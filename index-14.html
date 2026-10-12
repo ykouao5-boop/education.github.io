@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Site Éducatif (Logistique)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .screen { display: none; }
+        .active-screen { display: block; }
+        #diaporama { scroll-behavior: smooth; scrollbar-width: none; }
+        #diaporama::-webkit-scrollbar { display: none; }
+        #menu-deroulant { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+        #menu-deroulant.ouvert { max-height: 600px; }
+    </style>
+</head>
+<body>
+
+    <!-- Portail de Connexion / Inscription (Bloquant si non connecté) -->
+    <div id="portail-connexion" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl border border-slate-100 space-y-6">
+            <div class="text-center space-y-2">
+                <p class="text-xs font-bold tracking-wider uppercase text-slate-400">Mon Site Éducatif (Logistique)</p>
+                <h2 id="titre-form-auth" class="text-3xl font-extrabold text-blue-800">🔐 Connexion</h2>
+                <p id="desc-form-auth" class="text-sm text-slate-600">Veuillez vous identifier pour accéder à la plateforme.</p>
+            </div>
+
+            <!-- Onglets de bascule Connexion / Inscription -->
+            <div class="flex rounded-xl bg-slate-100 p-1">
+                <button type="button" onclick="basculerModeAuth('connexion')" id="btn-tab-connexion" class="flex-1 py-2 text-sm font-bold rounded-lg bg-white text-blue-700 shadow-sm transition">Connexion</button>
+                <button type="button" onclick="basculerModeAuth('inscription')" id="btn-tab-inscription" class="flex-1 py-2 text-sm font-bold rounded-lg text-slate-600 transition">Inscription</button>
+            </div>
+
+            <!-- Formulaire Unique Dynamique -->
+            <form id="form-auth" onsubmit="gererSoumissionAuth(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Identifiant</label>
+                    <input type="text" id="auth-id" class="w-full p-3 border rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div id="champ-nom-container" class="hidden">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Nom</label>
+                    <input type="text" id="auth-nom" class="w-full p-3 border rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div id="champ-prenoms-container" class="hidden">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Prénoms</label>
+                    <input type="text" id="auth-prenoms" class="w-full p-3 border rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div id="champ-tel-container" class="hidden">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Numéro de téléphone</label>
+                    <input type="tel" id="auth-tel" class="w-full p-3 border rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Code de sécurité unique</label>
+                    <input type="password" id="auth-code" class="w-full p-3 border rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <button type="submit" id="btn-submit-auth" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-md">Se connecter</button>
+                <button type="button" id="btn-code-oublie" onclick="codeSecuriteOublie()" class="w-full text-sm text-emerald-700 font-semibold hover:underline bg-transparent border-none cursor-pointer">🔑 Code de sécurité oublié ?</button>
+            </form>
+
+            <div class="pt-4 border-t text-center">
+                <input type="password" id="admin-shortcut-code" placeholder="Code administrateur" class="w-full p-2.5 border rounded-xl bg-slate-100 text-xs mb-2 text-center outline-none focus:ring-2 focus:ring-indigo-500">
+                <button type="button" onclick="verifierAdminPortail()" class="w-full bg-indigo-800 text-white py-2 rounded-xl text-xs font-semibold hover:bg-indigo-900 transition">Accès administrateur</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barre de Navigation -->
+    <header class="bg-blue-700 text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-lg sm:text-2xl font-bold tracking-wide leading-tight cursor-pointer" onclick="changerEcran('accueil')">📚 Mon Site Éducatif <span class="font-medium text-blue-200">(Logistique)</span></h1>
+            <button id="btn-menu" onclick="basculerMenu()" aria-label="Menu" aria-expanded="false" class="p-2 rounded-lg hover:bg-blue-600 text-white bg-transparent border-none cursor-pointer">
+                <svg id="icone-barres" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                <svg id="icone-croix" class="hidden" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+        </div>
+        <nav id="menu-deroulant" class="bg-blue-800">
+            <div class="max-w-7xl mx-auto px-4 py-2 flex flex-col">
+                <button onclick="changerEcran('accueil')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">🏠 Accueil</button>
+                <button onclick="changerEcran('cours')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">🎓 Cours</button>
+                <button onclick="changerEcran('revisions')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">📚 Révisions</button>
+                <button onclick="changerEcran('evaluations')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">📝 Évaluations</button>
+                <button onclick="changerEcran('exercices')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">💡 Exercices Corrigés</button>
+                <button onclick="changerEcran('propositions')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">📤 Propositions</button>
+                <button id="nav-btn-admin" onclick="changerEcran('admin-panel')" class="hidden text-left w-full px-3 py-3 text-white bg-indigo-800 border-none cursor-pointer hover:bg-indigo-900 rounded-lg font-bold text-base mt-1">🛡️ Admin</button>
+                <button onclick="deconnexion()" class="text-left w-full px-3 py-3 text-white bg-red-600 border-none cursor-pointer hover:bg-red-700 rounded-lg font-medium text-base mt-1 mb-2">🚪 Déconnexion</button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Contenu Principal -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 py-8 w-full relative mb-16">
+
+        <div id="accueil" class="screen space-y-8">
+            <div class="text-center py-16 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl shadow-lg p-8">
+                <h2 id="welcome-user-title" class="text-4xl font-extrabold mb-4">Bienvenue sur votre espace d'apprentissage</h2>
+                <p class="text-lg text-blue-100 max-w-2xl mx-auto mb-8">Retrouvez vos cours, révisions, évaluations et exercices corrigés, et partagez vos propres propositions.</p>
+                <button data-ouvre-menu onclick="majMenu(true)" class="bg-white text-blue-700 px-8 py-3 rounded-xl font-bold hover:bg-blue-50 transition shadow-md border-none cursor-pointer">☰ Menu</button>
+            </div>
+
+            <div id="galerie-accueil" class="hidden bg-white p-6 rounded-2xl shadow-md border border-slate-100">
+                <h3 class="text-2xl font-bold text-blue-800 mb-4">📷 Photos</h3>
+                <div class="relative">
+                    <div id="diaporama" class="flex overflow-x-auto snap-x snap-mandatory rounded-xl bg-slate-100"></div>
+                    <button id="diapo-prec" onclick="diapoAller(-1)" aria-label="Photo précédente" class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white w-10 h-10 rounded-full text-2xl leading-none border-none cursor-pointer">‹</button>
+                    <button id="diapo-suiv" onclick="diapoAller(1)" aria-label="Photo suivante" class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white w-10 h-10 rounded-full text-2xl leading-none border-none cursor-pointer">›</button>
+                </div>
+                <div id="diapo-points" class="flex justify-center gap-2 mt-3"></div>
+                <p id="diapo-description" class="mt-3 text-center text-slate-700"></p>
+                <div id="diapo-admin" class="hidden">
+                    <div class="flex justify-center gap-2 mt-3">
+                        <button onclick="adminModifierDescriptionPhoto()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-700 border-none cursor-pointer">✏️ Modifier la description</button>
+                        <button onclick="adminSupprimerPhotoCourante()" class="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-700 border-none cursor-pointer">Supprimer</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="section-developpeur" class="hidden bg-white p-6 rounded-2xl shadow-md border border-slate-100">
+                <h3 class="text-2xl font-bold text-blue-800 mb-4 text-center">🛠️ Site développé par</h3>
+                <div class="flex flex-col items-center text-center gap-3">
+                    <div id="dev-photo" class="w-40 sm:w-52 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0"></div>
+                    <div>
+                        <p id="dev-nom-complet" class="text-lg font-bold text-slate-900"></p>
+                        <p id="dev-role" class="text-sm text-slate-600"></p>
+                    </div>
+                    <div id="dev-admin" class="hidden">
+                        <button onclick="ouvrirModalDeveloppeur()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-700 border-none cursor-pointer">✏️ Modifier</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="cours" class="screen space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
+                <h3 class="text-2xl font-bold text-blue-800 mb-2">🎓 Cours</h3>
+                <p class="text-slate-600 mb-6">Cliquez sur un cours pour le consulter directement en ligne.</p>
+                <div id="liste-cours" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+            </div>
+        </div>
+
+        <div id="revisions" class="screen space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
+                <h3 class="text-2xl font-bold text-blue-800 mb-2">📚 Espace Révisions</h3>
+                <p class="text-slate-600 mb-6">Cliquez sur un document pour le lire directement en ligne.</p>
+                <div id="liste-pdfs-public" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+            </div>
+        </div>
+
+        <div id="evaluations" class="screen space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
+                <h3 class="text-2xl font-bold text-blue-800 mb-2">📝 Évaluations</h3>
+                <p class="text-slate-600 mb-6">Cliquez sur une évaluation pour ouvrir sa page dédiée.</p>
+                <div id="liste-evaluations-public" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+            </div>
+        </div>
+
+        <div id="exercices" class="screen space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
+                <h3 class="text-2xl font-bold text-blue-800 mb-4">💡 Exercices Corrigés</h3>
+                <div id="liste-exercices-valides" class="space-y-4"></div>
+            </div>
+        </div>
+
+        <div id="propositions" class="screen space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-slate-50 p-6 rounded-2xl shadow-md border border-slate-200">
+                    <h3 class="text-xl font-bold text-blue-700 mb-3">📤 Faire une proposition</h3>
+                    <p class="text-xs text-slate-500 mb-4">Votre proposition sera publiée après vérification par l'administrateur.</p>
+                    <form id="form-proposition" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Type de proposition</label>
+                            <select id="prop-type" onchange="majFormProposition()" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+                                <option value="exercice">Exercice corrigé</option>
+                                <option value="revision">Révision</option>
+                                <option value="photo">Photo</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label id="lbl-prop-titre" class="block text-sm font-medium text-slate-700 mb-1">Titre</label>
+                            <input type="text" id="prop-titre" placeholder="Ex: Examen Blanc" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+                        </div>
+                        <div id="prop-champs-exercice" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Énoncé (photo ou document)</label>
+                                <input type="file" id="prop-enonce-file" accept="image/*,.pdf" class="w-full p-2 border rounded-lg bg-white text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Corrigé (photo ou document)</label>
+                                <input type="file" id="prop-corrige-file" accept="image/*,.pdf" class="w-full p-2 border rounded-lg bg-white text-sm">
+                            </div>
+                        </div>
+                        <div id="prop-champs-revision" class="space-y-4 hidden">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Document de révision</label>
+                                <input type="file" id="prop-revision-file" accept=".pdf" class="w-full p-2 border rounded-lg bg-white text-sm">
+                            </div>
+                        </div>
+                        <div id="prop-champs-photo" class="space-y-4 hidden">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Photo</label>
+                                <input type="file" id="prop-photo-file" accept="image/*" class="w-full p-2 border rounded-lg bg-white text-sm">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition border-none cursor-pointer">Envoyer pour vérification</button>
+                    </form>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
+                    <h3 class="text-xl font-bold text-blue-800 mb-3">📊 Mon suivi</h3>
+                    <div id="historique-utilisateur" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="admin-panel" class="screen space-y-8">
+            <div class="bg-white p-8 rounded-2xl shadow-md border border-slate-100">
+                <div class="flex justify-between items-center mb-6 pb-4 border-b">
+                    <h3 class="text-2xl font-bold text-blue-800">🛡️ Panneau Administrateur</h3>
+                    <button onclick="changerEcran('accueil')" class="bg-slate-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-slate-700 font-medium border-none cursor-pointer">Fermer Admin</button>
+                </div>
+
+                <div class="space-y-8">
+                    <div class="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                        <h4 class="font-bold text-lg text-slate-900">👥 Gestion des utilisateurs</h4>
+                        <div id="admin-liste-utilisateurs" class="space-y-3"></div>
+                    </div>
+
+                    <div class="p-5 bg-indigo-50 border border-indigo-200 rounded-xl space-y-3">
+                        <h4 class="font-bold text-lg text-indigo-900">Ajouter un document de révision</h4>
+                        <div class="flex gap-2 flex-wrap">
+                            <input type="text" id="admin-pdf-titre" placeholder="Titre du document" class="p-2 border rounded flex-grow bg-white text-sm">
+                            <input type="file" id="admin-pdf-file" accept=".pdf" class="p-1.5 border rounded bg-white text-sm">
+                            <button onclick="adminAjouterPdf()" class="bg-indigo-600 text-white px-4 py-2 rounded font-medium hover:bg-indigo-700 border-none cursor-pointer text-sm">Uploader</button>
+                        </div>
+                    </div>
+
+                    <div class="p-5 bg-sky-50 border border-sky-200 rounded-xl space-y-3">
+                        <h4 class="font-bold text-lg text-sky-900">Ajouter un cours</h4>
+                        <div class="flex gap-2 flex-wrap">
+                            <input type="text" id="admin-cours-titre" placeholder="Titre du cours" class="p-2 border rounded flex-grow bg-white text-sm">
+                            <input type="file" id="admin-cours-file" accept=".pdf,image/*" class="p-1.5 border rounded bg-white text-sm">
+                            <button onclick="adminAjouterCours()" class="bg-sky-600 text-white px-4 py-2 rounded font-medium hover:bg-sky-700 border-none cursor-pointer text-sm">Ajouter</button>
+                        </div>
+                    </div>
+
+                    <div class="p-5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-3">
+                        <h4 class="font-bold text-lg text-emerald-900">Ajouter une évaluation</h4>
+                        <div class="flex gap-2 flex-wrap">
+                            <input type="text" id="admin-eval-titre" placeholder="Titre de l'évaluation" class="p-2 border rounded flex-grow bg-white text-sm">
+                            <input type="text" id="admin-eval-desc" placeholder="Description" class="p-2 border rounded flex-grow bg-white text-sm">
+                            <input type="file" id="admin-eval-file" accept=".html,.htm,text/html" class="p-1.5 border rounded bg-white text-sm">
+                            <button onclick="adminAjouterEvaluation()" class="bg-emerald-600 text-white px-4 py-2 rounded font-medium hover:bg-emerald-700 border-none cursor-pointer text-sm">Ajouter</button>
+                        </div>
+                    </div>
+
+                    <div class="p-5 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+                        <h4 class="font-bold text-lg text-amber-900">Modération des propositions (en attente)</h4>
+                        <div id="admin-liste-moderation" class="space-y-3">
+                            <p class="text-sm text-slate-500 italic">Aucune proposition en attente.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="modal-lecteur" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl max-w-4xl w-full h-[85vh] p-4 shadow-2xl relative flex flex-col">
+                <div class="flex justify-between items-center pb-3 border-b mb-2">
+                    <h3 id="modal-titre-fichier" class="text-lg font-bold text-blue-900">Visualisation</h3>
+                    <div class="flex items-center gap-4">
+                        <a id="lien-ouvrir-fichier" href="#" target="_blank" class="text-sm text-blue-600 underline">Ouvrir dans un nouvel onglet</a>
+                        <button onclick="fermerLecteur()" class="text-slate-500 hover:text-slate-800 text-2xl font-bold bg-transparent border-none cursor-pointer">&times;</button>
+                    </div>
+                </div>
+                <div class="flex-grow bg-slate-100 rounded-lg overflow-hidden flex items-center justify-center">
+                    <iframe id="iframe-lecteur" src="" class="w-full h-full border-none hidden"></iframe>
+                    <img id="img-lecteur" src="" class="max-w-full max-h-full object-contain hidden" alt="Aperçu">
+                </div>
+            </div>
+        </div>
+
+        <div id="modal-developpeur" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+                <h3 class="text-lg font-bold text-blue-900">Site développé par</h3>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Photo</label>
+                    <input type="file" id="dev-photo-file" accept="image/*" class="w-full p-2 border rounded-lg bg-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Prénoms</label>
+                    <input type="text" id="dev-prenom" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Nom</label>
+                    <input type="text" id="dev-nom" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Rôle</label>
+                    <input type="text" id="dev-role-input" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+                </div>
+                <div class="flex gap-2 justify-end">
+                    <button onclick="fermerModalDeveloppeur()" class="bg-slate-200 text-slate-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-300 border-none cursor-pointer">Annuler</button>
+                    <button onclick="enregistrerDeveloppeur()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 border-none cursor-pointer">Enregistrer</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bouton WhatsApp Assistance -->
+    <a href="https://wa.me/2250152801988?text=Bonjour,%20j'ai%20un%20problème%20de%20connexion%20sur%20la%20plateforme%20éducative." target="_blank" class="fixed bottom-4 right-4 z-30 bg-emerald-600 text-white px-3 py-2 rounded-xl shadow-lg flex items-center space-x-2 border border-emerald-400 hover:bg-emerald-700 transition text-xs">
+        <span class="text-base">💬</span>
+        <div>
+            <p class="font-bold leading-tight">Assistance</p>
+        </div>
+    </a>
+
+    <footer class="bg-slate-800 text-slate-400 py-6 text-center text-sm mt-12">
+        <p>&copy; 2026 - Plateforme Éducative - Royal Industry</p>
+    </footer>
+
+    <script>
+        const CLE_ADMIN_PRINCIPAL = "kkyao@2804";
+        const CLE_ADMIN_SECONDAIRE = "logita@6385";
+        let modeAuthActif = 'connexion';
+
+        // Lecture sécurisée du stockage (évite le plantage si le navigateur le bloque)
+        function lireStockage(nomStore, cle, defaut) {
+            try {
+                const brut = window[nomStore].getItem(cle);
+                return brut ? JSON.parse(brut) : defaut;
+            } catch (e) {
+                console.warn("Stockage illisible :", cle, e);
+                return defaut;
+            }
+        }
+        function ecrireSession(cle, valeur) {
+            try { sessionStorage.setItem(cle, valeur); } catch (e) { console.warn(e); }
+        }
+
+        const DONNEES_PAR_DEFAUT = {
+            pdfs: [],
+            cours: [],
+            photos: [],
+            evaluations: [
+                { titre: "Recherche Opérationnelle", description: "QCM, questions-réponses et rédaction avec corrections intégrées.", lien: "exercice_recherche_operationnelle.html" }
+            ],
+            exercicesValides: [],
+            exercicesEnAttente: [],
+            exercicesRejetes: [],
+            propositionsArchivees: [],
+            utilisateurs: []
+        };
+
+        let donneesSite = lireStockage('localStorage', 'donnees_site_edu', null) || {};
+        // Répare d'anciennes données auxquelles il manque des champs (ex: "utilisateurs")
+        Object.keys(DONNEES_PAR_DEFAUT).forEach(cle => {
+            if (!Array.isArray(donneesSite[cle])) donneesSite[cle] = DONNEES_PAR_DEFAUT[cle];
+        });
+        if (!donneesSite.developpeur || typeof donneesSite.developpeur !== 'object') {
+            donneesSite.developpeur = { photo: '', nom: '', prenom: '', role: '' };
+        }
+
+        let utilisateurActif = lireStockage('sessionStorage', 'utilisateur_actif', null);
+        let estAdmin = lireStockage('sessionStorage', 'est_admin', false);
+        let roleAdmin = lireStockage('sessionStorage', 'role_admin', null);
+
+        function estPrincipal() { return estAdmin && roleAdmin === 'principal'; }
+
+        function sauvegarder() {
+            try {
+                localStorage.setItem('donnees_site_edu', JSON.stringify(donneesSite));
+                return true;
+            } catch (e) {
+                console.error("Échec de la sauvegarde :", e);
+                return false;
+            }
+        }
+
+        function verifierSession() {
+            if (utilisateurActif && !donneesSite.utilisateurs.some(u => u.id === utilisateurActif.id && u.code === utilisateurActif.code)) {
+                utilisateurActif = null;
+                try { sessionStorage.removeItem('utilisateur_actif'); } catch (e) {}
+            }
+            if (utilisateurActif || estAdmin) {
+                ['auth-code', 'admin-shortcut-code'].forEach(id => document.getElementById(id).value = '');
+                document.getElementById('portail-connexion').classList.add('hidden');
+                if (estAdmin) {
+                    document.getElementById('welcome-user-title').textContent = roleAdmin === 'principal' ? 'Bienvenue, Administrateur Principal' : 'Bienvenue, Administrateur';
+                    document.getElementById('nav-btn-admin').classList.remove('hidden');
+                } else if (utilisateurActif) {
+                    document.getElementById('welcome-user-title').textContent = `Bienvenue, ${utilisateurActif.prenoms} ${utilisateurActif.nom}`;
+                    document.getElementById('nav-btn-admin').classList.add('hidden');
+                }
+                changerEcran('accueil');
+            } else {
+                document.getElementById('portail-connexion').classList.remove('hidden');
+                document.getElementById('nav-btn-admin').classList.add('hidden');
+            }
+        }
+
+        function basculerModeAuth(mode) {
+            modeAuthActif = mode;
+            const btnConn = document.getElementById('btn-tab-connexion');
+            const btnInsc = document.getElementById('btn-tab-inscription');
+            const titre = document.getElementById('titre-form-auth');
+            const desc = document.getElementById('desc-form-auth');
+            const submitBtn = document.getElementById('btn-submit-auth');
+
+            const champNom = document.getElementById('champ-nom-container');
+            const champPrenoms = document.getElementById('champ-prenoms-container');
+            const champTel = document.getElementById('champ-tel-container');
+
+            if (mode === 'connexion') {
+                btnConn.className = "flex-1 py-2 text-sm font-bold rounded-lg bg-white text-blue-700 shadow-sm transition";
+                btnInsc.className = "flex-1 py-2 text-sm font-bold rounded-lg text-slate-600 transition";
+                titre.textContent = "🔐 Connexion";
+                desc.textContent = "Veuillez vous identifier pour accéder à la plateforme.";
+                submitBtn.textContent = "Se connecter";
+
+                champNom.classList.add('hidden');
+                champPrenoms.classList.add('hidden');
+                champTel.classList.add('hidden');
+                document.getElementById('btn-code-oublie').classList.remove('hidden');
+            } else {
+                btnInsc.className = "flex-1 py-2 text-sm font-bold rounded-lg bg-white text-blue-700 shadow-sm transition";
+                btnConn.className = "flex-1 py-2 text-sm font-bold rounded-lg text-slate-600 transition";
+                titre.textContent = "📝 Inscription";
+                desc.textContent = "Remplissez les informations pour créer votre compte.";
+                submitBtn.textContent = "S'inscrire";
+
+                champNom.classList.remove('hidden');
+                champPrenoms.classList.remove('hidden');
+                champTel.classList.remove('hidden');
+                document.getElementById('btn-code-oublie').classList.add('hidden');
+            }
+        }
+
+        function codeSecuriteOublie() {
+            const id = document.getElementById('auth-id').value.trim();
+            let message = "Bonjour, j'ai oublié mon code de sécurité sur la plateforme éducative.";
+            if (id) message += " Mon identifiant : " + id + ".";
+            message += " Pouvez-vous m'aider à le récupérer ? Merci.";
+            window.open("https://wa.me/2250152801988?text=" + encodeURIComponent(message), "_blank");
+        }
+
+        function gererSoumissionAuth(e) {
+            e.preventDefault();
+            const id = document.getElementById('auth-id').value.trim();
+            const code = document.getElementById('auth-code').value.trim();
+
+            if (!id || !code) {
+                return alert("Veuillez remplir tous les champs obligatoires.");
+            }
+
+            if (modeAuthActif === 'connexion') {
+                let user = donneesSite.utilisateurs.find(u => u.id === id);
+                if (user) {
+                    if (user.code === code) {
+                        utilisateurActif = user;
+                        estAdmin = false;
+                        ecrireSession('utilisateur_actif', JSON.stringify(utilisateurActif));
+                        ecrireSession('est_admin', JSON.stringify(false));
+                        verifierSession();
+                    } else {
+                        alert("Code de sécurité incorrect.");
+                    }
+                } else {
+                    alert("Cet identifiant n'existe pas. Veuillez vous inscrire.");
+                }
+            } else {
+                const nom = document.getElementById('auth-nom').value.trim();
+                const prenoms = document.getElementById('auth-prenoms').value.trim();
+                const telephone = document.getElementById('auth-tel').value.trim();
+
+                if (!nom || !prenoms || !telephone) {
+                    return alert("Veuillez remplir toutes les informations d'inscription (Nom, Prénoms, Téléphone).");
+                }
+
+                let utilisateurExistant = donneesSite.utilisateurs.find(u => u.id === id || u.telephone === telephone);
+                if (utilisateurExistant) {
+                    alert("Ce compte existe déjà (identifiant ou numéro de téléphone déjà utilisé). Veuillez vous connecter.");
+                    basculerModeAuth('connexion');
+                    return;
+                }
+
+                let nouvelUtilisateur = { id, nom, prenoms, telephone, code };
+                donneesSite.utilisateurs.push(nouvelUtilisateur);
+                if (!sauvegarder()) {
+                    donneesSite.utilisateurs.pop();
+                    return alert("Impossible d'enregistrer le compte : la mémoire du navigateur est pleine ou bloquée (navigation privée ?). Contactez l'assistance.");
+                }
+
+                alert("Inscription réussie ! Vous êtes connectés.");
+                utilisateurActif = nouvelUtilisateur;
+                estAdmin = false;
+                ecrireSession('utilisateur_actif', JSON.stringify(utilisateurActif));
+                ecrireSession('est_admin', JSON.stringify(false));
+                verifierSession();
+            }
+        }
+
+        function verifierAdminPortail() {
+            const code = document.getElementById('admin-shortcut-code').value;
+            let role = null;
+            if (code === CLE_ADMIN_PRINCIPAL) role = 'principal';
+            else if (code === CLE_ADMIN_SECONDAIRE) role = 'secondaire';
+            if (!role) return alert("Code administrateur incorrect.");
+
+            estAdmin = true;
+            roleAdmin = role;
+            utilisateurActif = null;
+            ecrireSession('est_admin', JSON.stringify(true));
+            ecrireSession('role_admin', JSON.stringify(role));
+            try { sessionStorage.removeItem('utilisateur_actif'); } catch (e) {}
+            verifierSession();
+            changerEcran('admin-panel');
+        }
+
+        function deconnexion() {
+            sessionStorage.removeItem('utilisateur_actif');
+            sessionStorage.removeItem('est_admin');
+            sessionStorage.removeItem('role_admin');
+            utilisateurActif = null;
+            estAdmin = false;
+            window.location.reload();
+        }
+
+        function majMenu(ouvert) {
+            document.getElementById('menu-deroulant').classList.toggle('ouvert', ouvert);
+            document.getElementById('btn-menu').setAttribute('aria-expanded', ouvert);
+            document.getElementById('icone-barres').classList.toggle('hidden', ouvert);
+            document.getElementById('icone-croix').classList.toggle('hidden', !ouvert);
+        }
+
+        function basculerMenu() {
+            majMenu(!document.getElementById('menu-deroulant').classList.contains('ouvert'));
+        }
+
+        function fermerMenu() {
+            majMenu(false);
+        }
+
+        document.addEventListener('click', e => {
+            if (!e.composedPath().includes(document.querySelector('header')) && !e.target.closest('[data-ouvre-menu]')) fermerMenu();
+        });
+
+        function changerEcran(idEcran) {
+            fermerMenu();
+            if (idEcran === 'admin-panel' && !estAdmin) idEcran = 'accueil';
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+            document.getElementById(idEcran).classList.add('active-screen');
+            window.scrollTo(0, 0);
+            rafraichirAffichagePublic();
+            if (idEcran === 'admin-panel') rafraichirAdmin();
+        }
+
+        function libelleType(type) {
+            return type === 'photo' ? 'Photo' : type === 'revision' ? 'Révision' : type === 'evaluation' ? 'Évaluation' : 'Exercice corrigé';
+        }
+
+        function esc(t) {
+            return String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        // Lit un fichier ; les photos sont réduites pour économiser la mémoire du navigateur
+        function lireFichier(file, maxDim = 1400) {
+            return new Promise((resolve, reject) => {
+                const r = new FileReader();
+                r.onerror = reject;
+                r.onload = () => {
+                    if (!file.type.startsWith('image/')) return resolve(r.result);
+                    const img = new Image();
+                    img.onerror = () => resolve(r.result);
+                    img.onload = () => {
+                        const k = Math.min(1, maxDim / Math.max(img.width, img.height));
+                        const c = document.createElement('canvas');
+                        c.width = Math.round(img.width * k);
+                        c.height = Math.round(img.height * k);
+                        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                        resolve(c.toDataURL('image/jpeg', 0.7));
+                    };
+                    img.src = r.result;
+                };
+                r.readAsDataURL(file);
+            });
+        }
+
+        let urlBlobActif = null;
+
+        async function ouvrirLecteurDirect(titre, urlFichier) {
+            document.getElementById('modal-titre-fichier').textContent = titre;
+            document.getElementById('modal-lecteur').classList.remove('hidden');
+            const iframe = document.getElementById('iframe-lecteur');
+            const img = document.getElementById('img-lecteur');
+
+            let src = urlFichier;
+            if (urlFichier.startsWith('data:')) {
+                try {
+                    const blob = await (await fetch(urlFichier)).blob();
+                    if (urlBlobActif) URL.revokeObjectURL(urlBlobActif);
+                    urlBlobActif = URL.createObjectURL(blob);
+                    src = urlBlobActif;
+                } catch (e) { console.warn(e); }
+            }
+            document.getElementById('lien-ouvrir-fichier').href = src;
+
+            if (urlFichier.startsWith('data:image/') || /\.(jpeg|jpg|png|gif)$/i.test(urlFichier)) {
+                iframe.classList.add('hidden');
+                img.classList.remove('hidden');
+                img.src = src;
+            } else {
+                img.classList.add('hidden');
+                iframe.classList.remove('hidden');
+                iframe.src = src;
+            }
+        }
+
+        function ouvrirDoc(liste, idx, champ, prefixe) {
+            const item = donneesSite[liste][idx];
+            if (!item) return;
+            const nom = item.description || item.titre;
+            ouvrirLecteurDirect(prefixe ? prefixe + ' : ' + nom : nom, item[champ]);
+        }
+
+        function fermerLecteur() {
+            document.getElementById('modal-lecteur').classList.add('hidden');
+            document.getElementById('iframe-lecteur').src = '';
+            document.getElementById('img-lecteur').src = '';
+            if (urlBlobActif) { URL.revokeObjectURL(urlBlobActif); urlBlobActif = null; }
+        }
+
+        function boutonSupprimer(type, idx) {
+            return estAdmin ? `<button onclick="adminSupprimerFichier('${type}', ${idx})" class="bg-red-600 text-white px-2.5 py-1.5 rounded-lg text-xs hover:bg-red-700 border-none cursor-pointer">Supprimer</button>` : '';
+        }
+
+        function rafraichirAffichagePublic() {
+            document.getElementById('liste-pdfs-public').innerHTML = donneesSite.pdfs.map((p, idx) => `
+                <div class="p-4 bg-blue-50 border border-blue-200 rounded-xl flex justify-between items-center gap-2 shadow-sm">
+                    <span class="font-medium text-blue-900">${esc(p.titre)}</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="ouvrirDoc('pdfs', ${idx}, 'fileUrl', '')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700 font-medium cursor-pointer border-none">Lire en ligne</button>
+                        ${boutonSupprimer('pdf', idx)}
+                    </div>
+                </div>
+            `).join('') || "<p class='text-slate-500 italic'>Aucun document disponible.</p>";
+
+            document.getElementById('liste-cours').innerHTML = donneesSite.cours.map((c, idx) => `
+                <div class="p-4 bg-sky-50 border border-sky-200 rounded-xl flex justify-between items-center gap-2 shadow-sm">
+                    <span class="font-medium text-sky-900">${esc(c.titre)}</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="ouvrirDoc('cours', ${idx}, 'fileUrl', '')" class="bg-sky-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-sky-700 font-medium cursor-pointer border-none">Consulter</button>
+                        ${boutonSupprimer('cours', idx)}
+                    </div>
+                </div>
+            `).join('') || "<p class='text-slate-500 italic'>Aucun cours disponible.</p>";
+
+            rafraichirDiaporama();
+            rafraichirDeveloppeur();
+
+            document.getElementById('liste-evaluations-public').innerHTML = donneesSite.evaluations.map((ev, idx) => `
+                <div class="p-5 border border-slate-200 rounded-xl bg-slate-50 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-2 gap-2">
+                            <h4 class="font-bold text-lg text-blue-800">${esc(ev.titre)}</h4>
+                            ${boutonSupprimer('evaluation', idx)}
+                        </div>
+                        <p class="text-sm text-slate-600 mb-4">${esc(ev.description)}</p>
+                    </div>
+                    <button onclick="ouvrirEvaluation(${idx})" class="block w-full text-center bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition border-none cursor-pointer">Faire l'évaluation</button>
+                </div>
+            `).join('') || "<p class='text-slate-500 italic'>Aucune évaluation disponible.</p>";
+
+            document.getElementById('liste-exercices-valides').innerHTML = donneesSite.exercicesValides.map((e, idx) => `
+                <div class="p-4 border rounded-xl bg-slate-50 shadow-sm space-y-2">
+                    <div class="flex justify-between items-center gap-2">
+                        <h5 class="font-bold text-blue-700 text-base">${esc(e.titre)}</h5>
+                        ${boutonSupprimer('exoValide', idx)}
+                    </div>
+                    <div class="flex gap-3 text-sm flex-wrap">
+                        <button onclick="ouvrirDoc('exercicesValides', ${idx}, 'enonceUrl', 'Énoncé')" class="bg-slate-200 text-slate-800 px-3 py-1.5 rounded-lg hover:bg-slate-300 font-medium cursor-pointer border-none">📄 Énoncé</button>
+                        <button onclick="ouvrirDoc('exercicesValides', ${idx}, 'corrigeUrl', 'Corrigé')" class="bg-blue-100 text-blue-800 px-3 py-1.5 rounded-lg hover:bg-blue-200 font-medium cursor-pointer border-none">✅ Corrigé</button>
+                    </div>
+                </div>
+            `).join('') || "<p class='text-slate-500 italic'>Aucun exercice validé pour le moment.</p>";
+
+            if (utilisateurActif) {
+                const mesDemandes = [...donneesSite.exercicesEnAttente, ...donneesSite.exercicesValides, ...(donneesSite.exercicesRejetes || []), ...donneesSite.propositionsArchivees]
+                    .filter(ex => ex.auteurId === utilisateurActif.id);
+                document.getElementById('historique-utilisateur').innerHTML = mesDemandes.map(d => `
+                    <div class="p-3 border rounded-lg bg-slate-50 flex justify-between items-center text-sm">
+                        <div>
+                            <strong>${esc(d.titre)}</strong> <span class="text-xs text-slate-400">(${libelleType(d.type)})</span>
+                            <div class="text-xs text-slate-500">Statut :
+                                <span class="font-semibold ${d.statut === 'Validé' ? 'text-green-600' : d.statut === 'Rejeté' ? 'text-red-600' : 'text-amber-600'}">${esc(d.statut)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('') || "<p class='text-xs text-slate-500 italic'>Vous n'avez fait aucune proposition pour le moment.</p>";
+            }
+        }
+
+        function majFormProposition() {
+            const type = document.getElementById('prop-type').value;
+            document.getElementById('prop-champs-exercice').classList.toggle('hidden', type !== 'exercice');
+            document.getElementById('prop-champs-revision').classList.toggle('hidden', type !== 'revision');
+            document.getElementById('prop-champs-photo').classList.toggle('hidden', type !== 'photo');
+            document.getElementById('lbl-prop-titre').textContent = type === 'photo' ? 'Description' : 'Titre';
+            document.getElementById('prop-titre').placeholder = type === 'photo' ? 'Décrivez la photo' : 'Ex: Examen Blanc';
+        }
+
+        document.getElementById('form-proposition').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const type = document.getElementById('prop-type').value;
+            const titre = document.getElementById('prop-titre').value.trim();
+            if (!titre) return alert(type === 'photo' ? "Veuillez écrire une description pour la photo." : "Veuillez donner un titre à votre proposition.");
+
+            const fEnonce = document.getElementById('prop-enonce-file').files[0];
+            const fCorrige = document.getElementById('prop-corrige-file').files[0];
+            const fRevision = document.getElementById('prop-revision-file').files[0];
+            if (type === 'exercice' && (!fEnonce || !fCorrige)) return alert("Veuillez joindre l'énoncé et le corrigé.");
+            const fPhoto = document.getElementById('prop-photo-file').files[0];
+            if (type === 'revision' && !fRevision) return alert("Veuillez joindre le document de révision.");
+            if (type === 'photo' && !fPhoto) return alert("Veuillez joindre la photo.");
+
+            const btn = this.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = "Envoi en cours...";
+            try {
+                const proposition = {
+                    id: Date.now(),
+                    type,
+                    titre,
+                    auteurId: utilisateurActif ? utilisateurActif.id : 'Administrateur',
+                    statut: "En attente de validation"
+                };
+                if (type === 'exercice') {
+                    [proposition.enonceUrl, proposition.corrigeUrl] = await Promise.all([lireFichier(fEnonce), lireFichier(fCorrige)]);
+                } else if (type === 'revision') {
+                    proposition.fileUrl = await lireFichier(fRevision);
+                    proposition.fileName = fRevision.name;
+                } else {
+                    proposition.description = titre;
+                    proposition.fileUrl = await lireFichier(fPhoto);
+                    proposition.fileName = fPhoto.name;
+                }
+                donneesSite.exercicesEnAttente.push(proposition);
+                if (!sauvegarder()) {
+                    donneesSite.exercicesEnAttente.pop();
+                    alert("Envoi impossible : fichiers trop volumineux ou mémoire du navigateur pleine. Essayez avec des fichiers plus légers.");
+                } else {
+                    alert("Proposition envoyée avec succès ! Vous pouvez suivre son état dans votre suivi.");
+                    this.reset();
+                    majFormProposition();
+                    rafraichirAffichagePublic();
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Erreur lors de la lecture des fichiers.");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Envoyer pour vérification";
+            }
+        });
+
+        function rafraichirAdmin() {
+            const modContainer = document.getElementById('admin-liste-moderation');
+            modContainer.innerHTML = donneesSite.exercicesEnAttente.map((ex, i) => {
+                const liens = (ex.type === 'revision' || ex.type === 'photo')
+                    ? `<button onclick="ouvrirDoc('exercicesEnAttente', ${i}, 'fileUrl', '${libelleType(ex.type)}')" class="underline text-blue-600 bg-transparent border-none cursor-pointer p-0">Aperçu</button>`
+                    : `<button onclick="ouvrirDoc('exercicesEnAttente', ${i}, 'enonceUrl', 'Énoncé')" class="underline text-blue-600 bg-transparent border-none cursor-pointer p-0">Énoncé</button> • <button onclick="ouvrirDoc('exercicesEnAttente', ${i}, 'corrigeUrl', 'Corrigé')" class="underline text-blue-600 bg-transparent border-none cursor-pointer p-0">Corrigé</button>`;
+                return `
+                <div class="p-3 bg-white border rounded-lg flex justify-between items-center gap-2 text-sm shadow-sm">
+                    <div>
+                        <strong>${esc(ex.titre)}</strong> <span class="text-xs text-slate-400">(${libelleType(ex.type)})</span>
+                        <div class="text-xs text-slate-500">Soumis par : ${esc(ex.auteurId)}</div>
+                        <div class="text-xs flex gap-2 mt-1">${liens}</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="adminValiderExo(${i})" class="bg-green-600 text-white px-3 py-1 rounded font-medium hover:bg-green-700 border-none cursor-pointer text-xs">Valider</button>
+                        <button onclick="adminRejeterExo(${i})" class="bg-red-600 text-white px-3 py-1 rounded font-medium hover:bg-red-700 border-none cursor-pointer text-xs">Rejeter</button>
+                    </div>
+                </div>`;
+            }).join('') || "<p class='text-sm text-slate-500 italic'>Aucune proposition en attente.</p>";
+
+            document.getElementById('admin-liste-utilisateurs').innerHTML = donneesSite.utilisateurs.map((u, index) => `
+                <div class="p-3 bg-white border rounded-lg flex flex-wrap gap-2 items-center justify-between text-sm">
+                    <div class="flex gap-2 flex-wrap items-center">
+                        <input type="text" value="${esc(u.id)}" id="u-id-${index}" class="p-1 border rounded w-20 text-xs" placeholder="Identifiant">
+                        <input type="text" value="${esc(u.nom)}" id="u-nom-${index}" class="p-1 border rounded w-24 text-xs" placeholder="Nom">
+                        <input type="text" value="${esc(u.prenoms)}" id="u-prenoms-${index}" class="p-1 border rounded w-28 text-xs" placeholder="Prénoms">
+                        <input type="text" value="${esc(u.telephone)}" id="u-tel-${index}" class="p-1 border rounded w-24 text-xs" placeholder="Téléphone">
+                        <input type="text" value="${esc(u.code)}" id="u-code-${index}" class="p-1 border rounded w-20 text-xs" placeholder="Code">
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="adminModifierUtilisateur(${index})" class="bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium hover:bg-blue-700 border-none cursor-pointer">Mettre à jour</button>
+                        <button onclick="adminSupprimerUtilisateur(${index})" class="bg-red-600 text-white px-3 py-1 rounded text-xs font-medium hover:bg-red-700 border-none cursor-pointer">🗑️ Supprimer</button>
+                    </div>
+                </div>
+            `).join('') || "<p class='text-xs text-slate-500 italic'>Aucun utilisateur enregistré.</p>";
+        }
+
+        async function adminAjouterPdf() {
+            const titre = document.getElementById('admin-pdf-titre').value.trim();
+            const fichier = document.getElementById('admin-pdf-file').files[0];
+            if (!titre || !fichier) return alert("Renseignez le titre et choisissez un document.");
+            try {
+                const fileUrl = await lireFichier(fichier);
+                donneesSite.pdfs.push({ titre, fileUrl, fileName: fichier.name });
+                if (!sauvegarder()) {
+                    donneesSite.pdfs.pop();
+                    return alert("Ajout impossible : fichier trop volumineux ou mémoire du navigateur pleine.");
+                }
+                document.getElementById('admin-pdf-titre').value = '';
+                document.getElementById('admin-pdf-file').value = '';
+                alert("Document de révision ajouté !");
+                rafraichirAffichagePublic();
+            } catch (err) {
+                console.error(err);
+                alert("Erreur lors de la lecture du fichier.");
+            }
+        }
+
+        async function adminAjouterCours() {
+            const titre = document.getElementById('admin-cours-titre').value.trim();
+            const fichier = document.getElementById('admin-cours-file').files[0];
+            if (!titre || !fichier) return alert("Renseignez le titre et choisissez le fichier du cours.");
+            try {
+                const fileUrl = await lireFichier(fichier);
+                donneesSite.cours.push({ titre, fileUrl, fileName: fichier.name });
+                if (!sauvegarder()) {
+                    donneesSite.cours.pop();
+                    return alert("Ajout impossible : fichier trop volumineux ou mémoire du navigateur pleine.");
+                }
+                document.getElementById('admin-cours-titre').value = '';
+                document.getElementById('admin-cours-file').value = '';
+                alert("Cours ajouté !");
+                rafraichirAffichagePublic();
+            } catch (err) {
+                console.error(err);
+                alert("Erreur lors de la lecture du fichier.");
+            }
+        }
+
+        async function adminAjouterEvaluation() {
+            const titre = document.getElementById('admin-eval-titre').value.trim();
+            const description = document.getElementById('admin-eval-desc').value.trim();
+            const fichier = document.getElementById('admin-eval-file').files[0];
+            if (!titre || !fichier) return alert("Renseignez le titre et choisissez le fichier de l'évaluation.");
+            if (!/\.html?$/i.test(fichier.name)) return alert("Le fichier doit être une page web (.html).");
+            try {
+                const contenuHtml = await fichier.text();
+                donneesSite.evaluations.push({ titre, description, contenuHtml });
+                if (!sauvegarder()) {
+                    donneesSite.evaluations.pop();
+                    return alert("Ajout impossible : fichier trop volumineux ou mémoire du navigateur pleine.");
+                }
+                ['admin-eval-titre', 'admin-eval-desc', 'admin-eval-file'].forEach(id => document.getElementById(id).value = '');
+                alert("Évaluation ajoutée !");
+                rafraichirAffichagePublic();
+            } catch (err) {
+                console.error(err);
+                alert("Erreur lors de la lecture du fichier.");
+            }
+        }
+
+        function ouvrirPageHtml(contenu) {
+            const url = URL.createObjectURL(new Blob([contenu], { type: 'text/html' }));
+            window.open(url, '_blank');
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        }
+
+        function ouvrirEvaluation(idx) {
+            const ev = donneesSite.evaluations[idx];
+            if (!ev) return;
+            if (ev.contenuHtml) ouvrirPageHtml(ev.contenuHtml);
+            else if (ev.lien) window.open(ev.lien, '_blank');
+        }
+
+        function adminValiderExo(index) {
+            const p = donneesSite.exercicesEnAttente.splice(index, 1)[0];
+            if (!p) return;
+            if (p.type === 'revision') {
+                donneesSite.pdfs.push({ titre: p.titre, fileUrl: p.fileUrl, fileName: p.fileName });
+                donneesSite.propositionsArchivees.push({ id: p.id, type: 'revision', titre: p.titre, auteurId: p.auteurId, statut: 'Validé' });
+            } else if (p.type === 'photo') {
+                donneesSite.photos.push({ titre: p.titre, description: p.description || p.titre, fileUrl: p.fileUrl, auteurId: p.auteurId });
+                donneesSite.propositionsArchivees.push({ id: p.id, type: 'photo', titre: p.titre, auteurId: p.auteurId, statut: 'Validé' });
+            } else {
+                p.statut = 'Validé';
+                donneesSite.exercicesValides.push(p);
+            }
+            sauvegarder();
+            rafraichirAdmin();
+            rafraichirAffichagePublic();
+            alert("Proposition validée et publiée !");
+        }
+
+        function adminRejeterExo(index) {
+            const p = donneesSite.exercicesEnAttente.splice(index, 1)[0];
+            if (!p) return;
+            p.statut = 'Rejeté';
+            delete p.enonceUrl; delete p.corrigeUrl; delete p.fileUrl;
+            donneesSite.exercicesRejetes.push(p);
+            sauvegarder();
+            rafraichirAdmin();
+            alert("Proposition rejetée.");
+        }
+
+        function adminModifierUtilisateur(index) {
+            const u = donneesSite.utilisateurs[index];
+            if (!u) return;
+            const lire = id => document.getElementById(id).value.trim();
+            const id = lire(`u-id-${index}`);
+            const code = lire(`u-code-${index}`);
+            if (!id || !code) return alert("L'identifiant et le code sont obligatoires.");
+            if (donneesSite.utilisateurs.some((x, i) => i !== index && x.id === id)) return alert("Cet identifiant est déjà utilisé par un autre compte.");
+
+            const ancienId = u.id;
+            Object.assign(u, { id, code, nom: lire(`u-nom-${index}`), prenoms: lire(`u-prenoms-${index}`), telephone: lire(`u-tel-${index}`) });
+            [...donneesSite.exercicesEnAttente, ...donneesSite.exercicesValides, ...(donneesSite.exercicesRejetes || []), ...donneesSite.propositionsArchivees]
+                .forEach(ex => { if (ex.auteurId === ancienId) ex.auteurId = id; });
+            sauvegarder();
+            alert("Informations utilisateur mises à jour avec succès !");
+            rafraichirAdmin();
+        }
+
+        function adminSupprimerUtilisateur(index) {
+            const u = donneesSite.utilisateurs[index];
+            if (!u) return;
+            if (!confirm(`Supprimer l'utilisateur « ${u.id} » (${u.prenoms} ${u.nom}) ? Il ne pourra plus se connecter.`)) return;
+            donneesSite.utilisateurs.splice(index, 1);
+            sauvegarder();
+            rafraichirAdmin();
+        }
+
+        function adminSupprimerFichier(type, index) {
+            if (!estAdmin) return;
+            if(confirm("Voulez-vous vraiment supprimer cet élément ?")) {
+                if(type === 'photo') {
+                    donneesSite.photos.splice(index, 1);
+                } else if(type === 'cours') {
+                    donneesSite.cours.splice(index, 1);
+                } else if(type === 'pdf') {
+                    donneesSite.pdfs.splice(index, 1);
+                } else if(type === 'evaluation') {
+                    donneesSite.evaluations.splice(index, 1);
+                } else if(type === 'exoValide') {
+                    donneesSite.exercicesValides.splice(index, 1);
+                }
+                sauvegarder();
+                rafraichirAffichagePublic();
+                alert("Élément supprimé avec succès.");
+            }
+        }
+
+        let diapoIndex = 0;
+        let diapoTimer = null;
+
+        function rafraichirDiaporama() {
+            const photos = donneesSite.photos;
+            const d = document.getElementById('diaporama');
+            document.getElementById('galerie-accueil').classList.toggle('hidden', photos.length === 0);
+            if (diapoIndex >= photos.length) diapoIndex = 0;
+            d.innerHTML = photos.map((ph, idx) => `
+                <div class="snap-center shrink-0 w-full">
+                    <img src="${ph.fileUrl}" alt="" onclick="ouvrirDoc('photos', ${idx}, 'fileUrl', '')" class="w-full max-h-[28rem] object-contain cursor-pointer">
+                </div>
+            `).join('');
+            ['diapo-prec', 'diapo-suiv'].forEach(id => document.getElementById(id).classList.toggle('hidden', photos.length < 2));
+            if (d.clientWidth) d.scrollTo({ left: diapoIndex * d.clientWidth, behavior: 'instant' });
+            diapoMajDescription();
+            diapoPlanifier();
+        }
+
+        function diapoMajDescription() {
+            const photos = donneesSite.photos;
+            const ph = photos[diapoIndex];
+            document.getElementById('diapo-description').textContent = ph ? (ph.description || ph.titre || '') : '';
+            document.getElementById('diapo-points').innerHTML = photos.length > 1
+                ? photos.map((_, i) => `<span class="w-2.5 h-2.5 rounded-full ${i === diapoIndex ? 'bg-blue-600' : 'bg-slate-300'}"></span>`).join('')
+                : '';
+            document.getElementById('diapo-admin').classList.toggle('hidden', !(estAdmin && ph));
+        }
+
+        function diapoAllerA(i) {
+            const d = document.getElementById('diaporama');
+            const n = donneesSite.photos.length;
+            if (!n || !d.clientWidth) return;
+            d.scrollTo({ left: ((i % n) + n) % n * d.clientWidth, behavior: 'smooth' });
+        }
+
+        function diapoAller(delta) {
+            diapoAllerA(diapoIndex + delta);
+            diapoPlanifier();
+        }
+
+        // Avance toute seule vers la droite après 3 secondes sans contact
+        function diapoPlanifier() {
+            clearTimeout(diapoTimer);
+            if (donneesSite.photos.length < 2) return;
+            diapoTimer = setTimeout(() => {
+                diapoAllerA(diapoIndex + 1);
+                diapoPlanifier();
+            }, 3000);
+        }
+
+        function diapoPause() {
+            clearTimeout(diapoTimer);
+        }
+
+        (function initDiaporama() {
+            const d = document.getElementById('diaporama');
+            d.addEventListener('scroll', () => {
+                if (!d.clientWidth) return;
+                const i = Math.round(d.scrollLeft / d.clientWidth);
+                if (i !== diapoIndex && i >= 0 && i < donneesSite.photos.length) {
+                    diapoIndex = i;
+                    diapoMajDescription();
+                }
+            }, { passive: true });
+            ['touchstart', 'mousedown'].forEach(ev => d.addEventListener(ev, diapoPause, { passive: true }));
+            ['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach(ev => d.addEventListener(ev, diapoPlanifier, { passive: true }));
+            d.addEventListener('wheel', diapoPlanifier, { passive: true });
+            window.addEventListener('resize', () => {
+                if (d.clientWidth) d.scrollTo({ left: diapoIndex * d.clientWidth, behavior: 'instant' });
+            });
+        })();
+
+        function rafraichirDeveloppeur() {
+            const d = donneesSite.developpeur;
+            const rempli = d.nom || d.prenom || d.role || d.photo;
+            document.getElementById('section-developpeur').classList.toggle('hidden', !rempli && !estPrincipal());
+            document.getElementById('dev-admin').classList.toggle('hidden', !estPrincipal());
+            document.getElementById('dev-photo').innerHTML = d.photo ? `<img src="${d.photo}" alt="" class="block w-full h-auto">` : '<div class="h-40 flex items-center justify-center text-5xl">👤</div>';
+            document.getElementById('dev-nom-complet').textContent = [d.prenom, d.nom].filter(Boolean).join(' ') || 'À renseigner';
+            document.getElementById('dev-role').textContent = d.role || '';
+        }
+
+        function ouvrirModalDeveloppeur() {
+            if (!estPrincipal()) return;
+            const d = donneesSite.developpeur;
+            document.getElementById('dev-prenom').value = d.prenom || '';
+            document.getElementById('dev-nom').value = d.nom || '';
+            document.getElementById('dev-role-input').value = d.role || '';
+            document.getElementById('dev-photo-file').value = '';
+            document.getElementById('modal-developpeur').classList.remove('hidden');
+        }
+
+        function fermerModalDeveloppeur() {
+            document.getElementById('modal-developpeur').classList.add('hidden');
+        }
+
+        async function enregistrerDeveloppeur() {
+            if (!estPrincipal()) return;
+            const ancien = donneesSite.developpeur;
+            const nouveau = {
+                photo: ancien.photo || '',
+                prenom: document.getElementById('dev-prenom').value.trim(),
+                nom: document.getElementById('dev-nom').value.trim(),
+                role: document.getElementById('dev-role-input').value.trim()
+            };
+            const fichier = document.getElementById('dev-photo-file').files[0];
+            try {
+                if (fichier) nouveau.photo = await lireFichier(fichier, 800);
+            } catch (err) {
+                console.error(err);
+                return alert("Erreur lors de la lecture de la photo.");
+            }
+            donneesSite.developpeur = nouveau;
+            if (!sauvegarder()) {
+                donneesSite.developpeur = ancien;
+                return alert("Enregistrement impossible : mémoire du navigateur pleine.");
+            }
+            fermerModalDeveloppeur();
+            rafraichirDeveloppeur();
+        }
+
+        function adminModifierDescriptionPhoto() {
+            if (!estAdmin) return;
+            const ph = donneesSite.photos[diapoIndex];
+            if (!ph) return;
+            const nouvelle = prompt("Modifier la description de cette photo :", ph.description || ph.titre || '');
+            if (nouvelle === null) return;
+            ph.description = nouvelle.trim();
+            sauvegarder();
+            diapoMajDescription();
+        }
+
+        function adminSupprimerPhotoCourante() {
+            adminSupprimerFichier('photo', diapoIndex);
+        }
+
+        window.onload = () => {
+            verifierSession();
+            rafraichirAffichagePublic();
+        };
+    </script>
+</body>
+</html>

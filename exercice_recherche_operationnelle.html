@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exercice interactif — Recherche opérationnelle</title>
+<style>
+:root{--bg:#f3f6fb;--card:#fff;--ink:#182338;--muted:#637087;--blue:#2457d6;--line:#dce3ef;--green:#18794e;--red:#b42318}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+header{background:linear-gradient(135deg,#173a8a,#3478ee);color:#fff;padding:28px 16px}
+header .wrap,main{max-width:850px;margin:auto}h1{margin:0 0 8px;font-size:clamp(1.5rem,4vw,2.15rem)}header p{margin:0;opacity:.93}
+main{padding:18px 12px 40px}.intro,.section,.result{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 4px 14px #1b31550a}
+h2{font-size:1.2rem;margin:0 0 12px}h3{font-size:1rem;margin:0 0 8px}.question{padding:14px 0;border-top:1px solid var(--line)}.question:first-of-type{border-top:0}
+label.option{display:flex;gap:9px;align-items:flex-start;padding:9px 10px;border:1px solid var(--line);border-radius:10px;margin:7px 0;cursor:pointer}
+label.option:has(input:checked){border-color:var(--blue);background:#edf3ff}
+input[type=radio]{margin-top:5px;accent-color:var(--blue)}textarea,input[type=text]{width:100%;padding:11px 12px;border:1px solid #bdc8d9;border-radius:10px;font:inherit;background:#fff;color:var(--ink)}
+textarea{min-height:88px;resize:vertical}.answer{display:none;background:#edf8f1;border-left:4px solid var(--green);padding:10px 12px;border-radius:8px;margin-top:9px}.answer.show{display:block}
+button{border:0;border-radius:10px;padding:11px 15px;font:600  .96rem system-ui;cursor:pointer}
+.primary{background:var(--blue);color:#fff}.secondary{background:#e9eef7;color:#24334c}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.feedback{font-weight:650;margin-top:7px}.good{color:var(--green)}.bad{color:var(--red)}.muted{color:var(--muted);font-size:.92rem}
+.result{display:none}.result.show{display:block}.score{font-size:1.35rem;font-weight:800}
+footer{text-align:center;color:var(--muted);font-size:.85rem;padding:10px 15px 30px}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>Exercice interactif : Recherche opérationnelle</h1><p>QCM • Questions-réponses • Réponses à rédiger</p></div></header>
+<main>
+<div class="intro"><strong>Consigne :</strong> réponds sans regarder ton cours, puis clique sur « Corriger le QCM ». Pour les questions écrites, compare ta réponse avec la correction proposée. <p class="muted">Note : le texte du PDF fourni n’a pas pu être lu. Cet exercice reprend donc les notions générales évoquées dans l’exercice précédent ; il ne garantit pas de suivre exactement ton document.</p></div>
+
+<form id="quiz">
+<section class="section">
+<h2>Partie 1 — QCM (5 points)</h2>
+<div class="question"><h3>1. La recherche opérationnelle aide principalement à :</h3>
+<label class="option"><input type="radio" name="q1" value="a"> Décorer les locaux d’une entreprise</label>
+<label class="option"><input type="radio" name="q1" value="b"> Aider à prendre des décisions et à optimiser les ressources</label>
+<label class="option"><input type="radio" name="q1" value="c"> Supprimer toutes les contraintes</label><div class="feedback" id="f1"></div></div>
+<div class="question"><h3>2. Minimiser un coût signifie :</h3>
+<label class="option"><input type="radio" name="q2" value="a"> Le réduire autant que possible</label>
+<label class="option"><input type="radio" name="q2" value="b"> L’augmenter</label>
+<label class="option"><input type="radio" name="q2" value="c"> Ne jamais le calculer</label><div class="feedback" id="f2"></div></div>
+<div class="question"><h3>3. Lequel est un exemple de ressource limitée ?</h3>
+<label class="option"><input type="radio" name="q3" value="a"> Le temps disponible</label>
+<label class="option"><input type="radio" name="q3" value="b"> Une idée sans contrainte</label>
+<label class="option"><input type="radio" name="q3" value="c"> Un slogan publicitaire</label><div class="feedback" id="f3"></div></div>
+<div class="question"><h3>4. Pour choisir un itinéraire de livraison, on peut chercher à :</h3>
+<label class="option"><input type="radio" name="q4" value="a"> Choisir au hasard</label>
+<label class="option"><input type="radio" name="q4" value="b"> Ignorer la distance</label>
+<label class="option"><input type="radio" name="q4" value="c"> Comparer les itinéraires et leurs coûts</label><div class="feedback" id="f4"></div></div>
+<div class="question"><h3>5. Maximiser un résultat signifie :</h3>
+<label class="option"><input type="radio" name="q5" value="a"> Obtenir le résultat le plus élevé possible</label>
+<label class="option"><input type="radio" name="q5" value="b"> Réduire tous les résultats à zéro</label>
+<label class="option"><input type="radio" name="q5" value="c"> Ne tenir compte d’aucune ressource</label><div class="feedback" id="f5"></div></div>
+<div class="actions"><button class="primary" type="button" onclick="gradeQuiz()">Corriger le QCM</button><button class="secondary" type="button" onclick="resetQuiz()">Recommencer</button></div>
+</section>
+
+<section class="section">
+<h2>Partie 2 — Questions et réponses (5 points)</h2>
+<p class="muted">Essaie de répondre oralement ou dans ton cahier, puis ouvre la correction.</p>
+<div class="question"><h3>1. Donne une définition de la recherche opérationnelle.</h3><button class="secondary" type="button" onclick="toggleAnswer('a1')">Afficher / masquer la réponse</button><div class="answer" id="a1">La recherche opérationnelle utilise des méthodes d’analyse, souvent mathématiques, pour aider à résoudre des problèmes et prendre de meilleures décisions.</div></div>
+<div class="question"><h3>2. Cite deux objectifs possibles de la recherche opérationnelle.</h3><button class="secondary" type="button" onclick="toggleAnswer('a2')">Afficher / masquer la réponse</button><div class="answer" id="a2">Par exemple : minimiser les coûts et maximiser les bénéfices ou la production.</div></div>
+<div class="question"><h3>3. Cite deux domaines où la recherche opérationnelle peut être utile.</h3><button class="secondary" type="button" onclick="toggleAnswer('a3')">Afficher / masquer la réponse</button><div class="answer" id="a3">Par exemple : la gestion des stocks, la planification de la production, le transport ou l’organisation du personnel.</div></div>
+<div class="question"><h3>4. Pourquoi faut-il tenir compte des contraintes avant de prendre une décision ?</h3><button class="secondary" type="button" onclick="toggleAnswer('a4')">Afficher / masquer la réponse</button><div class="answer" id="a4">Parce que les ressources, le temps, le budget ou le personnel sont limités. Une décision doit rester réalisable avec les moyens disponibles.</div></div>
+<div class="question"><h3>5. Explique la différence entre minimiser et maximiser.</h3><button class="secondary" type="button" onclick="toggleAnswer('a5')">Afficher / masquer la réponse</button><div class="answer" id="a5">Minimiser consiste à rendre une valeur aussi faible que possible (ex. un coût). Maximiser consiste à la rendre aussi élevée que possible (ex. un bénéfice).</div></div>
+</section>
+
+<section class="section">
+<h2>Partie 3 — Écris ta réponse (10 points)</h2>
+<p class="muted">Écris dans les champs. Tu peux afficher une correction indicative après avoir répondu.</p>
+<div class="question"><h3>1. Une entreprise dépense trop pour livrer ses clients. Quel objectif peut-elle chercher à atteindre ? Explique. (2 points)</h3><textarea id="w1" placeholder="Écris ta réponse ici…"></textarea><button class="secondary" type="button" onclick="toggleAnswer('wa1')">Voir une correction indicative</button><div class="answer" id="wa1">Elle peut chercher à minimiser les coûts de livraison, par exemple en comparant les itinéraires, les distances et les moyens de transport.</div></div>
+<div class="question"><h3>2. Une entreprise dispose de peu de véhicules et de peu de personnel. Comment la RO peut-elle l’aider ? (2 points)</h3><textarea id="w2" placeholder="Écris ta réponse ici…"></textarea><button class="secondary" type="button" onclick="toggleAnswer('wa2')">Voir une correction indicative</button><div class="answer" id="wa2">Elle peut aider à répartir les véhicules et le personnel, organiser les horaires et utiliser au mieux les ressources disponibles.</div></div>
+<div class="question"><h3>3. Donne un exemple concret d’un problème qu’on peut résoudre grâce à la RO. (2 points)</h3><textarea id="w3" placeholder="Écris ta réponse ici…"></textarea><button class="secondary" type="button" onclick="toggleAnswer('wa3')">Voir une correction indicative</button><div class="answer" id="wa3">Exemple : déterminer l’ordre de livraison de plusieurs clients pour réduire la distance parcourue et les dépenses de carburant.</div></div>
+<div class="question"><h3>4. Une entreprise veut produire le plus possible sans dépasser son budget. Quel objectif et quelle contrainte reconnais-tu ? (2 points)</h3><textarea id="w4" placeholder="Écris ta réponse ici…"></textarea><button class="secondary" type="button" onclick="toggleAnswer('wa4')">Voir une correction indicative</button><div class="answer" id="wa4">L’objectif est de maximiser la production. La contrainte est le budget disponible, qui ne doit pas être dépassé.</div></div>
+<div class="question"><h3>5. Explique en quelques phrases pourquoi une décision optimale doit respecter les contraintes. (2 points)</h3><textarea id="w5" placeholder="Écris ta réponse ici…"></textarea><button class="secondary" type="button" onclick="toggleAnswer('wa5')">Voir une correction indicative</button><div class="answer" id="wa5">Une solution peut sembler avantageuse mais être impossible à réaliser si elle dépasse les ressources disponibles. Une solution optimale doit donc améliorer le résultat tout en respectant les contraintes.</div></div>
+</section>
+</form>
+<div class="result" id="result"><div class="score" id="score"></div><p id="details"></p><p class="muted">Le score automatique porte uniquement sur le QCM. Les questions écrites sont à évaluer en comparant tes réponses aux corrections indicatives.</p></div>
+</main>
+<footer>Exercice d’entraînement — Recherche opérationnelle</footer>
+<script>
+const correct={q1:'b',q2:'a',q3:'a',q4:'c',q5:'a'};
+function gradeQuiz(){let score=0;for(let i=1;i<=5;i++){const chosen=document.querySelector('input[name="q'+i+'"]:checked');const f=document.getElementById('f'+i);if(chosen&&chosen.value===correct['q'+i]){score++;f.textContent='Correct !';f.className='feedback good'}else{f.textContent='Incorrect ou sans réponse. Consulte la correction ci-dessous.';f.className='feedback bad'} }
+document.getElementById('score').textContent='Score QCM : '+score+'/5';document.getElementById('details').textContent='Tu as obtenu '+score+' bonne(s) réponse(s) sur 5.';const r=document.getElementById('result');r.classList.add('show');r.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function toggleAnswer(id){document.getElementById(id).classList.toggle('show')}
+function resetQuiz(){document.getElementById('quiz').reset();for(let i=1;i<=5;i++){const f=document.getElementById('f'+i);f.textContent='';f.className='feedback'}document.querySelectorAll('.answer').forEach(a=>a.classList.remove('show'));document.getElementById('result').classList.remove('show');window.scrollTo({top:0,behavior:'smooth'})}
+</script>
+</body>
+</html>
