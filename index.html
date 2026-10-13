@@ -573,6 +573,17 @@
 
     </main>
 
+    <div id="modal-edit-msg" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center z-[85] p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-3">
+            <h3 class="text-lg font-bold text-blue-900">✏️ Modifier mon message</h3>
+            <textarea id="edit-msg-texte" data-mention="1" rows="6" class="w-full p-3 border rounded-xl bg-white text-sm"></textarea>
+            <div class="flex gap-2 justify-end">
+                <button onclick="fermerEditMsg()" class="bg-slate-200 text-slate-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-300 border-none cursor-pointer">Annuler</button>
+                <button id="edit-msg-ok" onclick="validerEditMsg()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 border-none cursor-pointer">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
     <div id="modal-profil" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center z-[55] p-4">
         <div id="profil-contenu" class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-5 shadow-2xl space-y-4"></div>
     </div>
@@ -1642,7 +1653,7 @@ function rafraichirForum() {
             </div>`).join('') || "<p class='text-slate-500 italic'>Aucun sujet. Lancez la discussion !</p>";
         return;
     }
-    const posts = [{ id: '_main', aid: s.auteurId, nom: s.auteurNom, texte: s.texte, date: s.date }, ...s.messages];
+    const posts = [{ id: '_main', aid: s.auteurId, nom: s.auteurNom, texte: s.texte, date: s.date, modifie: s.modifie }, ...s.messages];
     $('forum-sujet').innerHTML = `
         <div class="flex justify-between gap-2 items-center flex-wrap">
             <button onclick="forumOuvrir(null)" class="text-sm text-blue-700 bg-transparent border-none cursor-pointer p-0 font-semibold">← Tous les sujets</button>
@@ -1654,11 +1665,11 @@ function rafraichirForum() {
                 <div class="flex justify-between gap-2 items-center flex-wrap">
                     <div class="flex items-center gap-1.5 flex-wrap">${auteurBtn(p.aid, p.nom)}<span class="text-xs text-slate-400">${fmt(p.date)}</span></div>
                     <div class="flex gap-1">
-                        ${m && p.aid !== m.id ? bt('bg-amber-100 text-amber-800 hover:bg-amber-200', '🚩 Signaler', `forumSignaler('${s._id}','${p.id}')`) : ''}
+                        ${m && p.aid === m.id && !b && !muet ? bt('bg-blue-100 text-blue-800 hover:bg-blue-200', '✏️ Modifier', `editMsg('forum','${s._id}','${p.id}')`) : ''}${m && p.aid !== m.id ? bt('bg-amber-100 text-amber-800 hover:bg-amber-200', '🚩 Signaler', `forumSignaler('${s._id}','${p.id}')`) : ''}
                         ${estAdmin && p.id !== '_main' ? bt('bg-red-600 text-white', '🗑️', `forumSupprimerMsg('${s._id}','${p.id}')`) : ''}
                     </div>
                 </div>
-                <p class="text-sm whitespace-pre-wrap break-words">${texteMsg(p.texte)}</p>
+                <p class="text-sm whitespace-pre-wrap break-words">${texteMsg(p.texte)}</p>${modifieHtml(p)}
             </div>`).join('')}
         ${peutEcrire ? `<div class="space-y-2"><textarea id="forum-reply" data-mention="1" rows="3" placeholder="Votre message…" class="w-full p-3 border rounded-xl text-sm bg-white"></textarea><button onclick="forumRepondre()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold border-none cursor-pointer">Envoyer</button></div>` : (b ? '' : '<p class="text-sm italic text-slate-500">Connectez-vous pour participer.</p>')}`;
     const r2 = $('forum-reply');
@@ -1845,7 +1856,7 @@ function rafraichirChat() {
     const c = $('chat-admin-liste'); if (!c) return;
     const bas = c.scrollTop + c.clientHeight >= c.scrollHeight - 40;
     c.innerHTML = [...donneesSite.chatAdmin].sort((a, b) => a.date - b.date).slice(-150).map(x => `
-        <div class="p-2.5 rounded-xl bg-white border text-sm"><div class="flex justify-between items-center gap-2"><span>${auteurBtn(x.aid, x.nom)} <span class="text-xs text-slate-400">${fmt(x.date)}</span></span>${estPrincipal() && x._id ? bt('bg-red-600 text-white', '🗑️', `chatSupprimer('${x._id}')`) : ''}</div><p class="whitespace-pre-wrap break-words mt-1">${texteMsg(x.texte)}</p></div>`).join('') || "<p class='text-sm italic text-slate-500'>Aucun message.</p>";
+        <div class="p-2.5 rounded-xl bg-white border text-sm"><div class="flex justify-between items-center gap-2"><span>${auteurBtn(x.aid, x.nom)} <span class="text-xs text-slate-400">${fmt(x.date)}</span></span><span class="flex gap-1">${btnEditChat('chatAdmin', x)}${estPrincipal() && x._id ? bt('bg-red-600 text-white', '🗑️', `chatSupprimer('${x._id}')`) : ''}</span></div><p class="whitespace-pre-wrap break-words mt-1">${texteMsg(x.texte)}</p>${modifieHtml(x)}</div>`).join('') || "<p class='text-sm italic text-slate-500'>Aucun message.</p>";
     if (bas) c.scrollTop = c.scrollHeight;
 }
 async function chatEnvoyer() {
@@ -2501,7 +2512,7 @@ function rafraichirChatProf() {
     if (!peutEspaceProf()) { c.innerHTML = ''; return; }
     const bas = c.scrollTop + c.clientHeight >= c.scrollHeight - 40, haut = c.scrollTop;
     c.innerHTML = [...donneesSite.chatProf].sort((a, b) => a.date - b.date).slice(-200).map(x => `
-        <div class="p-2.5 rounded-xl bg-white border text-sm"><div class="flex justify-between items-center gap-2"><span>${auteurBtn(x.aid, x.nom)} <span class="text-xs text-slate-400">${fmt(x.date)}</span></span>${estAdmin && x._id ? bt('bg-red-600 text-white', '🗑️', `epChatSupprimer('${x._id}')`) : ''}</div><p class="whitespace-pre-wrap break-words mt-1">${texteMsg(x.texte)}</p></div>`).join('') || "<p class='text-sm italic text-slate-500'>Aucun message. Lancez la discussion !</p>";
+        <div class="p-2.5 rounded-xl bg-white border text-sm"><div class="flex justify-between items-center gap-2"><span>${auteurBtn(x.aid, x.nom)} <span class="text-xs text-slate-400">${fmt(x.date)}</span></span><span class="flex gap-1">${btnEditChat('chatProf', x)}${estAdmin && x._id ? bt('bg-red-600 text-white', '🗑️ Supprimer', `epChatSupprimer('${x._id}')`) : ''}</span></div><p class="whitespace-pre-wrap break-words mt-1">${texteMsg(x.texte)}</p>${modifieHtml(x)}</div>`).join('') || "<p class='text-sm italic text-slate-500'>Aucun message. Lancez la discussion !</p>";
     c.scrollTop = bas ? c.scrollHeight : haut;
 }
 async function epChatEnvoyer() {
@@ -2841,6 +2852,174 @@ const _rafPublicDons = rafraichirAffichagePublic;
 rafraichirAffichagePublic = function () { _rafPublicDons(); try { rafraichirDons(); } catch (e) { console.error('Dons :', e); } };
 const _rafAdminLegerDons = rafraichirAdminLeger;
 rafraichirAdminLeger = function () { _rafAdminLegerDons(); try { rafraichirDonsAdmin(); } catch (e) { console.error('Dons admin :', e); } };
+</script>
+
+<script>
+// =====================================================================
+//  MODULE v6 : modification de ses propres messages, relecture rapide
+//  des salons (temps réel renforcé), retour sur la dernière page
+//  consultée après actualisation, questions FAQ complémentaires
+// =====================================================================
+
+// ---------- 1. Modifier ses propres messages ----------
+const modifieHtml = x => (x && x.modifie) ? '<p style="font-size:11px" class="text-slate-400 italic mt-1">(modifié)</p>' : '';
+function btnEditChat(col, x) {
+    const m = moi();
+    if (!m || !x._id || x.aid !== m.id) return '';
+    return bt('bg-blue-100 text-blue-800 hover:bg-blue-200', '✏️ Modifier', `editMsg('${col}','${x._id}','')`);
+}
+function trouverMsg(type, id, mid) {
+    if (type === 'forum') {
+        const s = donneesSite.sujets.find(x => x._id === id); if (!s) return null;
+        if (mid === '_main') return { aid: s.auteurId, ref: s };
+        const p = s.messages.find(x => x.id === mid); return p ? { aid: p.aid, ref: p } : null;
+    }
+    if (type === 'chatAdmin' || type === 'chatProf') {
+        const x = donneesSite[type].find(k => k._id === id); return x ? { aid: x.aid, ref: x } : null;
+    }
+    return null;
+}
+let editCtx = null;
+function editMsg(type, id, mid) {
+    const m = moi(); if (!m) return;
+    const o = trouverMsg(type, id, mid);
+    if (!o || o.aid !== m.id) return;
+    if (type === 'chatAdmin' && !estAdmin) return;
+    if (type === 'chatProf' && !peutEspaceProf()) return;
+    if (type !== 'chatAdmin' && monBan()) return alert('Vous êtes banni : modification impossible.');
+    editCtx = { type, id, mid };
+    $('edit-msg-texte').value = o.ref.texte || '';
+    $('modal-edit-msg').classList.remove('hidden');
+    setTimeout(() => { try { $('edit-msg-texte').focus(); } catch (e) { } }, 50);
+}
+function fermerEditMsg() { $('modal-edit-msg').classList.add('hidden'); editCtx = null; }
+function majApresEdition() {
+    sigForum = '';
+    [rafraichirForum, rafraichirChat, rafraichirChatProf].forEach(f => { try { f(); } catch (e) { console.warn(e); } });
+}
+async function validerEditMsg() {
+    if (!editCtx) return;
+    const m = moi(), o = trouverMsg(editCtx.type, editCtx.id, editCtx.mid);
+    if (!m || !o || o.aid !== m.id) { fermerEditMsg(); return alert('Ce message est introuvable ou ne vous appartient pas.'); }
+    const t = $('edit-msg-texte').value.trim();
+    if (!t) return alert('Le message ne peut pas être vide.');
+    if (t === o.ref.texte) return fermerEditMsg();
+    const btn = $('edit-msg-ok'); btn.disabled = true;
+    const avant = { texte: o.ref.texte, modifie: o.ref.modifie };
+    o.ref.texte = t; o.ref.modifie = Date.now();
+    try {
+        if (!(await sauvegarder())) {
+            o.ref.texte = avant.texte;
+            if (avant.modifie === undefined) delete o.ref.modifie; else o.ref.modifie = avant.modifie;
+            return alert("Modification impossible : échec de l'enregistrement.\n\nDétail : " + derniereErreur);
+        }
+        fermerEditMsg(); majApresEdition();
+    } finally { btn.disabled = false; }
+}
+
+// Le bouton 🗑️ du salon prof/sponsors apparaît dès qu'un message est enregistré
+const _epChatEnvoyerV6 = epChatEnvoyer;
+epChatEnvoyer = async function () { await _epChatEnvoyerV6(); try { rafraichirChatProf(); } catch (e) { } };
+
+// ---------- 2. Temps réel renforcé ----------
+// Relecture rapide uniquement des messages de l'écran ouvert (fonctionne même si le temps réel Supabase n'est pas activé)
+function colsLive() {
+    const ec = ecranActif();
+    if (ec === 'forum') return ['sujets'];
+    if (ec === 'espace-prof' && epOnglet === 'discussion') return ['chatProf'];
+    if (ec === 'admin-panel' && ongletAdmin === 'chat') return ['chatAdmin'];
+    return [];
+}
+let pollLiveEnCours = false;
+async function pollLive() {
+    if (pollLiveEnCours || document.hidden || synchroEnCours > 0 || !(utilisateurActif || estAdmin)) return;
+    const cols = colsLive(); if (!cols.length) return;
+    pollLiveEnCours = true;
+    try {
+        const v0 = versionLocale, r0 = versionRT;
+        const { data, error } = await sb.from(TABLE).select('id,collection,data').in('collection', cols);
+        if (error || !data || synchroEnCours > 0 || v0 !== versionLocale || r0 !== versionRT) return;
+        let maj = false; const vus = new Set();
+        data.forEach(r => { vus.add(r.id); try { if (appliquerRT({ eventType: 'UPDATE', new: r })) maj = true; } catch (e) { console.warn(e); } });
+        cols.forEach(c => {
+            donneesSite[c].slice().forEach(it => {
+                if (it._id && !vus.has(it._id) && instantane[it._id] !== undefined) {   // supprimé ailleurs
+                    donneesSite[c] = donneesSite[c].filter(x => x !== it); delete instantane[it._id]; versionRT++; maj = true;
+                }
+            });
+        });
+        if (maj) majApresChangement();
+    } catch (e) { console.warn('Relecture rapide :', e); }
+    finally { pollLiveEnCours = false; }
+}
+setInterval(pollLive, 2500);
+
+// ---------- 3. Rester sur la dernière page après actualisation ----------
+const CLE_ETAT = 'etat_page';
+function sauverEtatPage() {
+    try {
+        const ec = ecranActif(); if (!ec) return;
+        sessionStorage.setItem(CLE_ETAT, JSON.stringify({ ecran: ec, evalId: evalDetailId, forum: forumOuvert, admin: ongletAdmin, ep: epOnglet }));
+    } catch (e) { }
+}
+[['changerEcran', f => { changerEcran = f; }], ['forumOuvrir', f => { forumOuvrir = f; }], ['adminTab', f => { adminTab = f; }], ['epTab', f => { epTab = f; }]].forEach(([nom, set]) => {
+    const orig = window[nom];
+    set(function () { const r = orig.apply(this, arguments); sauverEtatPage(); return r; });
+});
+const _deconnexionV6 = deconnexion;
+deconnexion = function () { try { sessionStorage.removeItem(CLE_ETAT); } catch (e) { } return _deconnexionV6.apply(this, arguments); };
+
+function restaurerPage(s) {
+    try {
+        if (s.admin) ongletAdmin = s.admin;
+        if (s.ep) epOnglet = s.ep;
+        let ecran = s.ecran;
+        if (ecran === 'forum' && s.forum) forumOuvert = s.forum;
+        if (ecran === 'eval-detail') {
+            const idx = donneesSite.evaluations.findIndex(e => e._id === s.evalId);
+            if (idx < 0) ecran = 'evaluations'; else return ouvrirEvalDetail(idx);
+        }
+        changerEcran(ecran);
+    } catch (e) { console.warn('Restauration de la page :', e); }
+}
+let restaurationFaite = false;
+const _verifierSessionV6 = verifierSession;
+verifierSession = function () {
+    let saved = null;
+    if (!restaurationFaite) { try { saved = JSON.parse(sessionStorage.getItem(CLE_ETAT) || 'null'); } catch (e) { } }
+    _verifierSessionV6();
+    try { completerFaq(); } catch (e) { console.warn(e); }
+    if (restaurationFaite) return;
+    restaurationFaite = true;
+    if (saved && saved.ecran && (utilisateurActif || estAdmin)) restaurerPage(saved);
+};
+
+// ---------- 4. FAQ complémentaire (ajoutée une seule fois) ----------
+ECRANS.profil = '👤 Mon profil';
+$('faq-ecran').innerHTML = Object.entries(ECRANS).map(([k, v]) => `<option value="${k}">Redirige vers : ${v}</option>`).join('');
+const FAQ_PLUS = [
+    ['Comment faire un don ?', "Ouvrez « Dons » dans le menu (ou touchez le bouton ❤️ en bas à gauche), puis appuyez sur « FAITES UN DON ». Le paiement se fait uniquement par Wave. Ensuite, revenez sur la page et répondez « Oui » en indiquant le montant que vous avez envoyé.", 'dons'],
+    ['Comment savoir si mon don a été reçu ?', "Dans la page « Dons », la liste « Mes dons déclarés » affiche l'état de chaque don : en attente, reçu ou pas reçu. L'administration le vérifie avant de le confirmer.", 'dons'],
+    ['Que signifie le tag 💝 Donateur ?', "Il est attribué par l'administrateur principal aux personnes qui soutiennent la plateforme. Il s'ajoute à votre tag habituel (Étudiant, Prof, Sponsor) sans le remplacer.", 'forum'],
+    ["Comment modifier un message que j'ai envoyé ?", "Sur votre propre message (forum ou discussions), appuyez sur « ✏️ Modifier », changez le texte puis enregistrez. La mention « (modifié) » apparaît alors en petit sous le message.", 'forum'],
+    ["Comment mentionner quelqu'un dans un message ?", "Tapez @ puis les premières lettres de son nom, et choisissez la personne dans la liste. Un clic sur la mention ouvre son profil.", 'forum'],
+    ['Comment signaler un message inapproprié ?', "Appuyez sur « 🚩 Signaler » sous le message et indiquez le motif. Les administrateurs recevront votre signalement.", 'forum'],
+    ["Comment rendre un devoir « à rendre » ?", "Ouvrez l'évaluation dans « Évaluations », écrivez vos réponses sous le sujet (ou joignez une photo ou un PDF), puis appuyez sur « Faire évaluer ». Vous pouvez modifier votre envoi tant que la date limite n'est pas dépassée.", 'evaluations'],
+    ['Que se passe-t-il si la date limite est dépassée ?', "L'envoi est fermé : le bouton est désactivé et vous ne pouvez plus rendre ni modifier votre copie. Contactez l'assistance en cas de problème.", 'evaluations'],
+    ['Comment modifier mon profil et ma photo ?', "Ouvrez le menu puis « Mon profil » : vous pouvez changer votre photo, votre nom, votre niveau, vos centres d'intérêt et votre description. Votre identifiant, votre téléphone et votre code restent privés.", 'profil'],
+    ['Comment recevoir une alerte pour les nouveaux messages ?', "Dans « Mon profil », cochez l'option 🔔 d'alerte. Les messages arrivent toujours en direct ; l'alerte est seulement une petite notification discrète.", 'profil'],
+    ['Comment rechercher un cours, une révision ou un exercice ?', "Chaque catégorie possède une barre de recherche 🔍 : tapez un mot du titre, de la sous-catégorie ou du type (QCM, à rendre…).", 'cours'],
+    ['Comment suivre mes propositions ?', "Dans « Propositions », la zone « Mon suivi » affiche l'état de chacune : en attente, validée ou rejetée.", 'propositions'],
+    ["Que se passe-t-il quand j'actualise la page ?", "Vous restez connecté et le site vous ramène à la dernière page que vous consultiez.", 'accueil'],
+    ["Comment contacter l'assistance ?", "Touchez le bouton vert « Assistance » en bas à droite : il ouvre une conversation WhatsApp avec le service client.", 'accueil']
+].map((f, i) => ({ _id: uid(i + 101, 1), q: f[0], r: f[1], ecran: f[2] }));
+async function completerFaq() {
+    if (!(utilisateurActif || estAdmin)) return;
+    const p = P(); if (p.faqPlus) return;
+    FAQ_PLUS.forEach(f => { if (!donneesSite.faqs.some(x => x._id === f._id)) donneesSite.faqs.push({ ...f }); });
+    p.faqPlus = true;
+    await sauvegarder(); rafraichirFaq();
+}
 </script>
 
 </body>
