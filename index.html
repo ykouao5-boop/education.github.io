@@ -6,6 +6,7 @@
     <title>Mon Site Éducatif (Logistique)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>window.supabase || document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>')</script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -366,7 +367,9 @@
         const SUPABASE_KEY = "sb_publishable_X-wLiwe-nHWseZouv0Mwog_z2ogLydc"; // clé publique (publishable)
         const TABLE = "ykouao5";
         const BUCKET = "fichiers";
+        if (!window.supabase) { alert("La bibliothèque Supabase n'a pas pu se charger. Vérifiez votre connexion internet puis rechargez la page."); }
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let derniereErreur = '';
 
         const COLLECTIONS = Object.keys(DONNEES_PAR_DEFAUT);
 
@@ -465,12 +468,13 @@
                 return true;
             } catch (e) {
                 console.error("Échec de la sauvegarde Supabase :", e);
+                derniereErreur = (e && (e.message || e.error_description || e.details)) || String(e);
                 return false;
             }
         }
 
         async function sauvegarderOuAlerter() {
-            if (!(await sauvegarder())) alert("Échec de l'enregistrement dans la base de données. Vérifiez votre connexion puis rechargez la page.");
+            if (!(await sauvegarder())) alert("Échec de l'enregistrement dans la base de données. Vérifiez votre connexion puis rechargez la page.\n\nDétail : " + derniereErreur);
         }
 
         function verifierSession() {
@@ -584,7 +588,7 @@
                 donneesSite.utilisateurs.push(nouvelUtilisateur);
                 if (!(await sauvegarder())) {
                     donneesSite.utilisateurs.pop();
-                    return alert("Impossible d'enregistrer le compte : la mémoire du navigateur est pleine ou bloquée (navigation privée ?). Contactez l'assistance.");
+                    return alert("Impossible d'enregistrer le compte dans la base de données.\n\nDétail : " + derniereErreur + "\n\nContactez l'assistance.");
                 }
 
                 alert("Inscription réussie ! Vous êtes connectés.");
