@@ -6,11 +6,6 @@
     <title>Mon Site Éducatif (Logistique)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-      const SUPABASE_URL = 'https://sizxvfsrfkmjbqtjhbpb.supabase.co';
-      const SUPABASE_ANON_KEY = 'sb_publishable_X-wLiwe-nHWseZouv0Mwog_z2ogLydc';
-      const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    </script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -366,13 +361,73 @@
             utilisateurs: []
         };
 
-        let donneesSite = lireStockage('localStorage', 'donnees_site_edu', null) || {};
-        // Répare d'anciennes données auxquelles il manque des champs (ex: "utilisateurs")
-        Object.keys(DONNEES_PAR_DEFAUT).forEach(cle => {
-            if (!Array.isArray(donneesSite[cle])) donneesSite[cle] = DONNEES_PAR_DEFAUT[cle];
-        });
-        if (!donneesSite.developpeur || typeof donneesSite.developpeur !== 'object') {
-            donneesSite.developpeur = { photo: '', nom: '', prenom: '', role: '' };
+        // ===== Connexion à la base de données Supabase =====
+        const SUPABASE_URL = "https://sizxvfsrfkmjbqtjhbpb.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_X-wLiwe-nHWseZouv0Mwog_z2ogLydc"; // clé publique (publishable)
+        const TABLE = "ykouao5";
+        const BUCKET = "fichiers";
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const COLLECTIONS = Object.keys(DONNEES_PAR_DEFAUT);
+
+        function donneesVides() {
+            const d = {};
+            COLLECTIONS.forEach(c => d[c] = []);
+            d.developpeur = { photo: '', nom: '', prenom: '', role: '' };
+            return d;
+        }
+
+        let donneesSite = donneesVides();
+        let instantane = {};        // état connu de la base : id -> JSON
+        let versionLocale = 0;      // incrémentée à chaque sauvegarde
+        let synchroEnCours = 0;
+        let fileSauvegarde = Promise.resolve();
+
+        // Transforme donneesSite en lignes (une ligne par élément) pour la table
+        function lignes(d) {
+            const out = [];
+            COLLECTIONS.forEach(c => d[c].forEach(it => {
+                if (!it._id) it._id = crypto.randomUUID();
+                out.push({ id: it._id, collection: c, data: it });
+            }));
+            const dev = d.developpeur;
+            if (dev._id || dev.nom || dev.prenom || dev.role || dev.photo) {
+                if (!dev._id) dev._id = crypto.randomUUID();
+                out.push({ id: dev._id, collection: 'developpeur', data: dev });
+            }
+            return out;
+        }
+
+        async function chargerDonnees(forcer = true) {
+            const v0 = versionLocale;
+            const { data, error } = await sb.from(TABLE).select('id,collection,data').order('seq', { ascending: true });
+            if (error) throw error;
+            if (!forcer && v0 !== versionLocale) return false; // une sauvegarde a eu lieu entre-temps
+            const nouveau = donneesVides();
+            data.forEach(r => {
+                const it = r.data || {};
+                it._id = r.id;
+                if (r.collection === 'developpeur') nouveau.developpeur = Object.assign({ photo: '', nom: '', prenom: '', role: '' }, it);
+                else if (Array.isArray(nouveau[r.collection])) nouveau[r.collection].push(it);
+            });
+            const premiereFois = data.length === 0;
+            if (premiereFois) {
+                nouveau.evaluations = DONNEES_PAR_DEFAUT.evaluations.map((e, i) => ({ ...e, _id: '00000000-0000-0000-0000-00000000000' + (i + 1) }));
+            }
+            donneesSite = nouveau;
+            instantane = {};
+            if (!premiereFois) lignes(nouveau).forEach(l => instantane[l.id] = JSON.stringify(l.data));
+            else await sauvegarder();
+            return true;
+        }
+
+        async function rechargerEnFond(idEcran) {
+            if (synchroEnCours > 0) return;
+            try {
+                if (!(await chargerDonnees(false))) return;
+            } catch (e) { console.warn("Rechargement impossible :", e); return; }
+            rafraichirAffichagePublic();
+            if (idEcran === 'admin-panel' && estAdmin) rafraichirAdmin();
         }
 
         let utilisateurActif = lireStockage('sessionStorage', 'utilisateur_actif', null);
@@ -381,14 +436,41 @@
 
         function estPrincipal() { return estAdmin && roleAdmin === 'principal'; }
 
+        // Envoie à Supabase uniquement ce qui a changé. Retourne une promesse (true = succès).
         function sauvegarder() {
+            versionLocale++;
+            synchroEnCours++;
+            const p = fileSauvegarde.then(synchroniser);
+            fileSauvegarde = p.then(() => {}, () => {});
+            return p.finally(() => { synchroEnCours--; });
+        }
+
+        async function synchroniser() {
             try {
-                localStorage.setItem('donnees_site_edu', JSON.stringify(donneesSite));
+                const courant = lignes(donneesSite);
+                const ids = new Set(courant.map(l => l.id));
+                const aEcrire = courant.filter(l => instantane[l.id] !== JSON.stringify(l.data));
+                const aSupprimer = Object.keys(instantane).filter(id => !ids.has(id));
+                for (let i = 0; i < aEcrire.length; i += 50) {
+                    const lot = aEcrire.slice(i, i + 50);
+                    const { error } = await sb.from(TABLE).upsert(lot, { onConflict: 'id' });
+                    if (error) throw error;
+                    lot.forEach(l => instantane[l.id] = JSON.stringify(l.data));
+                }
+                if (aSupprimer.length) {
+                    const { error } = await sb.from(TABLE).delete().in('id', aSupprimer);
+                    if (error) throw error;
+                    aSupprimer.forEach(id => delete instantane[id]);
+                }
                 return true;
             } catch (e) {
-                console.error("Échec de la sauvegarde :", e);
+                console.error("Échec de la sauvegarde Supabase :", e);
                 return false;
             }
+        }
+
+        async function sauvegarderOuAlerter() {
+            if (!(await sauvegarder())) alert("Échec de l'enregistrement dans la base de données. Vérifiez votre connexion puis rechargez la page.");
         }
 
         function verifierSession() {
@@ -458,7 +540,7 @@
             window.open("https://wa.me/2250152801988?text=" + encodeURIComponent(message), "_blank");
         }
 
-        function gererSoumissionAuth(e) {
+        async function gererSoumissionAuth(e) {
             e.preventDefault();
             const id = document.getElementById('auth-id').value.trim();
             const code = document.getElementById('auth-code').value.trim();
@@ -500,7 +582,7 @@
 
                 let nouvelUtilisateur = { id, nom, prenoms, telephone, code };
                 donneesSite.utilisateurs.push(nouvelUtilisateur);
-                if (!sauvegarder()) {
+                if (!(await sauvegarder())) {
                     donneesSite.utilisateurs.pop();
                     return alert("Impossible d'enregistrer le compte : la mémoire du navigateur est pleine ou bloquée (navigation privée ?). Contactez l'assistance.");
                 }
@@ -567,6 +649,7 @@
             window.scrollTo(0, 0);
             rafraichirAffichagePublic();
             if (idEcran === 'admin-panel') rafraichirAdmin();
+            rechargerEnFond(idEcran);
         }
 
         function libelleType(type) {
@@ -577,27 +660,36 @@
             return String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         }
 
-        // Lit un fichier ; les photos sont réduites pour économiser la mémoire du navigateur
-        function lireFichier(file, maxDim = 1400) {
-            return new Promise((resolve, reject) => {
-                const r = new FileReader();
-                r.onerror = reject;
-                r.onload = () => {
-                    if (!file.type.startsWith('image/')) return resolve(r.result);
-                    const img = new Image();
-                    img.onerror = () => resolve(r.result);
-                    img.onload = () => {
-                        const k = Math.min(1, maxDim / Math.max(img.width, img.height));
-                        const c = document.createElement('canvas');
-                        c.width = Math.round(img.width * k);
-                        c.height = Math.round(img.height * k);
-                        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-                        resolve(c.toDataURL('image/jpeg', 0.7));
-                    };
-                    img.src = r.result;
+        function reduireImage(file, maxDim) {
+            return new Promise(resolve => {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+                img.onload = () => {
+                    const k = Math.min(1, maxDim / Math.max(img.width, img.height));
+                    const c = document.createElement('canvas');
+                    c.width = Math.round(img.width * k);
+                    c.height = Math.round(img.height * k);
+                    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                    URL.revokeObjectURL(url);
+                    c.toBlob(b => resolve(b || file), 'image/jpeg', 0.7);
                 };
-                r.readAsDataURL(file);
+                img.src = url;
             });
+        }
+
+        // Envoie le fichier dans Supabase Storage (photos réduites) et retourne son URL publique
+        async function lireFichier(file, maxDim = 1400) {
+            let blob = file;
+            let ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
+            if (file.type.startsWith('image/')) {
+                blob = await reduireImage(file, maxDim);
+                if (blob.type === 'image/jpeg') ext = 'jpg';
+            }
+            const chemin = Date.now() + '-' + crypto.randomUUID() + '.' + ext;
+            const { error } = await sb.storage.from(BUCKET).upload(chemin, blob, { contentType: blob.type || file.type || 'application/octet-stream' });
+            if (error) throw error;
+            return sb.storage.from(BUCKET).getPublicUrl(chemin).data.publicUrl;
         }
 
         let urlBlobActif = null;
@@ -759,9 +851,9 @@
                     proposition.fileName = fPhoto.name;
                 }
                 donneesSite.exercicesEnAttente.push(proposition);
-                if (!sauvegarder()) {
+                if (!(await sauvegarder())) {
                     donneesSite.exercicesEnAttente.pop();
-                    alert("Envoi impossible : fichiers trop volumineux ou mémoire du navigateur pleine. Essayez avec des fichiers plus légers.");
+                    alert("Envoi impossible : échec de l'enregistrement (connexion ou fichiers trop volumineux). Essayez avec des fichiers plus légers.");
                 } else {
                     alert("Proposition envoyée avec succès ! Vous pouvez suivre son état dans votre suivi.");
                     this.reset();
@@ -821,9 +913,9 @@
             try {
                 const fileUrl = await lireFichier(fichier);
                 donneesSite.pdfs.push({ titre, fileUrl, fileName: fichier.name });
-                if (!sauvegarder()) {
+                if (!(await sauvegarder())) {
                     donneesSite.pdfs.pop();
-                    return alert("Ajout impossible : fichier trop volumineux ou mémoire du navigateur pleine.");
+                    return alert("Ajout impossible : échec de l'enregistrement (connexion ou fichier trop volumineux).");
                 }
                 document.getElementById('admin-pdf-titre').value = '';
                 document.getElementById('admin-pdf-file').value = '';
@@ -842,9 +934,9 @@
             try {
                 const fileUrl = await lireFichier(fichier);
                 donneesSite.cours.push({ titre, fileUrl, fileName: fichier.name });
-                if (!sauvegarder()) {
+                if (!(await sauvegarder())) {
                     donneesSite.cours.pop();
-                    return alert("Ajout impossible : fichier trop volumineux ou mémoire du navigateur pleine.");
+                    return alert("Ajout impossible : échec de l'enregistrement (connexion ou fichier trop volumineux).");
                 }
                 document.getElementById('admin-cours-titre').value = '';
                 document.getElementById('admin-cours-file').value = '';
@@ -865,9 +957,9 @@
             try {
                 const contenuHtml = await fichier.text();
                 donneesSite.evaluations.push({ titre, description, contenuHtml });
-                if (!sauvegarder()) {
+                if (!(await sauvegarder())) {
                     donneesSite.evaluations.pop();
-                    return alert("Ajout impossible : fichier trop volumineux ou mémoire du navigateur pleine.");
+                    return alert("Ajout impossible : échec de l'enregistrement (connexion ou fichier trop volumineux).");
                 }
                 ['admin-eval-titre', 'admin-eval-desc', 'admin-eval-file'].forEach(id => document.getElementById(id).value = '');
                 alert("Évaluation ajoutée !");
@@ -891,7 +983,7 @@
             else if (ev.lien) window.open(ev.lien, '_blank');
         }
 
-        function adminValiderExo(index) {
+        async function adminValiderExo(index) {
             const p = donneesSite.exercicesEnAttente.splice(index, 1)[0];
             if (!p) return;
             if (p.type === 'revision') {
@@ -904,24 +996,24 @@
                 p.statut = 'Validé';
                 donneesSite.exercicesValides.push(p);
             }
-            sauvegarder();
+            await sauvegarderOuAlerter();
             rafraichirAdmin();
             rafraichirAffichagePublic();
             alert("Proposition validée et publiée !");
         }
 
-        function adminRejeterExo(index) {
+        async function adminRejeterExo(index) {
             const p = donneesSite.exercicesEnAttente.splice(index, 1)[0];
             if (!p) return;
             p.statut = 'Rejeté';
             delete p.enonceUrl; delete p.corrigeUrl; delete p.fileUrl;
             donneesSite.exercicesRejetes.push(p);
-            sauvegarder();
+            await sauvegarderOuAlerter();
             rafraichirAdmin();
             alert("Proposition rejetée.");
         }
 
-        function adminModifierUtilisateur(index) {
+        async function adminModifierUtilisateur(index) {
             const u = donneesSite.utilisateurs[index];
             if (!u) return;
             const lire = id => document.getElementById(id).value.trim();
@@ -934,21 +1026,21 @@
             Object.assign(u, { id, code, nom: lire(`u-nom-${index}`), prenoms: lire(`u-prenoms-${index}`), telephone: lire(`u-tel-${index}`) });
             [...donneesSite.exercicesEnAttente, ...donneesSite.exercicesValides, ...(donneesSite.exercicesRejetes || []), ...donneesSite.propositionsArchivees]
                 .forEach(ex => { if (ex.auteurId === ancienId) ex.auteurId = id; });
-            sauvegarder();
+            await sauvegarderOuAlerter();
             alert("Informations utilisateur mises à jour avec succès !");
             rafraichirAdmin();
         }
 
-        function adminSupprimerUtilisateur(index) {
+        async function adminSupprimerUtilisateur(index) {
             const u = donneesSite.utilisateurs[index];
             if (!u) return;
             if (!confirm(`Supprimer l'utilisateur « ${u.id} » (${u.prenoms} ${u.nom}) ? Il ne pourra plus se connecter.`)) return;
             donneesSite.utilisateurs.splice(index, 1);
-            sauvegarder();
+            await sauvegarderOuAlerter();
             rafraichirAdmin();
         }
 
-        function adminSupprimerFichier(type, index) {
+        async function adminSupprimerFichier(type, index) {
             if (!estAdmin) return;
             if(confirm("Voulez-vous vraiment supprimer cet élément ?")) {
                 if(type === 'photo') {
@@ -962,7 +1054,7 @@
                 } else if(type === 'exoValide') {
                     donneesSite.exercicesValides.splice(index, 1);
                 }
-                sauvegarder();
+                await sauvegarderOuAlerter();
                 rafraichirAffichagePublic();
                 alert("Élément supprimé avec succès.");
             }
@@ -1027,4 +1119,94 @@
             const d = document.getElementById('diaporama');
             d.addEventListener('scroll', () => {
                 if (!d.clientWidth) return;
-                const i = Math.round(d.scrollLeft / d.clientWidth
+                const i = Math.round(d.scrollLeft / d.clientWidth);
+                if (i !== diapoIndex && i >= 0 && i < donneesSite.photos.length) {
+                    diapoIndex = i;
+                    diapoMajDescription();
+                }
+            }, { passive: true });
+            ['touchstart', 'mousedown'].forEach(ev => d.addEventListener(ev, diapoPause, { passive: true }));
+            ['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach(ev => d.addEventListener(ev, diapoPlanifier, { passive: true }));
+            d.addEventListener('wheel', diapoPlanifier, { passive: true });
+            window.addEventListener('resize', () => {
+                if (d.clientWidth) d.scrollTo({ left: diapoIndex * d.clientWidth, behavior: 'instant' });
+            });
+        })();
+
+        function rafraichirDeveloppeur() {
+            const d = donneesSite.developpeur;
+            const rempli = d.nom || d.prenom || d.role || d.photo;
+            document.getElementById('section-developpeur').classList.toggle('hidden', !rempli && !estPrincipal());
+            document.getElementById('dev-admin').classList.toggle('hidden', !estPrincipal());
+            document.getElementById('dev-photo').innerHTML = d.photo ? `<img src="${d.photo}" alt="" class="block w-full h-auto">` : '<div class="h-40 flex items-center justify-center text-5xl">👤</div>';
+            document.getElementById('dev-nom-complet').textContent = [d.prenom, d.nom].filter(Boolean).join(' ') || 'À renseigner';
+            document.getElementById('dev-role').textContent = d.role || '';
+        }
+
+        function ouvrirModalDeveloppeur() {
+            if (!estPrincipal()) return;
+            const d = donneesSite.developpeur;
+            document.getElementById('dev-prenom').value = d.prenom || '';
+            document.getElementById('dev-nom').value = d.nom || '';
+            document.getElementById('dev-role-input').value = d.role || '';
+            document.getElementById('dev-photo-file').value = '';
+            document.getElementById('modal-developpeur').classList.remove('hidden');
+        }
+
+        function fermerModalDeveloppeur() {
+            document.getElementById('modal-developpeur').classList.add('hidden');
+        }
+
+        async function enregistrerDeveloppeur() {
+            if (!estPrincipal()) return;
+            const ancien = donneesSite.developpeur;
+            const nouveau = {
+                photo: ancien.photo || '',
+                prenom: document.getElementById('dev-prenom').value.trim(),
+                nom: document.getElementById('dev-nom').value.trim(),
+                role: document.getElementById('dev-role-input').value.trim()
+            };
+            const fichier = document.getElementById('dev-photo-file').files[0];
+            try {
+                if (fichier) nouveau.photo = await lireFichier(fichier, 800);
+            } catch (err) {
+                console.error(err);
+                return alert("Erreur lors de la lecture de la photo.");
+            }
+            donneesSite.developpeur = nouveau;
+            if (!(await sauvegarder())) {
+                donneesSite.developpeur = ancien;
+                return alert("Enregistrement impossible : base de données inaccessible.");
+            }
+            fermerModalDeveloppeur();
+            rafraichirDeveloppeur();
+        }
+
+        async function adminModifierDescriptionPhoto() {
+            if (!estAdmin) return;
+            const ph = donneesSite.photos[diapoIndex];
+            if (!ph) return;
+            const nouvelle = prompt("Modifier la description de cette photo :", ph.description || ph.titre || '');
+            if (nouvelle === null) return;
+            ph.description = nouvelle.trim();
+            await sauvegarderOuAlerter();
+            diapoMajDescription();
+        }
+
+        function adminSupprimerPhotoCourante() {
+            adminSupprimerFichier('photo', diapoIndex);
+        }
+
+        window.onload = async () => {
+            try {
+                await chargerDonnees();
+            } catch (e) {
+                console.error(e);
+                alert("Connexion à la base de données impossible. Vérifiez votre connexion internet puis rechargez la page.");
+            }
+            verifierSession();
+            rafraichirAffichagePublic();
+        };
+    </script>
+</body>
+</html>
