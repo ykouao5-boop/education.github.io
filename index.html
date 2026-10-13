@@ -62,6 +62,7 @@
                 <p id="desc-form-auth" class="text-sm text-slate-600">Veuillez vous identifier pour accéder à la plateforme.</p>
             </div>
 
+            <div id="zone-auth-utilisateur" class="space-y-6">
             <!-- Onglets de bascule Connexion / Inscription -->
             <div class="flex rounded-xl bg-slate-100 p-1">
                 <button type="button" onclick="basculerModeAuth('connexion')" id="btn-tab-connexion" class="flex-1 py-2 text-sm font-bold rounded-lg bg-white text-blue-700 shadow-sm transition">Connexion</button>
@@ -93,10 +94,14 @@
                 <button type="submit" id="btn-submit-auth" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-md">Se connecter</button>
                 <button type="button" id="btn-code-oublie" onclick="codeSecuriteOublie()" class="w-full text-sm text-emerald-700 font-semibold hover:underline bg-transparent border-none cursor-pointer">🔑 Code de sécurité oublié ?</button>
             </form>
+            </div>
+
+            <div id="portail-maint-info" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800 text-center font-semibold">🚧 Le site est en maintenance : seuls les administrateurs peuvent se connecter pour le moment.</div>
 
             <div class="pt-4 border-t text-center">
-                <input type="password" id="admin-shortcut-code" placeholder="Code administrateur" class="w-full p-2.5 border rounded-xl bg-slate-100 text-xs mb-2 text-center outline-none focus:ring-2 focus:ring-indigo-500">
+                <input type="password" id="admin-shortcut-code" onkeydown="if(event.key==='Enter'){event.preventDefault();verifierAdminPortail();}" autocomplete="off" placeholder="Code administrateur" class="w-full p-2.5 border rounded-xl bg-slate-100 text-xs mb-2 text-center outline-none focus:ring-2 focus:ring-indigo-500">
                 <button type="button" onclick="verifierAdminPortail()" class="w-full bg-indigo-800 text-white py-2 rounded-xl text-xs font-semibold hover:bg-indigo-900 transition">Accès administrateur</button>
+                <button id="portail-retour-maint" type="button" onclick="fermerPortailAdmin()" class="hidden mt-3 text-xs text-slate-500 underline bg-transparent border-none cursor-pointer">← Retour à la page de maintenance</button>
             </div>
         </div>
     </div>
@@ -363,6 +368,12 @@
                         <p class="text-xs text-slate-500">Copies envoyées par les étudiants pour vos évaluations « A rendre ». La correction n'est visible que par les administrateurs et les professeurs.</p>
                         <div id="ep-liste-rendus" class="space-y-4"></div>
                     </div>
+                    <div class="space-y-3">
+                        <h4 class="font-bold text-lg text-blue-800">🗂️ Historique des ajouts des professeurs</h4>
+                        <p class="text-xs text-slate-500">Cours, évaluations et sous-catégories ajoutés par les professeurs. Seul l'administrateur principal peut modifier cet historique.</p>
+                        <div id="journal-prof-liste" class="space-y-2"></div>
+                        <button id="journal-prof-vider" onclick="journalVider('prof')" class="hidden bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold border-none cursor-pointer">🧹 Vider cet historique</button>
+                    </div>
                 </div>
                 <div id="ep-discussion" class="hidden space-y-3">
                     <p class="text-xs text-slate-500">Discussion réservée aux professeurs, aux sponsors et aux administrateurs. Les messages arrivent en temps réel.</p>
@@ -411,6 +422,7 @@
                     <button class="atab-btn" data-t="chat" onclick="adminTab('chat')">💬 Chat admin</button>
                     <button class="atab-btn" data-t="rendus" onclick="adminTab('rendus')">📨 Devoirs rendus</button>
                     <button class="atab-btn" data-t="dons" onclick="adminTab('dons')">💝 Dons</button>
+                    <button class="atab-btn" data-t="historique" onclick="adminTab('historique')">📜 Historique</button>
                     <button id="tab-site" class="atab-btn hidden" data-t="site" onclick="adminTab('site')">⚙️ Site</button>
                 </div>
 
@@ -490,6 +502,13 @@
                     <div id="admin-liste-rendus" class="space-y-4"></div>
                 </div>
 
+                <div id="atab-historique" class="atab hidden space-y-3">
+                    <h4 class="font-bold text-lg">📜 Historique des actions <span class="text-xs font-normal text-slate-500">(visible par tous les administrateurs, modifiable par l'administrateur principal uniquement)</span></h4>
+                    <p class="text-xs text-slate-500">Toutes les commandes effectuées sur le site par les administrateurs et les professeurs : ajouts, suppressions, sanctions, maintenance, annonces…</p>
+                    <div class="flex items-center justify-between gap-2 flex-wrap"><span id="journal-admin-compte" class="text-xs font-semibold text-slate-600"></span>
+                        <button id="journal-admin-vider" onclick="journalVider('tout')" class="hidden bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold border-none cursor-pointer">🧹 Vider tout l'historique</button></div>
+                    <div id="journal-admin-liste" class="space-y-2"></div>
+                </div>
                 <div id="atab-dons" class="atab hidden space-y-3">
                     <p class="text-xs text-slate-500">Dons déclarés par les membres après un paiement Wave. Vérifiez dans Wave Business, puis indiquez « Reçu » ou « Pas reçu ». Le montant est celui que le membre a écrit.</p>
                     <div id="admin-liste-dons" class="space-y-2"></div>
@@ -516,6 +535,8 @@
                         <p class="text-xs text-slate-500">Le message s'affiche en haut du site pour toutes les personnes connectées pendant 10 secondes, puis disparaît. Il ne bloque aucun bouton : on peut continuer à toucher l'écran à travers.</p>
                         <textarea id="annonce-input" rows="2" maxlength="160" placeholder="Ex : Les cours de lundi sont reportés à mardi 8h." class="w-full p-2 border rounded bg-white text-sm"></textarea>
                         <button onclick="annonceEnvoyer()" class="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">📢 Afficher maintenant</button>
+                        <button onclick="annoncePreAjouter()" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">💾 Pré-enregistrer</button>
+                        <div class="pt-2 border-t"><div class="text-xs font-bold text-slate-500 uppercase mb-2">Messages pré-enregistrés</div><div id="annonce-presets" class="space-y-2"></div></div>
                     </div>
                     <div class="p-4 border rounded-xl space-y-3">
                         <h4 class="font-bold text-lg">🚧 Mode maintenance <span class="text-xs font-normal text-slate-500">(administrateur principal uniquement)</span></h4>
@@ -634,7 +655,7 @@
         <p id="maint-msg" class="text-lg sm:text-2xl text-slate-300 max-w-2xl mb-8"></p>
         <a href="https://wa.me/2250152801988?text=Bonjour,%20le%20site%20est%20en%20maintenance." target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl text-lg font-bold no-underline">💬 Assistance</a>
         <p class="text-sm text-slate-400 mt-3 max-w-xs">Pour plus d'informations, contactez le service client.</p>
-        <button onclick="ouvrirPortailAdmin()" class="mt-12 text-xs text-slate-600 bg-transparent border-none cursor-pointer underline">Accès administrateur</button>
+        <button onclick="ouvrirPortailAdmin()" class="mt-12 text-xs text-slate-400 bg-transparent border-none cursor-pointer underline">Accès administrateur</button>
     </div>
 
     <div id="annonce-bandeau" aria-live="polite"><div class="annonce-boite"><span id="annonce-texte"></span><div class="annonce-barre"></div></div></div>
@@ -689,7 +710,7 @@
             exercicesRejetes: [],
             propositionsArchivees: [],
             utilisateurs: [],
-            faqs: [], sujets: [], chatAdmin: [], chatProf: [], signalements: [], demandesBan: [], sousCategories: [], parametres: [], rendus: [], admins: [], dons: []
+            faqs: [], sujets: [], chatAdmin: [], chatProf: [], signalements: [], demandesBan: [], sousCategories: [], parametres: [], rendus: [], admins: [], dons: [], journal: []
         };
 
         // ===== Connexion à la base de données Supabase =====
@@ -734,8 +755,13 @@
 
         async function chargerDonnees(forcer = true) {
             const v0 = versionLocale, r0 = versionRT;
-            const { data, error } = await sb.from(TABLE).select('id,collection,data').order('seq', { ascending: true });
-            if (error) throw error;
+            const data = [];
+            for (let from = 0; ; from += 1000) {   // Supabase renvoie au plus 1000 lignes par requête
+                const { data: lot, error } = await sb.from(TABLE).select('id,collection,data').order('seq', { ascending: true }).range(from, from + 999);
+                if (error) throw error;
+                data.push(...lot);
+                if (lot.length < 1000) break;
+            }
             if (!forcer && (v0 !== versionLocale || r0 !== versionRT)) return false; // une sauvegarde ou un changement temps réel a eu lieu entre-temps
             const nouveau = donneesVides();
             data.forEach(r => {
@@ -792,10 +818,11 @@
                     if (error) throw error;
                     lot.forEach(l => instantane[l.id] = JSON.stringify(l.data));
                 }
-                if (aSupprimer.length) {
-                    const { error } = await sb.from(TABLE).delete().in('id', aSupprimer);
+                for (let i = 0; i < aSupprimer.length; i += 50) {
+                    const lot = aSupprimer.slice(i, i + 50);
+                    const { error } = await sb.from(TABLE).delete().in('id', lot);
                     if (error) throw error;
-                    aSupprimer.forEach(id => delete instantane[id]);
+                    lot.forEach(id => delete instantane[id]);
                 }
                 return true;
             } catch (e) {
@@ -939,7 +966,9 @@
         async function verifierAdminPortail() {
             const code = document.getElementById('admin-shortcut-code').value.trim();
             if (!code) return alert("Saisissez un code administrateur.");
-            try { await chargerDonnees(true); } catch (e) { console.warn(e); }
+            let baseOk = true;
+            try { await chargerDonnees(true); } catch (e) { console.warn(e); baseOk = false; }
+            if (!baseOk && !donneesSite.admins.length) return alert("Connexion à la base de données impossible : réessayez dans un instant.");
             if (code === CLE_ADMIN_PRINCIPAL) {
                 const rec = donneesSite.admins.find(a => a.role === 'principal');
                 return rec ? connecterAdmin(rec) : ouvrirInscriptionAdmin('principal');
@@ -1570,6 +1599,11 @@ function majMaintenance() {
     $('maint-msg').textContent = m.message || MSG_MAINT;
     document.body.style.overflow = bloque ? 'hidden' : '';
     $('bandeau-maint').classList.toggle('hidden', !(m.actif && estAdmin));
+    // En maintenance, le portail n'affiche que l'accès administrateur
+    const enMaint = !!m.actif && !estAdmin;
+    ['zone-auth-utilisateur', 'titre-form-auth', 'desc-form-auth'].forEach(i => { const e = $(i); if (e) e.classList.toggle('hidden', enMaint); });
+    const pim = $('portail-maint-info'); if (pim) pim.classList.toggle('hidden', !enMaint);
+    const prm = $('portail-retour-maint'); if (prm) prm.classList.toggle('hidden', !enMaint);
     const nb = $('nav-btn-maint'); nb.classList.toggle('hidden', !estPrincipal());
     nb.textContent = m.actif ? '✅ Désactiver la maintenance' : '🚧 Activer la maintenance';
     $('maint-etat').textContent = m.actif ? '🔴 Maintenance ACTIVE : le site est masqué.' : '🟢 Site en ligne.';
@@ -1590,7 +1624,13 @@ async function enregistrerMessageMaintenance() {
     p.maintenance.message = $('maint-input').value.trim();
     await sauvegarderOuAlerter(); majMaintenance(); alert('Message enregistré.');
 }
-function ouvrirPortailAdmin() { voirPortail = true; majMaintenance(); }
+function ouvrirPortailAdmin() {
+    // Un utilisateur déjà connecté (donc bloqué) doit pouvoir passer par l'accès admin
+    if (utilisateurActif && !estAdmin) { utilisateurActif = null; try { sessionStorage.removeItem('utilisateur_actif'); } catch (e) { } }
+    voirPortail = true; verifierSession(); majMaintenance();
+    setTimeout(() => { const i = $('admin-shortcut-code'); if (i) i.focus(); }, 50);
+}
+function fermerPortailAdmin() { voirPortail = false; majMaintenance(); }
 
 // ---------- 3. FAQ ----------
 function rafraichirFaq() {
@@ -1653,7 +1693,7 @@ function rafraichirForum() {
             </div>`).join('') || "<p class='text-slate-500 italic'>Aucun sujet. Lancez la discussion !</p>";
         return;
     }
-    const posts = [{ id: '_main', aid: s.auteurId, nom: s.auteurNom, texte: s.texte, date: s.date, modifie: s.modifie }, ...s.messages];
+    const posts = [{ id: '_main', aid: s.auteurId, nom: s.auteurNom, texte: s.texte, date: s.date, modifie: s.modifie, supprime: s.supprime }, ...s.messages];
     $('forum-sujet').innerHTML = `
         <div class="flex justify-between gap-2 items-center flex-wrap">
             <button onclick="forumOuvrir(null)" class="text-sm text-blue-700 bg-transparent border-none cursor-pointer p-0 font-semibold">← Tous les sujets</button>
@@ -1665,11 +1705,12 @@ function rafraichirForum() {
                 <div class="flex justify-between gap-2 items-center flex-wrap">
                     <div class="flex items-center gap-1.5 flex-wrap">${auteurBtn(p.aid, p.nom)}<span class="text-xs text-slate-400">${fmt(p.date)}</span></div>
                     <div class="flex gap-1">
-                        ${m && p.aid === m.id && !b && !muet ? bt('bg-blue-100 text-blue-800 hover:bg-blue-200', '✏️ Modifier', `editMsg('forum','${s._id}','${p.id}')`) : ''}${m && p.aid !== m.id ? bt('bg-amber-100 text-amber-800 hover:bg-amber-200', '🚩 Signaler', `forumSignaler('${s._id}','${p.id}')`) : ''}
+                        ${m && p.aid === m.id && !b && !muet && !p.supprime ? bt('bg-blue-100 text-blue-800 hover:bg-blue-200', '✏️ Modifier', `editMsg('forum','${s._id}','${p.id}')`) : ''}${m && p.aid !== m.id && !p.supprime ? bt('bg-amber-100 text-amber-800 hover:bg-amber-200', '🚩 Signaler', `forumSignaler('${s._id}','${p.id}')`) : ''}
+                        ${!b && peutSupprimerMsg(p) && (!estAdmin || p.id === '_main') ? bt('bg-slate-200 text-slate-700 hover:bg-slate-300', '🗑️ Supprimer', `supprimerMonMessage('forum','${s._id}','${p.id}')`) : ''}
                         ${estAdmin && p.id !== '_main' ? bt('bg-red-600 text-white', '🗑️', `forumSupprimerMsg('${s._id}','${p.id}')`) : ''}
                     </div>
                 </div>
-                <p class="text-sm whitespace-pre-wrap break-words">${texteMsg(p.texte)}</p>${modifieHtml(p)}
+                <p class="text-sm whitespace-pre-wrap break-words">${texteAff(p)}</p>${modifieHtml(p)}
             </div>`).join('')}
         ${peutEcrire ? `<div class="space-y-2"><textarea id="forum-reply" data-mention="1" rows="3" placeholder="Votre message…" class="w-full p-3 border rounded-xl text-sm bg-white"></textarea><button onclick="forumRepondre()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold border-none cursor-pointer">Envoyer</button></div>` : (b ? '' : '<p class="text-sm italic text-slate-500">Connectez-vous pour participer.</p>')}`;
     const r2 = $('forum-reply');
@@ -1707,9 +1748,10 @@ async function forumRepondre() {
 async function forumSignaler(sid, mid) {
     const m = moi(); if (!m) return;
     const s = donneesSite.sujets.find(x => x._id === sid); if (!s) return;
-    const p = mid === '_main' ? { aid: s.auteurId, nom: s.auteurNom, texte: s.texte } : s.messages.find(x => x.id === mid); if (!p) return;
+    const p = mid === '_main' ? { aid: s.auteurId, nom: s.auteurNom, texte: s.texte, supprime: s.supprime } : s.messages.find(x => x.id === mid); if (!p) return;
+    if (p.supprime) return alert('Ce message a été supprimé.');
     const motif = prompt('Motif du signalement :'); if (motif === null) return;
-    donneesSite.signalements.push({ sujetId: sid, sujetTitre: s.titre, msgId: mid, auteurId: p.aid, auteurNom: p.nom, extrait: p.texte.slice(0, 200), par: m.nom, motif: motif.trim() || '—', date: Date.now(), statut: 'ouvert' });
+    donneesSite.signalements.push({ sujetId: sid, sujetTitre: s.titre, msgId: mid, auteurId: p.aid, auteurNom: p.nom, extrait: (p.texte || '').slice(0, 200), par: m.nom, motif: motif.trim() || '—', date: Date.now(), statut: 'ouvert' });
     await sauvegarderOuAlerter(); alert('Merci, le signalement a été transmis aux administrateurs.');
 }
 async function forumRenommer(sid) {
@@ -1856,7 +1898,7 @@ function rafraichirChat() {
     const c = $('chat-admin-liste'); if (!c) return;
     const bas = c.scrollTop + c.clientHeight >= c.scrollHeight - 40;
     c.innerHTML = [...donneesSite.chatAdmin].sort((a, b) => a.date - b.date).slice(-150).map(x => `
-        <div class="p-2.5 rounded-xl bg-white border text-sm"><div class="flex justify-between items-center gap-2"><span>${auteurBtn(x.aid, x.nom)} <span class="text-xs text-slate-400">${fmt(x.date)}</span></span><span class="flex gap-1">${btnEditChat('chatAdmin', x)}${estPrincipal() && x._id ? bt('bg-red-600 text-white', '🗑️', `chatSupprimer('${x._id}')`) : ''}</span></div><p class="whitespace-pre-wrap break-words mt-1">${texteMsg(x.texte)}</p>${modifieHtml(x)}</div>`).join('') || "<p class='text-sm italic text-slate-500'>Aucun message.</p>";
+        <div class="p-2.5 rounded-xl bg-white border text-sm"><div class="flex justify-between items-center gap-2"><span>${auteurBtn(x.aid, x.nom)} <span class="text-xs text-slate-400">${fmt(x.date)}</span></span><span class="flex gap-1">${btnEditChat('chatAdmin', x)}${estPrincipal() && x._id ? bt('bg-red-600 text-white', '🗑️', `chatSupprimer('${x._id}')`) : ''}</span></div><p class="whitespace-pre-wrap break-words mt-1">${texteAff(x)}</p>${modifieHtml(x)}</div>`).join('') || "<p class='text-sm italic text-slate-500'>Aucun message.</p>";
     if (bas) c.scrollTop = c.scrollHeight;
 }
 async function chatEnvoyer() {
@@ -2512,7 +2554,7 @@ function rafraichirChatProf() {
     if (!peutEspaceProf()) { c.innerHTML = ''; return; }
     const bas = c.scrollTop + c.clientHeight >= c.scrollHeight - 40, haut = c.scrollTop;
     c.innerHTML = [...donneesSite.chatProf].sort((a, b) => a.date - b.date).slice(-200).map(x => `
-        <div class="p-2.5 rounded-xl bg-white border text-sm"><div class="flex justify-between items-center gap-2"><span>${auteurBtn(x.aid, x.nom)} <span class="text-xs text-slate-400">${fmt(x.date)}</span></span><span class="flex gap-1">${btnEditChat('chatProf', x)}${estAdmin && x._id ? bt('bg-red-600 text-white', '🗑️ Supprimer', `epChatSupprimer('${x._id}')`) : ''}</span></div><p class="whitespace-pre-wrap break-words mt-1">${texteMsg(x.texte)}</p>${modifieHtml(x)}</div>`).join('') || "<p class='text-sm italic text-slate-500'>Aucun message. Lancez la discussion !</p>";
+        <div class="p-2.5 rounded-xl bg-white border text-sm"><div class="flex justify-between items-center gap-2"><span>${auteurBtn(x.aid, x.nom)} <span class="text-xs text-slate-400">${fmt(x.date)}</span></span><span class="flex gap-1">${btnEditChat('chatProf', x)}${estAdmin && x._id ? bt('bg-red-600 text-white', '🗑️ Supprimer', `epChatSupprimer('${x._id}')`) : ''}</span></div><p class="whitespace-pre-wrap break-words mt-1">${texteAff(x)}</p>${modifieHtml(x)}</div>`).join('') || "<p class='text-sm italic text-slate-500'>Aucun message. Lancez la discussion !</p>";
     c.scrollTop = bas ? c.scrollHeight : haut;
 }
 async function epChatEnvoyer() {
@@ -2862,11 +2904,12 @@ rafraichirAdminLeger = function () { _rafAdminLegerDons(); try { rafraichirDonsA
 // =====================================================================
 
 // ---------- 1. Modifier ses propres messages ----------
-const modifieHtml = x => (x && x.modifie) ? '<p style="font-size:11px" class="text-slate-400 italic mt-1">(modifié)</p>' : '';
+const modifieHtml = x => (x && x.modifie && !x.supprime) ? '<p style="font-size:11px" class="text-slate-400 italic mt-1">(modifié)</p>' : '';
 function btnEditChat(col, x) {
     const m = moi();
-    if (!m || !x._id || x.aid !== m.id) return '';
-    return bt('bg-blue-100 text-blue-800 hover:bg-blue-200', '✏️ Modifier', `editMsg('${col}','${x._id}','')`);
+    if (!m || !x._id || x.aid !== m.id || x.supprime) return '';
+    return bt('bg-blue-100 text-blue-800 hover:bg-blue-200', '✏️ Modifier', `editMsg('${col}','${x._id}','')`)
+        + (peutSupprimerMsg(x) ? bt('bg-slate-200 text-slate-700 hover:bg-slate-300', '🗑️ Supprimer', `supprimerMonMessage('${col}','${x._id}','')`) : '');
 }
 function trouverMsg(type, id, mid) {
     if (type === 'forum') {
@@ -2883,7 +2926,7 @@ let editCtx = null;
 function editMsg(type, id, mid) {
     const m = moi(); if (!m) return;
     const o = trouverMsg(type, id, mid);
-    if (!o || o.aid !== m.id) return;
+    if (!o || o.aid !== m.id || o.ref.supprime) return;
     if (type === 'chatAdmin' && !estAdmin) return;
     if (type === 'chatProf' && !peutEspaceProf()) return;
     if (type !== 'chatAdmin' && monBan()) return alert('Vous êtes banni : modification impossible.');
@@ -2900,7 +2943,7 @@ function majApresEdition() {
 async function validerEditMsg() {
     if (!editCtx) return;
     const m = moi(), o = trouverMsg(editCtx.type, editCtx.id, editCtx.mid);
-    if (!m || !o || o.aid !== m.id) { fermerEditMsg(); return alert('Ce message est introuvable ou ne vous appartient pas.'); }
+    if (!m || !o || o.aid !== m.id || o.ref.supprime) { fermerEditMsg(); return alert('Ce message est introuvable, supprimé ou ne vous appartient pas.'); }
     const t = $('edit-msg-texte').value.trim();
     if (!t) return alert('Le message ne peut pas être vide.');
     if (t === o.ref.texte) return fermerEditMsg();
@@ -3020,6 +3063,216 @@ async function completerFaq() {
     p.faqPlus = true;
     await sauvegarder(); rafraichirFaq();
 }
+
+// ---------- Suppression de ses propres messages : possible 10 minutes après l'envoi ----------
+// Le message reste visible sous la forme « (message supprimé) » ; aucun compte à rebours n'est affiché.
+const DELAI_SUPPR_MSG = 10 * 60 * 1000;
+function texteAff(x) {
+    return x && x.supprime ? '<em class="text-slate-400">(message supprimé)</em>' : texteMsg((x && x.texte) || '');
+}
+function peutSupprimerMsg(x) {
+    const m = moi();
+    return !!(m && x && !x.supprime && x.aid === m.id && x.date && Date.now() - x.date >= DELAI_SUPPR_MSG);
+}
+async function supprimerMonMessage(type, id, mid) {
+    const m = moi(); if (!m) return;
+    if (type !== 'chatAdmin' && monBan()) return alert('Vous êtes banni : suppression impossible.');
+    if (!confirm('Supprimer ce message ? Cette action est définitive.')) return;
+    try { await chargerDonnees(true); } catch (e) { }
+    const o = trouverMsg(type, id, mid);
+    if (!o || o.aid !== m.id) return alert('Ce message est introuvable ou ne vous appartient pas.');
+    if (o.ref.supprime) return majApresEdition();
+    if (Date.now() - (o.ref.date || 0) < DELAI_SUPPR_MSG) return alert("Ce message ne peut pas encore être supprimé.");
+    const avant = { texte: o.ref.texte, modifie: o.ref.modifie };
+    o.ref.texte = ''; o.ref.supprime = Date.now(); delete o.ref.modifie;
+    if (!(await sauvegarder())) {
+        o.ref.texte = avant.texte; delete o.ref.supprime; if (avant.modifie !== undefined) o.ref.modifie = avant.modifie;
+        majApresEdition();
+        return alert("Suppression impossible : échec de l'enregistrement.\n\nDétail : " + derniereErreur);
+    }
+    majApresEdition();
+}
+// Fait apparaître le bouton 🗑️ au bon moment, sans rechargement ni compte à rebours
+let _dernierTickSuppr = Date.now();
+setInterval(() => {
+    if (document.hidden) return;
+    const avant = _dernierTickSuppr, maintenant = Date.now(); _dernierTickSuppr = maintenant;
+    try {
+        const m = moi(); if (!m) return;
+        const mur = x => x && x.aid === m.id && !x.supprime && x.date + DELAI_SUPPR_MSG > avant && x.date + DELAI_SUPPR_MSG <= maintenant;
+        if (donneesSite.chatProf.some(mur) || donneesSite.chatAdmin.some(mur) || donneesSite.sujets.some(s => mur({ aid: s.auteurId, date: s.date, supprime: s.supprime }) || s.messages.some(mur))) majApresEdition();
+    } catch (e) { }
+}, 15000);
+
+// =====================================================================
+//  MODULE v7 : messages d'annonce pré-enregistrés + historique des actions
+// =====================================================================
+
+// ---------- Annonces pré-enregistrées (administrateur principal) ----------
+function rafraichirPresets() {
+    const c = $('annonce-presets'); if (!c) return;
+    const L = P().annoncesPre || [];
+    const h = L.map(a => `<div class="p-2.5 bg-white border rounded-lg text-sm flex items-center justify-between gap-2"><span class="break-words min-w-0">${esc(a.texte)}</span><span class="flex gap-1 flex-shrink-0">${bt('bg-amber-500 text-white', '📢 Afficher', `annoncePreAfficher('${a.id}')`)}${bt('bg-blue-100 text-blue-800', '✏️', `annoncePreModifier('${a.id}')`)}${bt('bg-red-600 text-white', '🗑️', `annoncePreSupprimer('${a.id}')`)}</span></div>`).join('') || "<p class='text-xs italic text-slate-500'>Aucun message pré-enregistré.</p>";
+    if (c.dataset.h !== h) { c.dataset.h = h; c.innerHTML = h; }
+}
+async function annoncePreSauver(nouvelle, echec) {
+    const p = P(), avant = p.annoncesPre;
+    p.annoncesPre = nouvelle;
+    if (!(await sauvegarder())) { p.annoncesPre = avant; alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); return false; }
+    rafraichirPresets(); return true;
+}
+async function annoncePreAjouter() {
+    if (!estPrincipal()) return;
+    const t = $('annonce-input').value.trim();
+    if (!t) return alert("Écrivez d'abord le message à pré-enregistrer.");
+    const L = P().annoncesPre || [];
+    if (L.some(a => a.texte === t)) return alert('Ce message est déjà pré-enregistré.');
+    if (L.length >= 30) return alert('30 messages pré-enregistrés au maximum : supprimez-en un.');
+    if (await annoncePreSauver([...L, { id: crypto.randomUUID(), texte: t }])) $('annonce-input').value = '';
+}
+async function annoncePreModifier(id) {
+    if (!estPrincipal()) return;
+    const L = P().annoncesPre || [], a = L.find(x => x.id === id); if (!a) return;
+    const t = prompt('Modifier le message (160 caractères max) :', a.texte); if (t === null) return;
+    const v = t.trim().slice(0, 160); if (!v) return alert('Le message ne peut pas être vide.');
+    await annoncePreSauver(L.map(x => x.id === id ? { ...x, texte: v } : x));
+}
+async function annoncePreSupprimer(id) {
+    if (!estPrincipal() || !confirm('Supprimer ce message pré-enregistré ?')) return;
+    await annoncePreSauver((P().annoncesPre || []).filter(x => x.id !== id));
+}
+async function annoncePreAfficher(id) {
+    if (!estPrincipal()) return;
+    const a = (P().annoncesPre || []).find(x => x.id === id); if (!a) return;
+    const inp = $('annonce-input'), brouillon = inp.value;
+    inp.value = a.texte;
+    await annonceEnvoyer();
+    inp.value = brouillon;
+}
+
+// ---------- Historique des actions ----------
+let _okSauv = 0;   // nombre de sauvegardes réussies (sert à ne journaliser que les actions réellement enregistrées)
+const _sauvOrigJ = sauvegarder;
+sauvegarder = function () {
+    const p = _sauvOrigJ.apply(this, arguments);
+    p.then(ok => { if (ok) _okSauv++; }, () => { });
+    return p;
+};
+function acteurJournal() {
+    const m = moi(); if (!m) return null;
+    const role = estAdmin ? roleAdmin : tagDe(m.id);
+    return (estAdmin || role === 'prof') ? { aid: m.id, nom: m.nom, role } : null;
+}
+async function journaliser(act, action, cat) {
+    if (!act || !action) return;
+    donneesSite.journal.push({ aid: act.aid, nom: act.nom, role: act.role, action, cat: cat || 'action', date: Date.now() });
+    try { await sauvegarder(); } catch (e) { console.warn('Journal :', e); }
+    try { rafraichirJournal(); } catch (e) { }
+}
+function surveiller(nom, cat, libelle) {
+    const orig = window[nom];
+    if (typeof orig !== 'function') return console.warn('Journal : fonction introuvable', nom);
+    window[nom] = async function () {
+        const args = arguments; let act = null, lib = '';
+        try { act = acteurJournal(); lib = act ? libelle.apply(null, args) : ''; } catch (e) { console.warn('Journal :', e); }
+        const avant = _okSauv;
+        const r = await orig.apply(this, args);
+        if (act && lib && _okSauv > avant) await journaliser(act, lib, cat);
+        return r;
+    };
+}
+const _t = (v, k = 'titre') => (v && v[k]) || '';
+const _liste = type => donneesSite[listeDe(type)] || [];
+const _typeLib = { pdf: 'révision', cours: 'cours', evaluation: 'évaluation', photo: 'photo', exoValide: 'exercice corrigé' };
+const _uNom = id => { const u = userParId(id); return u ? `${nomComplet(u)} (${u.id})` : String(id); };
+const _val = id => { const e = $(id); return e ? e.value.trim() : ''; };
+
+surveiller('adminAjouterCours', 'ajout', () => `Cours ajouté : « ${_val('admin-cours-titre')} »`);
+surveiller('adminAjouterEvaluation', 'ajout', () => `Évaluation ajoutée : « ${_val('admin-eval-titre')} »`);
+surveiller('sousCatAjouter', 'ajout', () => `Sous-catégorie ajoutée : « ${_val('souscat-nom')} »`);
+surveiller('sousCatSupprimer', 'action', id => `Sous-catégorie supprimée : « ${_t(donneesSite.sousCategories.find(c => c._id === id), 'nom')} »`);
+surveiller('adminSupprimerFichier', 'action', (type, i) => `Suppression (${_typeLib[type] || type}) : « ${_t(_liste(type)[i])} »`);
+surveiller('adminRenommer', 'action', (type, i) => `Renommage (${_typeLib[type] || type}) : « ${_t(_liste(type)[i])} »`);
+surveiller('enregistrerClasser', 'action', () => 'Classement / réglages d\'un élément modifiés');
+surveiller('adminModifierDescriptionPhoto', 'action', () => 'Description d\'une photo modifiée');
+surveiller('adminValiderExo', 'action', i => `Proposition validée : « ${_t(donneesSite.exercicesEnAttente[i])} »`);
+surveiller('adminRejeterExo', 'action', i => `Proposition rejetée : « ${_t(donneesSite.exercicesEnAttente[i])} »`);
+surveiller('adminModifierUtilisateur', 'action', i => `Compte utilisateur modifié : ${_t(donneesSite.utilisateurs[i], 'id')}`);
+surveiller('adminSupprimerUtilisateur', 'action', i => `Compte utilisateur supprimé : ${_t(donneesSite.utilisateurs[i], 'id')}`);
+surveiller('adminSupprimerAdmin', 'action', id => `Administrateur retiré : ${nomComplet(donneesSite.admins.find(a => a._id === id))}`);
+surveiller('basculerMaintenance', 'action', () => P().maintenance && P().maintenance.actif ? 'Maintenance désactivée (site remis en ligne)' : 'Maintenance activée');
+surveiller('enregistrerMessageMaintenance', 'action', () => 'Message de maintenance modifié');
+surveiller('annonceEnvoyer', 'action', () => `Annonce affichée : « ${_val('annonce-input')} »`);
+surveiller('annoncePreAjouter', 'action', () => `Annonce pré-enregistrée : « ${_val('annonce-input')} »`);
+surveiller('annoncePreSupprimer', 'action', id => `Annonce pré-enregistrée supprimée : « ${_t((P().annoncesPre || []).find(a => a.id === id), 'texte')} »`);
+surveiller('forumSupprimer', 'action', sid => `Sujet du forum supprimé : « ${_t(donneesSite.sujets.find(x => x._id === sid))} »`);
+surveiller('forumSupprimerMsg', 'action', sid => `Message supprimé dans le forum : « ${_t(donneesSite.sujets.find(x => x._id === sid))} »`);
+surveiller('forumRenommer', 'action', sid => `Sujet du forum renommé : « ${_t(donneesSite.sujets.find(x => x._id === sid))} »`);
+surveiller('forumSourdineGlobal', 'action', () => P().forumSourdine ? 'Forum réactivé' : 'Forum mis en sourdine');
+surveiller('forumSourdineSujet', 'action', id => { const s = donneesSite.sujets.find(x => x._id === id); return `${s && s.sourdine ? 'Sujet réactivé' : 'Sujet mis en sourdine'} : « ${_t(s)} »`; });
+surveiller('chatSupprimer', 'action', () => 'Message supprimé dans le chat admin');
+surveiller('epChatSupprimer', 'action', () => 'Message supprimé dans la discussion profs/sponsors');
+surveiller('profilTag', 'action', (id, tag) => `Tag « ${tag || 'aucun'} » attribué à ${_uNom(id)}`);
+surveiller('profilBannir', 'action', id => `Bannissement ${$('pb-type') && $('pb-type').value === 'def' ? 'définitif' : 'temporaire'} : ${_uNom(id)}${_val('pb-motif') ? ' — ' + _val('pb-motif') : ''}`);
+surveiller('profilLever', 'action', id => { const u = userParId(id); const dem = u && u.ban && u.ban.type === 'def' && !estPrincipal() && u.ban.par !== identAdmin(); return `${dem ? 'Demande de levée de ban' : 'Ban levé'} : ${_uNom(id)}`; });
+surveiller('demandeTraiter', 'action', (did, ok) => `Demande de levée de ban ${ok ? 'acceptée' : 'refusée'} : ${_t(donneesSite.demandesBan.find(x => x._id === did), 'userNom')}`);
+surveiller('sigSupprimer', 'action', () => 'Signalement traité : message supprimé');
+surveiller('sigClasser', 'action', () => 'Signalement classé sans suite');
+surveiller('rendreSupprimer', 'action', id => { const r = donneesSite.rendus.find(x => x._id === id); return `Copie supprimée : ${_t(r, 'auteurNom')} — ${_t(r, 'evalTitre')}`; });
+surveiller('donsStatut', 'action', (id, st) => { const d = donneesSite.dons.find(x => x._id === id); return `Don de ${_t(d, 'auteurNom')} (${_t(d, 'montant')} FCFA) marqué « ${st === 'recu' ? 'reçu' : st === 'non_recu' ? 'pas reçu' : st} »`; });
+surveiller('donsSupprimer', 'action', id => `Déclaration de don supprimée : ${_t(donneesSite.dons.find(x => x._id === id), 'auteurNom')}`);
+surveiller('basculerDonateur', 'action', id => { const u = userParId(id); return `Tag Donateur ${u && u.donateur ? 'retiré à' : 'attribué à'} ${_uNom(id)}`; });
+surveiller('donsEnregistrerMessages', 'action', () => 'Messages de la page Dons modifiés');
+surveiller('faqAjouter', 'action', () => 'Question ajoutée à la FAQ');
+surveiller('faqSupprimer', 'action', id => `Question supprimée de la FAQ : « ${_t(donneesSite.faqs.find(f => f._id === id), 'q')} »`);
+// Connexion d'un administrateur
+const _connecterAdminJ = connecterAdmin;
+connecterAdmin = function (rec) {
+    const r = _connecterAdminJ.apply(this, arguments);
+    try { journaliser({ aid: `@${rec.role}:${rec._id}`, nom: nomComplet(rec) || 'Administrateur', role: rec.role }, 'Connexion administrateur', 'action'); } catch (e) { }
+    return r;
+};
+
+function journalHtml(L, edit) {
+    if (!L.length) return "<p class='text-sm italic text-slate-500'>Aucune entrée.</p>";
+    return L.map(e => `<div class="p-2.5 bg-white border rounded-lg text-sm flex items-start justify-between gap-2"><div class="min-w-0"><div class="font-semibold break-words">${esc(e.action)}</div><div class="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-1.5">${tagHtml(e.role)}<span>${esc(e.nom || '')}</span><span>· ${fmt(e.date)}</span></div></div>${edit ? bt('bg-red-600 text-white', '🗑️', `journalSupprimer('${e._id}')`) : ''}</div>`).join('');
+}
+function rafraichirJournal() {
+    const tri = L => [...L].sort((a, b) => b.date - a.date), J = donneesSite.journal || [], pr = estPrincipal();
+    const c = $('journal-admin-liste');
+    if (c && estAdmin) {
+        const L = tri(J), h = journalHtml(L.slice(0, 200), pr) + (pr ? '1' : '0');
+        if (c.dataset.h !== h) { c.dataset.h = h; c.innerHTML = h; }
+        $('journal-admin-compte').textContent = L.length + ' action(s) enregistrée(s)' + (L.length > 200 ? ' — les 200 plus récentes sont affichées' : '');
+        $('journal-admin-vider').classList.toggle('hidden', !pr || !L.length);
+    }
+    const cp = $('journal-prof-liste');
+    if (cp && (estAdmin || estProf())) {
+        const L = tri(J.filter(e => e.cat === 'ajout' && e.role === 'prof')), h = journalHtml(L.slice(0, 200), pr) + (pr ? '1' : '0');
+        if (cp.dataset.h !== h) { cp.dataset.h = h; cp.innerHTML = h; }
+        $('journal-prof-vider').classList.toggle('hidden', !pr || !L.length);
+    }
+}
+async function journalSupprimer(id) {
+    if (!estPrincipal() || !confirm('Supprimer cette entrée de l\'historique ?')) return;
+    const avant = donneesSite.journal;
+    donneesSite.journal = avant.filter(e => e._id !== id);
+    if (!(await sauvegarder())) { donneesSite.journal = avant; alert("Suppression impossible.\n\nDétail : " + derniereErreur); }
+    rafraichirJournal();
+}
+async function journalVider(portee) {
+    if (!estPrincipal()) return;
+    const prof = portee === 'prof';
+    if (!confirm(prof ? "Vider l'historique des ajouts des professeurs ?" : "Vider TOUT l'historique des actions ? Cette action est définitive.")) return;
+    const avant = donneesSite.journal;
+    donneesSite.journal = prof ? avant.filter(e => !(e.cat === 'ajout' && e.role === 'prof')) : [];
+    if (!(await sauvegarder())) { donneesSite.journal = avant; alert("Opération impossible.\n\nDétail : " + derniereErreur); }
+    rafraichirJournal();
+}
+const _rafLegerJ = rafraichirAdminLeger;
+rafraichirAdminLeger = function () { _rafLegerJ(); try { rafraichirJournal(); rafraichirPresets(); } catch (e) { console.error('Journal :', e); } };
+const _rafEspaceProfJ = rafraichirEspaceProf;
+rafraichirEspaceProf = function () { _rafEspaceProfJ(); try { rafraichirJournal(); } catch (e) { } };
 </script>
 
 </body>
