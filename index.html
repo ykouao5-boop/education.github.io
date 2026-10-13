@@ -866,7 +866,7 @@
                 }
             } catch (err) {
                 console.error(err);
-                alert("Erreur lors de la lecture des fichiers.");
+                alert("Erreur lors de la lecture des fichiers\n\nDétail : " + ((err && (err.message || err.error || err.details)) || String(err)) + "\n\n(Vérifiez que le dossier 'fichiers' existe dans Supabase Storage et que sa règle est créée.)");
             } finally {
                 btn.disabled = false;
                 btn.textContent = "Envoyer pour vérification";
@@ -927,7 +927,7 @@
                 rafraichirAffichagePublic();
             } catch (err) {
                 console.error(err);
-                alert("Erreur lors de la lecture du fichier.");
+                alert("Erreur lors de la lecture du fichier\n\nDétail : " + ((err && (err.message || err.error || err.details)) || String(err)) + "\n\n(Vérifiez que le dossier 'fichiers' existe dans Supabase Storage et que sa règle est créée.)");
             }
         }
 
@@ -948,7 +948,7 @@
                 rafraichirAffichagePublic();
             } catch (err) {
                 console.error(err);
-                alert("Erreur lors de la lecture du fichier.");
+                alert("Erreur lors de la lecture du fichier\n\nDétail : " + ((err && (err.message || err.error || err.details)) || String(err)) + "\n\n(Vérifiez que le dossier 'fichiers' existe dans Supabase Storage et que sa règle est créée.)");
             }
         }
 
@@ -970,7 +970,7 @@
                 rafraichirAffichagePublic();
             } catch (err) {
                 console.error(err);
-                alert("Erreur lors de la lecture du fichier.");
+                alert("Erreur lors de la lecture du fichier\n\nDétail : " + ((err && (err.message || err.error || err.details)) || String(err)) + "\n\n(Vérifiez que le dossier 'fichiers' existe dans Supabase Storage et que sa règle est créée.)");
             }
         }
 
@@ -1175,7 +1175,7 @@
                 if (fichier) nouveau.photo = await lireFichier(fichier, 800);
             } catch (err) {
                 console.error(err);
-                return alert("Erreur lors de la lecture de la photo.");
+                return alert("Erreur lors de la lecture de la photo\n\nDétail : " + ((err && (err.message || err.error || err.details)) || String(err)) + "\n\n(Vérifiez que le dossier 'fichiers' existe dans Supabase Storage et que sa règle est créée.)");
             }
             donneesSite.developpeur = nouveau;
             if (!(await sauvegarder())) {
@@ -1206,7 +1206,7 @@
                 await chargerDonnees();
             } catch (e) {
                 console.error(e);
-                alert("Connexion à la base de données impossible. Vérifiez votre connexion internet puis rechargez la page.");
+                alert("Connexion à la base de données impossible.\n\nDétail : " + ((e && (e.message || e.details)) || String(e)) + "\n\nVérifiez votre connexion internet puis rechargez la page.");
             }
             verifierSession();
             rafraichirAffichagePublic();
