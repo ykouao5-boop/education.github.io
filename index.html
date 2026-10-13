@@ -23,19 +23,32 @@
         #diaporama { scroll-behavior: smooth; scrollbar-width: none; }
         #diaporama::-webkit-scrollbar { display: none; }
         #menu-deroulant { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
-        #menu-deroulant.ouvert { max-height: 600px; }
+        #menu-deroulant.ouvert { max-height: 900px; }
     
         .tag{display:inline-flex;align-items:center;gap:3px;padding:1px 9px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;box-shadow:0 1px 3px #0003;white-space:nowrap}
         .tag-principal{background:linear-gradient(135deg,#fbbf24,#f97316);color:#451a03}
         .tag-secondaire{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff}
         .tag-prof{background:linear-gradient(135deg,#10b981,#0d9488);color:#fff}
         .tag-etudiant{background:linear-gradient(135deg,#38bdf8,#3b82f6);color:#fff}
+        .tag-sponsor{background:linear-gradient(135deg,#ec4899,#db2777);color:#fff}
         .tag-rendre{background:linear-gradient(135deg,#ef4444,#f97316);color:#fff}
         .tag-perso{background:linear-gradient(135deg,#64748b,#475569);color:#fff}
         .tag-qcm{background:linear-gradient(135deg,#0ea5e9,#2563eb);color:#fff}
         .tag-qr{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff}
+        .tag-donateur{background:linear-gradient(135deg,#f43f5e,#e11d48);color:#fff}
         .atab-btn{padding:.5rem .9rem;border-radius:.6rem;font-size:.85rem;font-weight:700;white-space:nowrap;border:none;cursor:pointer;background:#f1f5f9;color:#475569}
         .atab-btn.on{background:#4338ca;color:#fff}
+        /* Message d'annonce : ne capte AUCUN clic/toucher (pointer-events:none) */
+        #annonce-bandeau{position:fixed;top:0;left:0;right:0;z-index:95;pointer-events:none;display:flex;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 6px) 8px 0;transform:translateY(-130%);opacity:0;transition:transform .35s ease,opacity .35s ease}
+        #annonce-bandeau.visible{transform:translateY(0);opacity:1}
+        #annonce-bandeau .annonce-boite{pointer-events:none;max-width:36rem;width:100%;background:rgba(30,27,75,.93);color:#fff;border-radius:14px;box-shadow:0 8px 24px #0005;padding:9px 14px 13px;font-size:14px;font-weight:600;line-height:1.35;position:relative;overflow:hidden}
+        #annonce-bandeau .annonce-barre{position:absolute;left:0;bottom:0;height:3px;background:#fbbf24;width:100%}
+        #annonce-bandeau.visible .annonce-barre{animation:annonceBarre 10s linear forwards}
+        @keyframes annonceBarre{from{width:100%}to{width:0}}
+        /* Alertes discrètes (nouveaux messages) : non cliquables, disparaissent seules */
+        #toast-zone{position:fixed;left:8px;right:8px;bottom:64px;z-index:90;pointer-events:none;display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+        .toast{pointer-events:none;max-width:22rem;background:rgba(15,23,42,.94);color:#fff;border-radius:12px;padding:8px 12px;font-size:13px;box-shadow:0 6px 18px #0004;animation:toastIn .25s ease;transition:opacity .4s}
+        @keyframes toastIn{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
     </style>
 </head>
 <body>
@@ -107,6 +120,8 @@
                 <button onclick="changerEcran('exercices')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">💡 Exercices Corrigés</button>
                 <button onclick="changerEcran('propositions')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">📤 Propositions</button>
                 <button onclick="changerEcran('forum')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">💬 Forum</button>
+                <button onclick="changerEcran('dons')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">❤️ Dons</button>
+                <button id="nav-btn-prof" onclick="changerEcran('espace-prof')" class="hidden text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">🤝 Espace prof/sponsors</button>
                 <button onclick="changerEcran('profil')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">👤 Mon profil</button>
                 <button onclick="changerEcran('faq')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">❓ FAQ</button>
                 <button id="nav-btn-maint" onclick="basculerMaintenance()" class="hidden text-left w-full px-3 py-3 text-white bg-red-700 border-none cursor-pointer hover:bg-red-800 rounded-lg font-bold text-base mt-1"></button>
@@ -180,7 +195,7 @@
             <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
                 <h3 class="text-2xl font-bold text-blue-800 mb-2">📝 Évaluations</h3>
                 <p class="text-slate-600 mb-6">Cliquez sur une évaluation pour ouvrir sa page dédiée.</p>
-                <input id="rech-evaluations" type="search" oninput="rafraichirAffichagePublic()" placeholder="🔍 Rechercher une évaluation, une sous-catégorie ou un tag (QCM, devoir à rendre…)" class="w-full p-2.5 border rounded-xl bg-slate-50 text-sm mb-4 outline-none focus:ring-2 focus:ring-blue-500">
+                <input id="rech-evaluations" type="search" oninput="rafraichirAffichagePublic()" placeholder="🔍 Rechercher une évaluation, une sous-catégorie ou un tag (QCM, à rendre…)" class="w-full p-2.5 border rounded-xl bg-slate-50 text-sm mb-4 outline-none focus:ring-2 focus:ring-blue-500">
                 <div id="liste-evaluations-public" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
             </div>
         </div>
@@ -266,17 +281,43 @@
             <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-4">
                 <div class="flex justify-between items-center gap-2">
                     <h3 class="text-2xl font-bold text-blue-800">💬 Forum</h3>
-                    <button id="btn-nouveau-sujet" onclick="forumNouveau()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold border-none cursor-pointer">+ Nouveau sujet</button>
+                    <div class="flex gap-2 flex-wrap justify-end"><button id="btn-sourdine-forum" onclick="forumSourdineGlobal()" class="hidden bg-slate-700 text-white px-4 py-2 rounded-xl text-sm font-bold border-none cursor-pointer"></button><button id="btn-nouveau-sujet" onclick="forumNouveau()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold border-none cursor-pointer">+ Nouveau sujet</button></div>
                 </div>
                 <p class="text-slate-500 text-xs">Espace libre de discussion, sans évaluation. Respectez les autres : tout message peut être signalé 🚩.</p>
                 <div id="forum-ban-info"></div>
                 <div id="forum-nouveau" class="hidden p-4 bg-slate-50 border rounded-xl space-y-2">
                     <input id="fn-titre" placeholder="Titre du sujet" maxlength="120" class="w-full p-2 border rounded bg-white text-sm">
-                    <textarea id="fn-texte" rows="4" placeholder="Votre message" class="w-full p-2 border rounded bg-white text-sm"></textarea>
+                    <textarea id="fn-texte" data-mention="1" rows="4" placeholder="Votre message" class="w-full p-2 border rounded bg-white text-sm"></textarea>
                     <button onclick="forumCreer()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">Publier</button>
                 </div>
                 <div id="forum-liste" class="space-y-3"></div>
                 <div id="forum-sujet" class="hidden space-y-3"></div>
+            </div>
+        </div>
+
+        <div id="dons" class="screen space-y-6">
+            <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-md border border-slate-100 max-w-2xl mx-auto space-y-6 text-center">
+                <h3 class="text-2xl font-bold text-rose-600">❤️ Dons</h3>
+                <p id="dons-message" class="text-slate-700 whitespace-pre-wrap break-words"></p>
+                <a id="btn-faire-don" href="https://pay.wave.com/m/M_ci_T-r32Il5V0lx/c/ci/" target="_blank" rel="noopener" onclick="donsApresClic()" class="block w-full bg-rose-600 hover:bg-rose-700 text-white text-2xl font-extrabold py-5 rounded-2xl shadow-lg no-underline">❤️ FAITES UN DON</a>
+                <div id="dons-question" class="hidden text-left p-4 bg-rose-50 border border-rose-200 rounded-2xl space-y-3">
+                    <p class="font-bold text-rose-900">Avez-vous effectué un don ?</p>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Montant du don (FCFA) — à écrire avant de répondre « Oui »</label>
+                        <input id="dons-montant" type="number" inputmode="numeric" min="1" step="1" placeholder="Ex : 5000" class="w-full p-3 border rounded-xl bg-white text-sm focus:ring-2 focus:ring-rose-400 outline-none">
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="dons-oui" onclick="donsOui()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold border-none cursor-pointer text-sm">✅ Oui, j'ai effectué un don</button>
+                        <button onclick="donsNon()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 py-3 rounded-xl font-bold border-none cursor-pointer text-sm">Non</button>
+                    </div>
+                    <p class="text-xs text-slate-500">Si vous répondez « Non », vous n'avez rien à écrire.</p>
+                </div>
+                <div id="dons-merci" class="hidden p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-900 font-semibold whitespace-pre-wrap break-words"></div>
+                <div id="dons-historique-box" class="hidden text-left space-y-2">
+                    <h4 class="font-bold text-slate-800 text-sm">Mes dons déclarés</h4>
+                    <div id="dons-historique" class="space-y-2"></div>
+                </div>
+                <p id="dons-note" class="text-xs text-slate-500"></p>
             </div>
         </div>
 
@@ -297,12 +338,62 @@
                 <div><label class="block text-sm font-medium text-slate-700 mb-1">Centres d'intérêt</label><input id="pf-interets" maxlength="120" placeholder="Ex : transport, stockage, football" class="w-full p-2.5 border rounded-lg bg-white text-sm"></div>
                 <div><label class="block text-sm font-medium text-slate-700 mb-1">Description</label><textarea id="pf-description" rows="4" maxlength="500" placeholder="Présentez-vous en quelques mots…" class="w-full p-2.5 border rounded-lg bg-white text-sm"></textarea></div>
                 <div id="pf-info" class="text-xs text-slate-500"></div>
+                <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="pf-notif" onchange="notifBasculer(this.checked)" class="mt-1 w-4 h-4"><span>🔔 Afficher une petite alerte quand un nouveau message arrive (forum, discussions, copies…). Les messages restent toujours reçus en temps réel.</span></label>
                 <div id="pf-cle-box" class="hidden p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-sm space-y-1">
                     <div class="font-bold text-indigo-900">🔑 Ma clé personnelle d'administrateur</div>
                     <div class="flex items-center gap-2 flex-wrap"><span id="pf-cle" class="font-mono font-bold">••••••••••</span><button type="button" onclick="profilBasculerCle()" class="bg-indigo-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer">Afficher / masquer</button></div>
                     <div class="text-xs text-red-700">Ne la communiquez à personne.</div>
                 </div>
                 <button onclick="enregistrerProfil()" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold hover:bg-blue-700 transition border-none cursor-pointer">Enregistrer mon profil</button>
+            </div>
+        </div>
+
+        <div id="espace-prof" class="screen space-y-6">
+            <div class="bg-white p-5 sm:p-8 rounded-2xl shadow-md border border-slate-100">
+                <h3 class="text-2xl font-bold text-blue-800 mb-1">🤝 Espace prof/sponsors</h3>
+                <p id="ep-intro" class="text-xs text-slate-500 mb-4"></p>
+                <div id="ep-tabs" class="flex gap-2 overflow-x-auto pb-3 mb-5 border-b">
+                    <button id="ep-btn-panel" class="atab-btn" data-t="panel" onclick="epTab('panel')">🛠️ Panel prof</button>
+                    <button id="ep-btn-discussion" class="atab-btn" data-t="discussion" onclick="epTab('discussion')">💬 Discussion prof/sponsors</button>
+                </div>
+                <div id="ep-panel" class="space-y-6">
+                    <div id="ep-contenu-slot"></div>
+                    <div class="space-y-3">
+                        <h4 class="font-bold text-lg text-blue-800">📨 Copies reçues</h4>
+                        <p class="text-xs text-slate-500">Copies envoyées par les étudiants pour vos évaluations « A rendre ». La correction n'est visible que par les administrateurs et les professeurs.</p>
+                        <div id="ep-liste-rendus" class="space-y-4"></div>
+                    </div>
+                </div>
+                <div id="ep-discussion" class="hidden space-y-3">
+                    <p class="text-xs text-slate-500">Discussion réservée aux professeurs, aux sponsors et aux administrateurs. Les messages arrivent en temps réel.</p>
+                    <div id="chat-prof-liste" class="h-80 overflow-y-auto space-y-2 p-3 bg-slate-50 border rounded-xl"></div>
+                    <div class="flex gap-2">
+                        <textarea id="chat-prof-input" data-mention="1" rows="2" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();epChatEnvoyer();}" placeholder="Message aux profs et sponsors…" class="flex-grow p-2 border rounded bg-white text-sm"></textarea>
+                        <button onclick="epChatEnvoyer()" class="bg-indigo-600 text-white px-4 rounded-lg font-bold border-none cursor-pointer">Envoyer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="eval-detail" class="screen space-y-4">
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-slate-100 space-y-4">
+                <button onclick="changerEcran('evaluations')" class="text-sm text-blue-700 bg-transparent border-none cursor-pointer p-0 font-semibold">← Retour aux évaluations</button>
+                <div>
+                    <h3 id="ed-titre" class="text-xl font-extrabold text-blue-800 break-words"></h3>
+                    <p id="ed-desc" class="text-sm text-slate-600 mt-1"></p>
+                    <div id="ed-tags" class="flex flex-wrap gap-1 mt-2"></div>
+                    <div id="ed-delai" class="mt-2 text-sm font-semibold"></div>
+                </div>
+                <div id="ed-sujet" class="rounded-xl border bg-slate-100 overflow-hidden"></div>
+                <div id="ed-ouvrir"></div>
+                <div id="ed-zone-ecriture" class="hidden space-y-3 pt-3 border-t">
+                    <h4 class="font-bold text-slate-800">✍️ Mes réponses</h4>
+                    <textarea id="ed-texte" rows="10" placeholder="Écris tes réponses ici…" class="w-full p-3 border rounded-xl bg-white text-sm"></textarea>
+                    <div id="ed-fichier-box"><label class="block text-sm font-medium text-slate-700 mb-1">Joindre une photo ou un PDF de ta copie (facultatif)</label><input type="file" id="ed-file" accept="image/*,.pdf" class="w-full p-2 border rounded-lg bg-white text-sm"></div>
+                    <p id="ed-info" class="text-xs text-slate-500"></p>
+                    <button id="ed-btn-envoyer" onclick="evalEnvoyer()" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-bold border-none cursor-pointer">📨 Faire évaluer</button>
+                </div>
+                <div id="ed-staff" class="hidden pt-3 border-t"></div>
             </div>
         </div>
 
@@ -319,10 +410,12 @@
                     <button class="atab-btn" data-t="sanctions" onclick="adminTab('sanctions')">🔨 Sanctions</button>
                     <button class="atab-btn" data-t="chat" onclick="adminTab('chat')">💬 Chat admin</button>
                     <button class="atab-btn" data-t="rendus" onclick="adminTab('rendus')">📨 Devoirs rendus</button>
+                    <button class="atab-btn" data-t="dons" onclick="adminTab('dons')">💝 Dons</button>
                     <button id="tab-site" class="atab-btn hidden" data-t="site" onclick="adminTab('site')">⚙️ Site</button>
                 </div>
 
-                <div id="atab-contenu" class="atab grid md:grid-cols-2 gap-4">
+                <div id="atab-contenu" class="atab">
+                    <div id="contenu-forms" class="grid md:grid-cols-2 gap-4">
                     <div class="p-4 bg-sky-50 border border-sky-200 rounded-xl space-y-2">
                         <h4 class="font-bold text-sky-900">🎓 Cours</h4>
                         <input type="text" id="admin-cours-titre" placeholder="Titre du cours" class="w-full p-2 border rounded bg-white text-sm">
@@ -334,12 +427,21 @@
                         <h4 class="font-bold text-emerald-900">📝 Évaluation</h4>
                         <input type="text" id="admin-eval-titre" placeholder="Titre" class="w-full p-2 border rounded bg-white text-sm">
                         <input type="text" id="admin-eval-desc" placeholder="Description" class="w-full p-2 border rounded bg-white text-sm">
-                        <input type="file" id="admin-eval-file" accept=".html,.htm,text/html" class="w-full p-2 border rounded bg-white text-sm">
+                        <input type="file" id="admin-eval-file" accept=".html,.htm,text/html,.pdf,image/*" onchange="evalFichierChange()" class="w-full p-2 border rounded bg-white text-sm">
+                        <p class="text-xs text-slate-500">Page web (.html) ou bien photo / PDF.</p>
+                        <p id="admin-eval-hint" class="text-xs text-amber-700"></p>
                         <select id="admin-eval-souscat" class="w-full p-2 border rounded bg-white text-sm"></select>
-                        <select id="admin-eval-nature" onchange="document.getElementById('admin-eval-corr-box').classList.toggle('hidden', this.value!=='rendre')" class="w-full p-2 border rounded bg-white text-sm"><option value="personnel">🏷️ Devoir personnel</option><option value="rendre">🏷️ Devoir à rendre</option></select>
-                        <div class="flex gap-4 text-sm"><label class="flex items-center gap-1"><input type="checkbox" id="admin-eval-qcm"> QCM</label><label class="flex items-center gap-1"><input type="checkbox" id="admin-eval-qr"> Questions-réponses</label></div>
-                        <div id="admin-eval-corr-box" class="hidden"><label class="block text-xs font-medium text-slate-600 mb-1">Correction (visible uniquement par les administrateurs)</label><input type="file" id="admin-eval-correction-file" accept=".pdf,image/*" class="w-full p-2 border rounded bg-white text-sm"></div>
-                        <button onclick="adminAjouterEvaluation()" class="bg-emerald-600 text-white px-4 py-2 rounded font-medium border-none cursor-pointer text-sm">Ajouter</button>
+                        <label class="block text-xs font-medium text-slate-600 -mb-1">Type d'exercice</label>
+                        <select id="admin-eval-nature" class="w-full p-2 border rounded bg-white text-sm"><option value="personnel">📖 Devoir personnel</option><option value="qcm">✅ QCM</option><option value="qr">✍️ Questions-réponses</option></select>
+                        <label class="flex items-start gap-2 p-2.5 rounded-lg bg-orange-50 border border-orange-200 cursor-pointer">
+                            <input type="checkbox" id="admin-eval-arendre" onchange="evalMajARendre()" class="mt-1 w-4 h-4">
+                            <span class="text-sm"><b>A rendre</b><br><span class="text-xs text-slate-600">Coché : l'étudiant écrit ses réponses sous le sujet puis clique sur « Faire évaluer » ; vous recevez sa copie (administrateurs et professeur). Non coché : rien n'est envoyé, l'étudiant s'entraîne seul.</span></span>
+                        </label>
+                        <div id="admin-eval-arendre-box" class="hidden space-y-2">
+                            <div><label class="block text-xs font-medium text-slate-600 mb-1">⏰ Date et heure limite (facultatif)</label><input type="datetime-local" id="admin-eval-delai" class="w-full p-2 border rounded bg-white text-sm"><p class="text-xs text-slate-500 mt-1">Passé ce moment, l'envoi est fermé aux étudiants. Laissez vide pour ne pas fixer de limite.</p></div>
+                            <div><label class="block text-xs font-medium text-slate-600 mb-1">Correction (visible uniquement par les administrateurs et les professeurs)</label><input type="file" id="admin-eval-correction-file" accept=".pdf,image/*" class="w-full p-2 border rounded bg-white text-sm"></div>
+                        </div>
+                        <button id="btn-add-eval" onclick="adminAjouterEvaluation()" class="bg-emerald-600 text-white px-4 py-2 rounded font-medium border-none cursor-pointer text-sm">Ajouter</button>
                     </div>
                     <div class="p-4 bg-violet-50 border border-violet-200 rounded-xl space-y-3">
                         <h4 class="font-bold text-violet-900">🗂️ Sous-catégories</h4>
@@ -349,6 +451,7 @@
                             <button onclick="sousCatAjouter()" class="bg-violet-600 text-white px-3 py-2 rounded text-sm font-bold border-none cursor-pointer">Ajouter</button>
                         </div>
                         <div id="souscat-liste" class="space-y-2"></div>
+                    </div>
                     </div>
                 </div>
 
@@ -377,21 +480,42 @@
                     <p class="text-xs text-slate-500">Discussion réservée aux administrateurs. Seul l'administrateur principal peut supprimer des messages.</p>
                     <div id="chat-admin-liste" class="h-80 overflow-y-auto space-y-2 p-3 bg-slate-50 border rounded-xl"></div>
                     <div class="flex gap-2">
-                        <textarea id="chat-input" rows="2" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatEnvoyer();}" placeholder="Message aux administrateurs…" class="flex-grow p-2 border rounded bg-white text-sm"></textarea>
+                        <textarea id="chat-input" data-mention="1" rows="2" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatEnvoyer();}" placeholder="Message aux administrateurs…" class="flex-grow p-2 border rounded bg-white text-sm"></textarea>
                         <button onclick="chatEnvoyer()" class="bg-indigo-600 text-white px-4 rounded-lg font-bold border-none cursor-pointer">Envoyer</button>
                     </div>
                 </div>
 
                 <div id="atab-rendus" class="atab hidden space-y-4">
-                    <p class="text-xs text-slate-500">Copies envoyées par les étudiants pour les évaluations marquées « Devoir à rendre ». La correction n'est visible qu'ici, jamais par les étudiants.</p>
+                    <p class="text-xs text-slate-500">Copies envoyées par les étudiants pour les évaluations marquées « A rendre ». La correction n'est visible que par les administrateurs et les professeurs, jamais par les étudiants.</p>
                     <div id="admin-liste-rendus" class="space-y-4"></div>
+                </div>
+
+                <div id="atab-dons" class="atab hidden space-y-3">
+                    <p class="text-xs text-slate-500">Dons déclarés par les membres après un paiement Wave. Vérifiez dans Wave Business, puis indiquez « Reçu » ou « Pas reçu ». Le montant est celui que le membre a écrit.</p>
+                    <div id="admin-liste-dons" class="space-y-2"></div>
                 </div>
 
                 <div id="atab-site" class="atab hidden space-y-4">
                     <div class="p-4 border rounded-xl space-y-3">
+                        <h4 class="font-bold text-lg">❤️ Messages de la page Dons <span class="text-xs font-normal text-slate-500">(administrateur principal uniquement)</span></h4>
+                        <label class="block text-sm font-medium">Message d'encouragement</label>
+                        <textarea id="dons-edit-message" rows="4" maxlength="600" class="w-full p-2 border rounded bg-white text-sm"></textarea>
+                        <label class="block text-sm font-medium">Message de remerciement (affiché après « Oui »)</label>
+                        <textarea id="dons-edit-merci" rows="3" maxlength="400" class="w-full p-2 border rounded bg-white text-sm"></textarea>
+                        <label class="block text-sm font-medium">Petit message en bas de la page</label>
+                        <input id="dons-edit-note" maxlength="160" class="w-full p-2 border rounded bg-white text-sm">
+                        <button onclick="donsEnregistrerMessages()" class="bg-rose-600 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">Enregistrer les messages</button>
+                    </div>
+                    <div class="p-4 border rounded-xl space-y-3">
                         <h4 class="font-bold text-lg">🛡️ Administrateurs <span class="text-xs font-normal text-slate-500">(administrateur principal uniquement)</span></h4>
                         <p class="text-xs text-slate-500">Clé universelle actuelle : <b class="font-mono">unita@5728</b>. Elle ne sert qu'à créer une clé personnelle ; chaque administrateur se connecte ensuite avec la sienne.</p>
                         <div id="admin-liste-admins" class="space-y-2"></div>
+                    </div>
+                    <div class="p-4 border rounded-xl space-y-3">
+                        <h4 class="font-bold text-lg">📢 Message d'annonce <span class="text-xs font-normal text-slate-500">(administrateur principal uniquement)</span></h4>
+                        <p class="text-xs text-slate-500">Le message s'affiche en haut du site pour toutes les personnes connectées pendant 10 secondes, puis disparaît. Il ne bloque aucun bouton : on peut continuer à toucher l'écran à travers.</p>
+                        <textarea id="annonce-input" rows="2" maxlength="160" placeholder="Ex : Les cours de lundi sont reportés à mardi 8h." class="w-full p-2 border rounded bg-white text-sm"></textarea>
+                        <button onclick="annonceEnvoyer()" class="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">📢 Afficher maintenant</button>
                     </div>
                     <div class="p-4 border rounded-xl space-y-3">
                         <h4 class="font-bold text-lg">🚧 Mode maintenance <span class="text-xs font-normal text-slate-500">(administrateur principal uniquement)</span></h4>
@@ -474,27 +598,17 @@
         </div>
     </div>
 
-    <div id="modal-rendu" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center z-[55] p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-3">
-            <h3 id="rendu-titre" class="text-lg font-bold text-blue-900"></h3>
-            <p id="rendu-info" class="text-xs text-slate-500"></p>
-            <textarea id="rendu-texte" rows="6" placeholder="Votre réponse (facultatif si vous joignez un fichier)" class="w-full p-2.5 border rounded-lg bg-white text-sm"></textarea>
-            <div><label class="block text-sm font-medium text-slate-700 mb-1">Fichier (photo ou PDF)</label><input type="file" id="rendu-file" accept="image/*,.pdf" class="w-full p-2 border rounded-lg bg-white text-sm"></div>
-            <div class="flex gap-2 justify-end">
-                <button onclick="document.getElementById('modal-rendu').classList.add('hidden')" class="bg-slate-200 text-slate-800 px-4 py-2 rounded-lg text-sm font-medium border-none cursor-pointer">Annuler</button>
-                <button id="rendu-btn" onclick="envoyerRendu()" class="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">Envoyer</button>
-            </div>
-        </div>
-    </div>
-
     <div id="modal-classer" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center z-[55] p-4">
         <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-4">
             <h3 class="text-lg font-bold text-blue-900">📂 Classement</h3>
             <div><label class="block text-sm font-medium text-slate-700 mb-1">Sous-catégorie</label><select id="cl-souscat" class="w-full p-2.5 border rounded-lg bg-white text-sm"></select></div>
             <div id="cl-eval" class="space-y-3 hidden">
-                <div><label class="block text-sm font-medium text-slate-700 mb-1">Nature</label><select id="cl-nature" onchange="document.getElementById('cl-corr-box').classList.toggle('hidden', this.value!=='rendre')" class="w-full p-2.5 border rounded-lg bg-white text-sm"><option value="personnel">Devoir personnel</option><option value="rendre">Devoir à rendre</option></select></div>
-                <div class="flex gap-4 text-sm"><label class="flex items-center gap-1"><input type="checkbox" id="cl-qcm"> QCM</label><label class="flex items-center gap-1"><input type="checkbox" id="cl-qr"> Questions-réponses</label></div>
-                <div id="cl-corr-box" class="hidden"><label class="block text-xs font-medium text-slate-600 mb-1">Correction (admins uniquement) — laisser vide pour conserver l'actuelle</label><input type="file" id="cl-correction-file" accept=".pdf,image/*" class="w-full p-2 border rounded bg-white text-sm"></div>
+                <div><label class="block text-sm font-medium text-slate-700 mb-1">Type d'exercice</label><select id="cl-nature" class="w-full p-2.5 border rounded-lg bg-white text-sm"><option value="personnel">Devoir personnel</option><option value="qcm">QCM</option><option value="qr">Questions-réponses</option></select></div>
+                <label class="flex items-start gap-2 p-2.5 rounded-lg bg-orange-50 border border-orange-200 cursor-pointer"><input type="checkbox" id="cl-arendre" onchange="clMajARendre()" class="mt-1 w-4 h-4"><span class="text-sm"><b>A rendre</b><br><span class="text-xs text-slate-600">Coché : les étudiants envoient leur copie (« Faire évaluer ») et vous la recevez. Non coché : rien n'est envoyé.</span></span></label>
+                <div id="cl-arendre-box" class="hidden space-y-3">
+                    <div><label class="block text-xs font-medium text-slate-600 mb-1">⏰ Date et heure limite (vide = aucune)</label><input type="datetime-local" id="cl-delai" class="w-full p-2 border rounded bg-white text-sm"></div>
+                    <div id="cl-corr-box"><label class="block text-xs font-medium text-slate-600 mb-1">Correction (admins et profs uniquement) — laisser vide pour conserver l'actuelle</label><input type="file" id="cl-correction-file" accept=".pdf,image/*" class="w-full p-2 border rounded bg-white text-sm"></div>
+                </div>
             </div>
             <div class="flex gap-2 justify-end">
                 <button onclick="document.getElementById('modal-classer').classList.add('hidden')" class="bg-slate-200 text-slate-800 px-4 py-2 rounded-lg text-sm font-medium border-none cursor-pointer">Annuler</button>
@@ -511,6 +625,15 @@
         <p class="text-sm text-slate-400 mt-3 max-w-xs">Pour plus d'informations, contactez le service client.</p>
         <button onclick="ouvrirPortailAdmin()" class="mt-12 text-xs text-slate-600 bg-transparent border-none cursor-pointer underline">Accès administrateur</button>
     </div>
+
+    <div id="annonce-bandeau" aria-live="polite"><div class="annonce-boite"><span id="annonce-texte"></span><div class="annonce-barre"></div></div></div>
+    <div id="toast-zone" aria-live="polite"></div>
+
+    <!-- Bouton flottant Dons (à l'opposé de l'assistance) -->
+    <button onclick="changerEcran('dons')" aria-label="Dons" class="fixed bottom-4 left-4 z-30 bg-rose-600 text-white px-3 py-2 rounded-xl shadow-lg flex items-center space-x-2 border border-rose-400 hover:bg-rose-700 transition text-xs cursor-pointer">
+        <span class="text-base">❤️</span>
+        <span class="font-bold leading-tight">Dons</span>
+    </button>
 
     <!-- Bouton WhatsApp Assistance -->
     <a href="https://wa.me/2250152801988?text=Bonjour,%20j'ai%20un%20problème%20de%20connexion%20sur%20la%20plateforme%20éducative." target="_blank" class="fixed bottom-4 right-4 z-30 bg-emerald-600 text-white px-3 py-2 rounded-xl shadow-lg flex items-center space-x-2 border border-emerald-400 hover:bg-emerald-700 transition text-xs">
@@ -555,7 +678,7 @@
             exercicesRejetes: [],
             propositionsArchivees: [],
             utilisateurs: [],
-            faqs: [], sujets: [], chatAdmin: [], signalements: [], demandesBan: [], sousCategories: [], parametres: [], rendus: [], admins: []
+            faqs: [], sujets: [], chatAdmin: [], chatProf: [], signalements: [], demandesBan: [], sousCategories: [], parametres: [], rendus: [], admins: [], dons: []
         };
 
         // ===== Connexion à la base de données Supabase =====
@@ -579,6 +702,7 @@
         let donneesSite = donneesVides();
         let instantane = {};        // état connu de la base : id -> JSON
         let versionLocale = 0;      // incrémentée à chaque sauvegarde
+        let versionRT = 0;          // incrémentée à chaque changement reçu en temps réel
         let synchroEnCours = 0;
         let fileSauvegarde = Promise.resolve();
 
@@ -598,10 +722,10 @@
         }
 
         async function chargerDonnees(forcer = true) {
-            const v0 = versionLocale;
+            const v0 = versionLocale, r0 = versionRT;
             const { data, error } = await sb.from(TABLE).select('id,collection,data').order('seq', { ascending: true });
             if (error) throw error;
-            if (!forcer && v0 !== versionLocale) return false; // une sauvegarde a eu lieu entre-temps
+            if (!forcer && (v0 !== versionLocale || r0 !== versionRT)) return false; // une sauvegarde ou un changement temps réel a eu lieu entre-temps
             const nouveau = donneesVides();
             data.forEach(r => {
                 const it = r.data || {};
@@ -785,7 +909,7 @@
                     return;
                 }
 
-                let nouvelUtilisateur = { id, nom, prenoms, telephone, code };
+                let nouvelUtilisateur = { id, nom, prenoms, telephone, code, tag: 'etudiant' };
                 donneesSite.utilisateurs.push(nouvelUtilisateur);
                 if (!(await sauvegarder())) {
                     donneesSite.utilisateurs.pop();
@@ -846,12 +970,15 @@
         function changerEcran(idEcran) {
             fermerMenu();
             if (idEcran === 'admin-panel' && !estAdmin) idEcran = 'accueil';
+            if (idEcran === 'espace-prof' && !peutEspaceProf()) idEcran = 'accueil';
+            if (idEcran === 'eval-detail' && !evalDetailId) idEcran = 'evaluations';
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
             document.getElementById(idEcran).classList.add('active-screen');
             if (idEcran === 'profil') remplirProfil();
             window.scrollTo(0, 0);
             rafraichirAffichagePublic();
             if (idEcran === 'admin-panel') rafraichirAdmin();
+            if (idEcran === 'espace-prof') epOuvrir();
             rechargerEnFond(idEcran);
         }
 
@@ -940,7 +1067,9 @@
         }
 
         function boutonSupprimer(type, idx) {
-            return estAdmin ? `<span class="inline-flex gap-1">${['pdf', 'cours', 'evaluation', 'exoValide'].includes(type) ? `<button onclick="ouvrirClasser('${type}', ${idx})" title="Sous-catégorie / tags" class="bg-violet-600 text-white px-2.5 py-1.5 rounded-lg text-xs hover:bg-violet-700 border-none cursor-pointer">📂</button>` : ''}<button onclick="adminRenommer('${type}', ${idx})" title="Modifier le nom et la description" class="bg-blue-600 text-white px-2.5 py-1.5 rounded-lg text-xs hover:bg-blue-700 border-none cursor-pointer">✏️</button><button onclick="adminSupprimerFichier('${type}', ${idx})" class="bg-red-600 text-white px-2.5 py-1.5 rounded-lg text-xs hover:bg-red-700 border-none cursor-pointer">🗑️</button></span>` : '';
+            const it = (donneesSite[listeDe(type)] || [])[idx];
+            if (!peutGerer(it)) return '';   // admin : tout ; prof : uniquement ce qu'il a ajouté
+            return `<span class="inline-flex gap-1">${['pdf', 'cours', 'evaluation', 'exoValide'].includes(type) ? `<button onclick="ouvrirClasser('${type}', ${idx})" title="Sous-catégorie / type / à rendre" class="bg-violet-600 text-white px-2.5 py-1.5 rounded-lg text-xs hover:bg-violet-700 border-none cursor-pointer">📂</button>` : ''}<button onclick="adminRenommer('${type}', ${idx})" title="Modifier le nom et la description" class="bg-blue-600 text-white px-2.5 py-1.5 rounded-lg text-xs hover:bg-blue-700 border-none cursor-pointer">✏️</button><button onclick="adminSupprimerFichier('${type}', ${idx})" class="bg-red-600 text-white px-2.5 py-1.5 rounded-lg text-xs hover:bg-red-700 border-none cursor-pointer">🗑️</button></span>`;
         }
 
         function rafraichirAffichagePublic() {
@@ -993,20 +1122,6 @@
                 </div>
             `).join('') || videMsg('exercices', "Aucun exercice validé pour le moment.");
 
-            if (utilisateurActif) {
-                const mesDemandes = [...donneesSite.exercicesEnAttente, ...donneesSite.exercicesValides, ...(donneesSite.exercicesRejetes || []), ...donneesSite.propositionsArchivees]
-                    .filter(ex => ex.auteurId === utilisateurActif.id);
-                document.getElementById('historique-utilisateur').innerHTML = mesDemandes.map(d => `
-                    <div class="p-3 border rounded-lg bg-slate-50 flex justify-between items-center text-sm">
-                        <div>
-                            <strong>${esc(d.titre)}</strong> <span class="text-xs text-slate-400">(${libelleType(d.type)})</span>
-                            <div class="text-xs text-slate-500">Statut :
-                                <span class="font-semibold ${d.statut === 'Validé' ? 'text-green-600' : d.statut === 'Rejeté' ? 'text-red-600' : 'text-amber-600'}">${esc(d.statut)}</span>
-                            </div>
-                        </div>
-                    </div>
-                `).join('') || "<p class='text-xs text-slate-500 italic'>Vous n'avez fait aucune proposition pour le moment.</p>";
-            }
         }
 
         function majFormProposition() {
@@ -1112,12 +1227,14 @@
 
         
         async function adminAjouterCours() {
+            if (!peutPanelProf()) return;
             const titre = document.getElementById('admin-cours-titre').value.trim();
             const fichier = document.getElementById('admin-cours-file').files[0];
             if (!titre || !fichier) return alert("Renseignez le titre et choisissez le fichier du cours.");
             try {
                 const fileUrl = await lireFichier(fichier);
-                donneesSite.cours.push({ titre, fileUrl, fileName: fichier.name, sousCat: document.getElementById('admin-cours-souscat').value });
+                const m = moi();
+                donneesSite.cours.push({ titre, fileUrl, fileName: fichier.name, sousCat: document.getElementById('admin-cours-souscat').value, auteurId: m.id, auteurNom: m.nom, date: Date.now() });
                 if (!(await sauvegarder())) {
                     donneesSite.cours.pop();
                     return alert("Ajout impossible : échec de l'enregistrement (connexion ou fichier trop volumineux).");
@@ -1130,49 +1247,6 @@
                 console.error(err);
                 alert("Erreur lors de la lecture du fichier\n\nDétail : " + ((err && (err.message || err.error || err.details)) || String(err)) + "\n\n(Vérifiez que le dossier 'fichiers' existe dans Supabase Storage et que sa règle est créée.)");
             }
-        }
-
-        async function adminAjouterEvaluation() {
-            const titre = document.getElementById('admin-eval-titre').value.trim();
-            const description = document.getElementById('admin-eval-desc').value.trim();
-            const fichier = document.getElementById('admin-eval-file').files[0];
-            if (!titre || !fichier) return alert("Renseignez le titre et choisissez le fichier de l'évaluation.");
-            if (!/\.html?$/i.test(fichier.name)) return alert("Le fichier doit être une page web (.html).");
-            const nature = document.getElementById('admin-eval-nature').value;
-            const formats = [];
-            if (document.getElementById('admin-eval-qcm').checked) formats.push('qcm');
-            if (document.getElementById('admin-eval-qr').checked) formats.push('qr');
-            const fCorr = document.getElementById('admin-eval-correction-file').files[0];
-            try {
-                const contenuHtml = await fichier.text();
-                const ev = { titre, description, contenuHtml, sousCat: document.getElementById('admin-eval-souscat').value, nature, formats };
-                if (nature === 'rendre' && fCorr) ev.correctionUrl = await lireFichier(fCorr);
-                donneesSite.evaluations.push(ev);
-                if (!(await sauvegarder())) {
-                    donneesSite.evaluations.pop();
-                    return alert("Ajout impossible : échec de l'enregistrement (connexion ou fichier trop volumineux).");
-                }
-                ['admin-eval-titre', 'admin-eval-desc', 'admin-eval-file', 'admin-eval-correction-file'].forEach(id => document.getElementById(id).value = '');
-                document.getElementById('admin-eval-qcm').checked = document.getElementById('admin-eval-qr').checked = false;
-                alert("Évaluation ajoutée !");
-                rafraichirAffichagePublic();
-            } catch (err) {
-                console.error(err);
-                alert("Erreur lors de la lecture du fichier\n\nDétail : " + ((err && (err.message || err.error || err.details)) || String(err)));
-            }
-        }
-
-        function ouvrirPageHtml(contenu) {
-            const url = URL.createObjectURL(new Blob([contenu], { type: 'text/html' }));
-            window.open(url, '_blank');
-            setTimeout(() => URL.revokeObjectURL(url), 60000);
-        }
-
-        function ouvrirEvaluation(idx) {
-            const ev = donneesSite.evaluations[idx];
-            if (!ev) return;
-            if (ev.contenuHtml) ouvrirPageHtml(ev.contenuHtml);
-            else if (ev.lien) window.open(ev.lien, '_blank');
         }
 
         async function adminValiderExo(index) {
@@ -1233,7 +1307,7 @@
         }
 
         async function adminSupprimerFichier(type, index) {
-            if (!estAdmin) return;
+            if (!peutGerer((donneesSite[listeDe(type)] || [])[index])) return;
             if(confirm("Voulez-vous vraiment supprimer cet élément ?")) {
                 if(type === 'photo') {
                     donneesSite.photos.splice(index, 1);
@@ -1253,6 +1327,7 @@
         }
 
         let diapoIndex = 0;
+        let diapoSig = '';
         let diapoTimer = null;
 
         function rafraichirDiaporama() {
@@ -1260,6 +1335,9 @@
             const d = document.getElementById('diaporama');
             document.getElementById('galerie-accueil').classList.toggle('hidden', photos.length === 0);
             if (diapoIndex >= photos.length) diapoIndex = 0;
+            const sigPh = JSON.stringify(photos.map(p => [p.fileUrl, p.description, p.titre]));
+            if (sigPh === diapoSig && d.children.length === photos.length) { diapoMajDescription(); return; }
+            diapoSig = sigPh;
             d.innerHTML = photos.map((ph, idx) => `
                 <div class="snap-center shrink-0 w-full">
                     <img src="${ph.fileUrl}" alt="" onclick="ouvrirDoc('photos', ${idx}, 'fileUrl', '')" class="w-full max-h-[28rem] object-contain cursor-pointer">
@@ -1413,9 +1491,10 @@ const TAGS = {
     principal:  { i: '👑', l: 'Admin principal' },
     secondaire: { i: '🛡️', l: 'Admin' },
     prof:       { i: '🎓', l: 'Prof' },
-    etudiant:   { i: '📘', l: 'Étudiant' }
+    etudiant:   { i: '📘', l: 'Étudiant' },
+    sponsor:    { i: '💎', l: 'Sponsor' }
 };
-const ECRANS = { accueil: '🏠 Accueil', cours: '🎓 Cours', revisions: '📚 Révisions', evaluations: '📝 Évaluations', exercices: '💡 Exercices', propositions: '📤 Propositions', forum: '💬 Forum' };
+const ECRANS = { accueil: '🏠 Accueil', cours: '🎓 Cours', revisions: '📚 Révisions', evaluations: '📝 Évaluations', exercices: '💡 Exercices', propositions: '📤 Propositions', forum: '💬 Forum', dons: '❤️ Dons' };
 const MSG_MAINT = "Le site est actuellement en maintenance. Nous revenons très vite.";
 const uid = (n, k) => `00000000-0000-0000-000${k}-` + String(n).padStart(12, '0');
 const FAQ_DEFAUT = [
@@ -1432,20 +1511,25 @@ const FAQ_DEFAUT = [
 
 let voirPortail = false, forumOuvert = null, sigForum = '', ongletAdmin = 'contenu';
 function adminRec() { return estAdmin ? (donneesSite.admins || []).find(a => a._id === adminId) || null : null; }
-Object.defineProperty(window, 'adminNom', { get() { const a = adminRec(); return a ? a.nom : ''; }, configurable: true });
+Object.defineProperty(window, 'adminNom', { get() { return nomComplet(adminRec()); }, configurable: true });
 function adminParAid(aid) { const id = String(aid).split(':').slice(1).join(':'); return (donneesSite.admins || []).find(a => a._id === id) || null; }
 
 // ---------- Identité, tags, bans ----------
 function moi() {
     if (estAdmin) return { id: `@${roleAdmin}:${adminId}`, nom: adminNom || 'Administrateur' };
-    return utilisateurActif ? { id: utilisateurActif.id, nom: utilisateurActif.nom } : null;
+    return utilisateurActif ? { id: utilisateurActif.id, nom: nomComplet(utilisateurActif) } : null;
 }
 const identAdmin = () => `${roleAdmin}:${adminId}`;
 const userParId = id => donneesSite.utilisateurs.find(u => u.id === id);
-const tagDe = aid => String(aid).startsWith('@') ? aid.slice(1).split(':')[0] : ((userParId(aid) || {}).tag || '');
+const tagDe = aid => {
+    if (String(aid).startsWith('@')) return aid.slice(1).split(':')[0];
+    const u = userParId(aid); if (!u) return '';
+    const t = u.tag === undefined ? 'etudiant' : u.tag;
+    return ['principal', 'secondaire'].includes(t) ? '' : t;
+};
 const tagHtml = t => TAGS[t] ? `<span class="tag tag-${t}">${TAGS[t].i} ${TAGS[t].l}</span>` : '';
-const nomDe = (aid, snap) => (String(aid).startsWith('@') ? (adminParAid(aid) || {}).nom : (userParId(aid) || {}).nom) || snap;
-const auteurBtn = (aid, nom) => `<button data-a="${esc(aid)}" onclick="event.stopPropagation();ouvrirProfil(this.dataset.a)" class="font-bold text-slate-900 hover:text-blue-700 bg-transparent border-none cursor-pointer p-0 text-sm">${esc(nomDe(aid, nom))}</button> ${tagHtml(tagDe(aid))}`;
+const nomDe = (aid, snap) => nomComplet(recDe(aid)) || snap;
+const auteurBtn = (aid, nom) => `${avatar(aid, nomDe(aid, nom))}<button data-a="${esc(aid)}" onclick="event.stopPropagation();ouvrirProfil(this.dataset.a)" class="font-bold text-slate-900 hover:text-blue-700 bg-transparent border-none cursor-pointer p-0 text-sm">${esc(nomDe(aid, nom))}</button> ${tagsHtml(aid)}`;
 function banActif(u) { const b = u && u.ban; return !b || (b.type === 'temp' && b.fin <= Date.now()) ? null : b; }
 const monBan = () => utilisateurActif ? banActif(userParId(utilisateurActif.id)) : null;
 const txtBan = b => b.type === 'def' ? 'définitivement' : `jusqu'au ${fmt(b.fin)}`;
@@ -1453,9 +1537,8 @@ const descr = x => x.description ? `<small class="block text-xs font-normal text
 
 // ---------- 1. Renommer sans supprimer ----------
 async function adminRenommer(type, idx) {
-    if (!estAdmin) return;
     const liste = { pdf: 'pdfs', cours: 'cours', evaluation: 'evaluations', exoValide: 'exercicesValides' }[type];
-    const it = (donneesSite[liste] || [])[idx]; if (!it) return;
+    const it = (donneesSite[liste] || [])[idx]; if (!it || !peutGerer(it)) return;
     const t = prompt('Nouveau nom :', it.titre); if (t === null) return;
     const d = prompt('Description (vide = aucune) :', it.description || ''); if (d === null) return;
     if (t.trim()) it.titre = t.trim();
@@ -1535,11 +1618,14 @@ function rafraichirForum() {
     let s = donneesSite.sujets.find(x => x._id === forumOuvert);
     if (!s) forumOuvert = null;
     const m = moi(), b = monBan();
-    const sig = JSON.stringify([donneesSite.sujets, donneesSite.utilisateurs.map(u => [u.id, u.nom, u.tag, u.ban]), donneesSite.admins.map(a => [a._id, a.nom]), forumOuvert, estAdmin, !!b, m && m.id]);
+    const sig = JSON.stringify([donneesSite.sujets, donneesSite.utilisateurs.map(u => [u.id, u.nom, u.prenoms, u.photo, u.tag, u.donateur, u.ban]), donneesSite.admins.map(a => [a._id, a.nom, a.prenoms, a.photo, a.role]), forumOuvert, estAdmin, !!b, m && m.id, !!P().forumSourdine]);
     if (sig === sigForum) return; sigForum = sig;
     const rep = $('forum-reply'), saved = rep ? rep.value : '', actif = rep && document.activeElement === rep;
     $('forum-ban-info').innerHTML = b ? `<div class="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800">🔨 Vous êtes banni du forum ${txtBan(b)}. Vous pouvez lire, mais plus écrire.</div>` : '';
-    const peutEcrire = !!m && !b;
+    const muetG = !!P().forumSourdine, muetS = !!(s && s.sourdine), muet = (muetG || muetS) && !estAdmin;
+    const peutEcrire = !!m && !b && !muet;
+    if (muetG || muetS) $('forum-ban-info').innerHTML += `<div class="p-3 mt-2 rounded-xl bg-slate-100 border border-slate-300 text-sm text-slate-700">🔇 ${muetG ? 'Le forum est en sourdine' : 'Ce sujet est en sourdine'} : seuls les administrateurs peuvent écrire.</div>`;
+    const bs = $('btn-sourdine-forum'); bs.classList.toggle('hidden', !estAdmin || !!forumOuvert); bs.textContent = muetG ? '🔊 Réactiver le forum' : '🔇 Mettre en sourdine';
     $('btn-nouveau-sujet').classList.toggle('hidden', !peutEcrire || !!forumOuvert);
     $('forum-liste').classList.toggle('hidden', !!forumOuvert);
     $('forum-sujet').classList.toggle('hidden', !forumOuvert);
@@ -1549,7 +1635,7 @@ function rafraichirForum() {
         $('forum-liste').innerHTML = [...donneesSite.sujets].sort((a, c) => dernier(c) - dernier(a)).map(x => `
             <div onclick="forumOuvrir('${x._id}')" class="p-4 border rounded-xl bg-slate-50 hover:bg-blue-50 cursor-pointer flex justify-between gap-3 items-start">
                 <div class="min-w-0">
-                    <h4 class="font-bold text-blue-800 break-words">${esc(x.titre)}</h4>
+                    <h4 class="font-bold text-blue-800 break-words">${x.sourdine ? '🔇 ' : ''}${esc(x.titre)}</h4>
                     <div class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-1.5">${auteurBtn(x.auteurId, x.auteurNom)} · ${fmt(x.date)} · 💬 ${x.messages.length}</div>
                 </div>
                 ${estAdmin ? `<span class="flex gap-1" onclick="event.stopPropagation()">${bt('bg-blue-600 text-white', '✏️', `forumRenommer('${x._id}')`)}${bt('bg-red-600 text-white', '🗑️', `forumSupprimer('${x._id}')`)}</span>` : ''}
@@ -1560,7 +1646,7 @@ function rafraichirForum() {
     $('forum-sujet').innerHTML = `
         <div class="flex justify-between gap-2 items-center flex-wrap">
             <button onclick="forumOuvrir(null)" class="text-sm text-blue-700 bg-transparent border-none cursor-pointer p-0 font-semibold">← Tous les sujets</button>
-            ${estAdmin ? `<span class="flex gap-1">${bt('bg-blue-600 text-white', '✏️ Renommer', `forumRenommer('${s._id}')`)}${bt('bg-red-600 text-white', '🗑️ Supprimer', `forumSupprimer('${s._id}')`)}</span>` : ''}
+            ${estAdmin ? `<span class="flex gap-1">${bt('bg-slate-700 text-white', s.sourdine ? '🔊 Réactiver' : '🔇 Sourdine', `forumSourdineSujet('${s._id}')`)}${bt('bg-blue-600 text-white', '✏️ Renommer', `forumRenommer('${s._id}')`)}${bt('bg-red-600 text-white', '🗑️ Supprimer', `forumSupprimer('${s._id}')`)}</span>` : ''}
         </div>
         <h4 class="text-xl font-extrabold text-slate-900 break-words">${esc(s.titre)}</h4>
         ${posts.map(p => `
@@ -1572,9 +1658,9 @@ function rafraichirForum() {
                         ${estAdmin && p.id !== '_main' ? bt('bg-red-600 text-white', '🗑️', `forumSupprimerMsg('${s._id}','${p.id}')`) : ''}
                     </div>
                 </div>
-                <p class="text-sm whitespace-pre-wrap break-words">${esc(p.texte)}</p>
+                <p class="text-sm whitespace-pre-wrap break-words">${texteMsg(p.texte)}</p>
             </div>`).join('')}
-        ${peutEcrire ? `<div class="space-y-2"><textarea id="forum-reply" rows="3" placeholder="Votre message…" class="w-full p-3 border rounded-xl text-sm bg-white"></textarea><button onclick="forumRepondre()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold border-none cursor-pointer">Envoyer</button></div>` : (b ? '' : '<p class="text-sm italic text-slate-500">Connectez-vous pour participer.</p>')}`;
+        ${peutEcrire ? `<div class="space-y-2"><textarea id="forum-reply" data-mention="1" rows="3" placeholder="Votre message…" class="w-full p-3 border rounded-xl text-sm bg-white"></textarea><button onclick="forumRepondre()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold border-none cursor-pointer">Envoyer</button></div>` : (b ? '' : '<p class="text-sm italic text-slate-500">Connectez-vous pour participer.</p>')}`;
     const r2 = $('forum-reply');
     if (r2 && saved) { r2.value = saved; if (actif) r2.focus(); }
 }
@@ -1586,6 +1672,8 @@ async function ecritureForum(fn) {
     if (!moi()) return alert('Connectez-vous pour participer.');
     try { await chargerDonnees(true); } catch (e) { }
     if (monBan()) { rafraichirForum(); return alert('Vous êtes banni du forum : écriture impossible.'); }
+    const sj = donneesSite.sujets.find(x => x._id === forumOuvert);
+    if (!estAdmin && (P().forumSourdine || (sj && sj.sourdine))) { rafraichirForum(); return alert('Le forum est en sourdine : seuls les administrateurs peuvent écrire.'); }
     fn(); await sauvegarderOuAlerter(); rafraichirForum();
 }
 async function forumCreer() {
@@ -1642,15 +1730,16 @@ function ouvrirProfil(aid) {
     const reste = aid.split(':').slice(1).join(':');
     const nom = src ? [src.prenoms, src.nom].filter(Boolean).join(' ') : (adm ? (/^[0-9a-f-]{36}$/i.test(reste) ? 'Administrateur (compte supprimé)' : reste) : 'Utilisateur supprimé');
     const photo = src && src.photo ? `<img src="${esc(src.photo)}" alt="" class="w-16 h-16 rounded-full object-cover border shrink-0">` : '<div class="w-16 h-16 rounded-full bg-slate-100 border flex items-center justify-center text-2xl shrink-0">👤</div>';
-    let h = `<div class="flex justify-between items-start gap-2"><div class="flex items-center gap-3 min-w-0">${photo}<div class="min-w-0"><h3 class="text-xl font-extrabold text-slate-900 break-words">${esc(nom)}</h3><div class="mt-1">${tagHtml(tagDe(aid)) || '<span class="text-xs text-slate-400">Aucun tag</span>'}</div></div></div><button onclick="$('modal-profil').classList.add('hidden')" class="text-2xl bg-transparent border-none cursor-pointer text-slate-500">&times;</button></div>`;
+    let h = `<div class="flex justify-between items-start gap-2"><div class="flex items-center gap-3 min-w-0">${photo}<div class="min-w-0"><h3 class="text-xl font-extrabold text-slate-900 break-words">${esc(nom)}</h3><div class="mt-1">${tagsHtml(aid) || '<span class="text-xs text-slate-400">Aucun tag</span>'}</div></div></div><button onclick="$('modal-profil').classList.add('hidden')" class="text-2xl bg-transparent border-none cursor-pointer text-slate-500">&times;</button></div>`;
     h += profilPublicHtml(src);
     if (u) {
         const b = banActif(u), du = `data-u="${esc(u.id)}"`;
         if (estAdmin) h += `<dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm bg-amber-50 border border-amber-200 rounded-xl p-3"><dt class="text-slate-500">Identifiant</dt><dd class="font-semibold">${esc(u.id)}</dd><dt class="text-slate-500">Téléphone</dt><dd class="font-semibold">${esc(u.telephone)}</dd><dd class="col-span-2 text-xs text-slate-500">🔒 Visible par les administrateurs uniquement</dd></dl>`;
         if (b) h += `<div class="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800">🔨 Banni ${txtBan(b)}${estAdmin ? `<br><span class="text-xs">Par ${esc(b.parNom)}${b.motif ? ' · ' + esc(b.motif) : ''}</span>` : ''}</div>`;
         if (estAdmin) {
-            const oTag = (t, l) => `<button ${du} onclick="profilTag(this.dataset.u,'${t}')" class="px-2.5 py-1 rounded-lg text-xs font-bold border cursor-pointer ${u.tag === t ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700'}">${l}</button>`;
-            h += `<div class="space-y-2"><h4 class="font-bold text-sm">🏷️ Tag</h4><div class="flex gap-1.5 flex-wrap">${oTag('etudiant', '📘 Étudiant')}${oTag('prof', '🎓 Prof')}${estPrincipal() ? oTag('secondaire', '🛡️ Admin') + oTag('principal', '👑 Principal') : ''}${oTag('', 'Retirer')}</div></div>`;
+            const oTag = (t, l) => `<button ${du} onclick="profilTag(this.dataset.u,'${t}')" class="px-2.5 py-1 rounded-lg text-xs font-bold border cursor-pointer ${tagDe(u.id) === t ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700'}">${l}</button>`;
+            h += `<div class="space-y-2"><h4 class="font-bold text-sm">🏷️ Tag</h4><div class="flex gap-1.5 flex-wrap">${oTag('etudiant', '📘 Étudiant')}${oTag('prof', '🎓 Prof')}${oTag('sponsor', '💎 Sponsor')}${oTag('', 'Retirer')}</div></div>`;
+            if (estPrincipal()) h += `<div class="space-y-2"><h4 class="font-bold text-sm">💝 Tag Donateur <span class="text-xs font-normal text-slate-500">(en plus du tag ci-dessus)</span></h4><button ${du} onclick="profilDonateur(this.dataset.u)" class="w-full ${u.donateur ? 'bg-slate-600' : 'bg-rose-600'} text-white py-2 rounded-xl text-sm font-bold border-none cursor-pointer">${u.donateur ? 'Retirer le tag Donateur' : 'Attribuer le tag Donateur'}</button></div>`;
             h += b
                 ? `<button ${du} onclick="profilLever(this.dataset.u)" class="w-full bg-emerald-600 text-white py-2 rounded-xl text-sm font-bold border-none cursor-pointer">Lever la sanction</button>`
                 : `<div class="space-y-2"><h4 class="font-bold text-sm">🔨 Bannir du forum</h4>
@@ -1665,8 +1754,8 @@ function ouvrirProfil(aid) {
 function apresProfil(id) { ouvrirProfil(id); rafraichirAffichagePublic(); if (estAdmin) { rafraichirAdminLeger(); if (ongletAdmin === 'utilisateurs') rafraichirUtilisateursAdmin(); } }
 async function profilTag(id, tag) {
     const u = userParId(id); if (!estAdmin || !u) return;
-    if (['principal', 'secondaire'].includes(tag) && !estPrincipal()) return alert("Réservé à l'administrateur principal.");
-    if (tag) u.tag = tag; else delete u.tag;
+    if (['principal', 'secondaire'].includes(tag)) return alert("Les tags « Admin » et « Admin principal » sont attribués automatiquement aux administrateurs : on ne peut pas les donner.");
+    u.tag = tag || '';
     await sauvegarderOuAlerter(); apresProfil(id);
 }
 async function profilBannir(id) {
@@ -1701,7 +1790,7 @@ function adminTab(t) {
     document.querySelectorAll('#admin-tabs .atab-btn').forEach(b => b.classList.toggle('on', b.dataset.t === t));
     $('tab-site').classList.toggle('hidden', !estPrincipal());
     if (t === 'utilisateurs') rafraichirUtilisateursAdmin();
-    if (t === 'contenu') rafraichirSousCats();
+    if (t === 'contenu') { const f = $('contenu-forms'), z = $('atab-contenu'); if (f && z && f.parentNode !== z) z.appendChild(f); rafraichirSousCats(); }
     rafraichirAdminLeger();
     if (t === 'chat') { const c = $('chat-admin-liste'); c.scrollTop = c.scrollHeight; }
 }
@@ -1713,7 +1802,7 @@ function rafraichirUtilisateursAdmin() {
     $('admin-liste-utilisateurs').innerHTML = donneesSite.utilisateurs.map((u, i) => ({ u, i })).filter(({ u }) => [u.id, u.nom, u.prenoms, u.telephone].join(' ').toLowerCase().includes(f)).map(({ u, i }) => `
         <div class="p-3 bg-white border rounded-xl text-sm">
             <div class="flex items-center justify-between gap-2 flex-wrap">
-                <div class="flex items-center gap-2 flex-wrap"><strong>${esc(u.nom)} ${esc(u.prenoms)}</strong>${tagHtml(u.tag)}${banActif(u) ? '<span class="tag" style="background:#fee2e2;color:#991b1b">🔨 banni</span>' : ''}<span class="text-xs text-slate-400">@${esc(u.id)}</span></div>
+                <div class="flex items-center gap-2 flex-wrap"><strong>${esc(u.nom)} ${esc(u.prenoms)}</strong>${tagsHtml(u.id)}${banActif(u) ? '<span class="tag" style="background:#fee2e2;color:#991b1b">🔨 banni</span>' : ''}<span class="text-xs text-slate-400">@${esc(u.id)}</span></div>
                 <div class="flex gap-1"><button data-a="${esc(u.id)}" onclick="ouvrirProfil(this.dataset.a)" class="bg-indigo-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer">Profil · tag · ban</button>${bt('bg-red-600 text-white', '🗑️', `adminSupprimerUtilisateur(${i})`)}</div>
             </div>
             <details class="mt-2"><summary class="text-xs text-blue-700 cursor-pointer">Modifier les informations</summary>
@@ -1745,7 +1834,7 @@ async function sigSupprimer(id) {
 
 function rafraichirSanctions() {
     const bans = donneesSite.utilisateurs.filter(u => banActif(u));
-    $('admin-liste-bans').innerHTML = bans.map(u => `<div class="p-3 bg-white border rounded-lg text-sm flex justify-between items-center gap-2 flex-wrap"><div><b>${esc(u.nom)}</b> ${tagHtml(u.tag)}<div class="text-xs text-slate-500">Banni ${txtBan(u.ban)} · par ${esc(u.ban.parNom)}${u.ban.motif ? ' · ' + esc(u.ban.motif) : ''}</div></div><button data-u="${esc(u.id)}" onclick="profilLever(this.dataset.u)" class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer">Lever</button></div>`).join('') || "<p class='text-sm text-slate-500 italic'>Aucun ban en cours.</p>";
+    $('admin-liste-bans').innerHTML = bans.map(u => `<div class="p-3 bg-white border rounded-lg text-sm flex justify-between items-center gap-2 flex-wrap"><div><b>${esc(u.nom)}</b> ${tagsHtml(u.id)}<div class="text-xs text-slate-500">Banni ${txtBan(u.ban)} · par ${esc(u.ban.parNom)}${u.ban.motif ? ' · ' + esc(u.ban.motif) : ''}</div></div><button data-u="${esc(u.id)}" onclick="profilLever(this.dataset.u)" class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer">Lever</button></div>`).join('') || "<p class='text-sm text-slate-500 italic'>Aucun ban en cours.</p>";
     $('admin-liste-demandes').innerHTML = donneesSite.demandesBan.map(d => {
         const peut = estPrincipal() || identAdmin() === d.approbateur;
         return `<div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm flex justify-between items-center gap-2 flex-wrap"><div>Levée du ban de <b>${esc(d.userNom)}</b><div class="text-xs text-slate-500">Demandée par ${esc(d.demandeurNom)} · à approuver par ${esc(d.approbateurNom)}</div></div>${peut ? `<span class="flex gap-1">${bt('bg-emerald-600 text-white', 'Approuver', `demandeTraiter('${d._id}',true)`)}${bt('bg-red-600 text-white', 'Refuser', `demandeTraiter('${d._id}',false)`)}</span>` : '<span class="text-xs italic text-slate-500">En attente</span>'}</div>`;
@@ -1756,7 +1845,7 @@ function rafraichirChat() {
     const c = $('chat-admin-liste'); if (!c) return;
     const bas = c.scrollTop + c.clientHeight >= c.scrollHeight - 40;
     c.innerHTML = [...donneesSite.chatAdmin].sort((a, b) => a.date - b.date).slice(-150).map(x => `
-        <div class="p-2.5 rounded-xl bg-white border text-sm"><div class="flex justify-between items-center gap-2"><span>${auteurBtn(x.aid, x.nom)} <span class="text-xs text-slate-400">${fmt(x.date)}</span></span>${estPrincipal() && x._id ? bt('bg-red-600 text-white', '🗑️', `chatSupprimer('${x._id}')`) : ''}</div><p class="whitespace-pre-wrap break-words mt-1">${esc(x.texte)}</p></div>`).join('') || "<p class='text-sm italic text-slate-500'>Aucun message.</p>";
+        <div class="p-2.5 rounded-xl bg-white border text-sm"><div class="flex justify-between items-center gap-2"><span>${auteurBtn(x.aid, x.nom)} <span class="text-xs text-slate-400">${fmt(x.date)}</span></span>${estPrincipal() && x._id ? bt('bg-red-600 text-white', '🗑️', `chatSupprimer('${x._id}')`) : ''}</div><p class="whitespace-pre-wrap break-words mt-1">${texteMsg(x.texte)}</p></div>`).join('') || "<p class='text-sm italic text-slate-500'>Aucun message.</p>";
     if (bas) c.scrollTop = c.scrollHeight;
 }
 async function chatEnvoyer() {
@@ -1774,7 +1863,7 @@ async function chatSupprimer(id) {
 function rafraichirSousCats() {
     const L = donneesSite.sousCategories;
     $('souscat-liste').innerHTML = [['cours', 'Cours'], ['evaluations', 'Évaluations'], ['revisions', 'Révisions'], ['exercices', 'Exercices']].map(([s, nom]) => `
-        <div><div class="text-xs font-bold text-slate-500 uppercase mb-1">${nom}</div><div class="flex gap-2 flex-wrap">${L.filter(c => c.section === s).map(c => `<span class="inline-flex items-center gap-1 bg-white border rounded-full pl-3 pr-1 py-0.5 text-sm">${esc(c.nom)}<button onclick="sousCatSupprimer('${c._id}')" class="bg-transparent border-none cursor-pointer text-red-600">✕</button></span>`).join('') || '<span class="text-xs italic text-slate-400">Aucune</span>'}</div></div>`).join('');
+        <div><div class="text-xs font-bold text-slate-500 uppercase mb-1">${nom}</div><div class="flex gap-2 flex-wrap">${L.filter(c => c.section === s).map(c => `<span class="inline-flex items-center gap-1 bg-white border rounded-full pl-3 pr-1 py-0.5 text-sm">${esc(c.nom)}${estAdmin ? `<button onclick="sousCatSupprimer('${c._id}')" class="bg-transparent border-none cursor-pointer text-red-600">✕</button>` : '<span class="pr-2"></span>'}</span>`).join('') || '<span class="text-xs italic text-slate-400">Aucune</span>'}</div></div>`).join('');
     [['admin-cours-souscat', 'cours'], ['admin-eval-souscat', 'evaluations']].forEach(([id, section]) => {
         const sel = $(id), v = sel.value;
         sel.innerHTML = '<option value="">— Sans sous-catégorie —</option>' + L.filter(c => c.section === section).map(c => `<option value="${c._id}">${esc(c.nom)}</option>`).join('');
@@ -1782,7 +1871,7 @@ function rafraichirSousCats() {
     });
 }
 async function sousCatAjouter() {
-    const nom = $('souscat-nom').value.trim(); if (!estAdmin || !nom) return alert('Indiquez un nom.');
+    const nom = $('souscat-nom').value.trim(); if (!peutPanelProf() || !nom) return alert('Indiquez un nom.');
     donneesSite.sousCategories.push({ section: $('souscat-section').value, nom });
     $('souscat-nom').value = ''; await sauvegarderOuAlerter(); rafraichirSousCats(); rafraichirAffichagePublic();
 }
@@ -1805,7 +1894,7 @@ function termesRecherche(section) { const e = $(RECH[section]); return e ? norm(
 function correspond(it, cats, termes) {
     if (!termes.length) return true;
     const sc = cats.find(c => c._id === it.sousCat);
-    const nat = it.nature === 'rendre' ? 'devoir a rendre' : (it.nature === 'personnel' ? 'devoir personnel' : '');
+    const nat = (it.nature !== undefined || it.aRendre !== undefined) ? (({ personnel: 'devoir personnel', qcm: 'qcm', qr: 'questions reponses question reponse' }[natureEv(it)] || '') + (aRendreEv(it) ? ' a rendre devoir a rendre' : '')) : '';
     const fm = (it.formats || []).map(f => f === 'qcm' ? 'qcm' : 'questions reponses').join(' ');
     const texte = norm([it.titre, it.description, sc ? sc.nom : '', nat, fm].join(' '));
     return termes.every(t => texte.includes(t));
@@ -1824,13 +1913,17 @@ function grouper(section, liste, fn) {
 
 // ---------- Branchement sur le code existant ----------
 const _rafPublic = rafraichirAffichagePublic;
-rafraichirAffichagePublic = function () { _rafPublic(); majMaintenance(); rafraichirFaq(); rafraichirForum(); majSousCatProp(); };
+rafraichirAffichagePublic = function () {
+    // Chaque module est isolé : une erreur dans l'un n'empêche plus les autres de se mettre à jour
+    [_rafPublic, majMaintenance, rafraichirFaq, rafraichirForum, majSousCatProp, majNavProf, rafraichirSuivi, evalDetailMaj, rafraichirEspaceProf, annonceVerifier]
+        .forEach(f => { try { f(); } catch (e) { console.error('Rafraîchissement :', f.name, e); } });
+};
 const _rafAdmin = rafraichirAdmin;
 rafraichirAdmin = function () { _rafAdmin(); adminTab(ongletAdmin); };
 const _majForm = majFormProposition;
 majFormProposition = function () { _majForm(); majSousCatProp(); };
 const _verifSession = verifierSession;
-verifierSession = function () { _verifSession(); majMaintenance(); majTitreBienvenue(); };
+verifierSession = function () { _verifSession(); majMaintenance(); majTitreBienvenue(); majNavProf(); };
 
 
 // =====================================================================
@@ -1923,11 +2016,12 @@ async function adminSupprimerAdmin(id) {
 function profilSource() { return estAdmin ? adminRec() : (utilisateurActif ? userParId(utilisateurActif.id) : null); }
 function remplirProfil() {
     const s = profilSource(); if (!s) return;
+    $('pf-notif').checked = notifActives();
     $('pf-prenoms').value = s.prenoms || ''; $('pf-nom').value = s.nom || '';
     $('pf-niveau').value = s.niveau || ''; $('pf-interets').value = s.interets || ''; $('pf-description').value = s.description || '';
     $('pf-photo-file').value = '';
     $('pf-photo').innerHTML = s.photo ? `<img src="${esc(s.photo)}" alt="" class="w-full h-full object-cover">` : '<div class="w-full h-full flex items-center justify-center text-3xl">👤</div>';
-    $('pf-tag').innerHTML = tagHtml(estAdmin ? roleAdmin : s.tag);
+    $('pf-tag').innerHTML = estAdmin ? tagHtml(roleAdmin) : tagsHtml(s.id);
     $('pf-info').textContent = estAdmin ? '' : `Identifiant : ${s.id}`;
     const cle = estAdmin && s.cle;
     $('pf-cle-box').classList.toggle('hidden', !cle);
@@ -1952,127 +2046,616 @@ async function enregistrerProfil() {
     alert('Profil enregistré.');
 }
 
-// ----- Évaluations : tags, boutons -----
+
+// =====================================================================
+//  MODULES v4 : photos, noms complets, @mentions, sourdine
+// =====================================================================
+function nomComplet(r) { return r ? [r.prenoms, r.nom].filter(Boolean).join(' ') : ''; }
+function recDe(aid) { return String(aid).startsWith('@') ? adminParAid(aid) : userParId(aid); }
+function avatar(aid, nom, size = 28) {
+    const r = recDe(aid), full = nomComplet(r) || nom || '?';
+    const st = `width:${size}px;height:${size}px;border-radius:50%;flex-shrink:0;vertical-align:middle;margin-right:6px;display:inline-block;`;
+    if (r && r.photo) return `<img src="${esc(r.photo)}" alt="" style="${st}object-fit:cover;border:1px solid #e2e8f0">`;
+    return `<span style="${st}background:#dbeafe;color:#1e40af;font-weight:800;font-size:${Math.round(size * .45)}px;line-height:${size}px;text-align:center">${esc((full.trim()[0] || '?').toUpperCase())}</span>`;
+}
+function membresMentionnables() {
+    const L = [];
+    donneesSite.admins.forEach(a => L.push({ aid: `@${a.role}:${a._id}`, nom: nomComplet(a), tag: a.role }));
+    donneesSite.utilisateurs.forEach(u => L.push({ aid: u.id, nom: nomComplet(u), tag: tagDe(u.id) }));
+    return L.filter(m => m.nom);
+}
+function texteMsg(t) {
+    const h = esc(t);
+    if (!h.includes('@')) return h;
+    const noms = membresMentionnables().sort((a, b) => b.nom.length - a.nom.length);
+    if (!noms.length) return h;
+    const map = new Map(noms.map(m => [esc(m.nom).toLowerCase(), m]));
+    const re = new RegExp('@(' + noms.map(m => esc(m.nom).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(?![\\p{L}\\p{N}])', 'giu');
+    return h.replace(re, (all, n) => {
+        const m = map.get(n.toLowerCase());
+        return m ? `<button data-a="${esc(m.aid)}" onclick="event.stopPropagation();ouvrirProfil(this.dataset.a)" style="color:#1d4ed8;background:#dbeafe;border:none;border-radius:6px;padding:0 4px;cursor:pointer;font:inherit;font-weight:700">@${n}</button>` : all;
+    });
+}
+
+let mention = { el: null, list: [], idx: 0, start: -1 };
+function mentionPop() {
+    let p = $('mention-pop');
+    if (!p) {
+        p = document.createElement('div'); p.id = 'mention-pop';
+        p.style.cssText = 'position:fixed;z-index:100;display:none;max-height:220px;overflow:auto;background:#fff;border:1px solid #cbd5e1;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.2);min-width:250px;max-width:92vw';
+        p.addEventListener('mousedown', e => { e.preventDefault(); const it = e.target.closest('[data-i]'); if (it) mentionChoisir(+it.dataset.i); });
+        document.body.appendChild(p);
+    }
+    return p;
+}
+function mentionFermer() { mentionPop().style.display = 'none'; mention.el = null; }
+function mentionMaj(ta) {
+    const avant = ta.value.slice(0, ta.selectionStart), at = avant.lastIndexOf('@');
+    if (at < 0 || (at > 0 && !/\s/.test(avant[at - 1]))) return mentionFermer();
+    const frag = avant.slice(at + 1);
+    if (/\n/.test(frag) || frag.length > 30) return mentionFermer();
+    const termes = norm(frag).split(/\s+/).filter(Boolean);
+    const L = membresMentionnables().filter(m => termes.every(t => norm(m.nom).includes(t))).slice(0, 6);
+    if (!L.length) return mentionFermer();
+    mention = { el: ta, list: L, idx: 0, start: at };
+    mentionRendre();
+}
+function mentionRendre() {
+    const p = mentionPop(), r = mention.el.getBoundingClientRect();
+    p.innerHTML = mention.list.map((m, i) => `<div data-i="${i}" style="display:flex;align-items:center;gap:4px;padding:6px 10px;cursor:pointer;${i === mention.idx ? 'background:#dbeafe;' : ''}">${avatar(m.aid, m.nom, 26)}<span style="font-size:14px;font-weight:600;margin-right:4px">${esc(m.nom)}</span>${tagHtml(m.tag)}</div>`).join('');
+    p.style.display = 'block';
+    p.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 262)) + 'px';
+    p.style.bottom = (window.innerHeight - r.top + 6) + 'px';
+}
+function mentionChoisir(i) {
+    const ta = mention.el, m = mention.list[i]; if (!ta || !m) return;
+    const ins = '@' + m.nom + ' ', fin = ta.selectionStart;
+    ta.value = ta.value.slice(0, mention.start) + ins + ta.value.slice(fin);
+    const np = mention.start + ins.length; ta.focus(); ta.setSelectionRange(np, np); mentionFermer();
+}
+document.addEventListener('keydown', e => {
+    const p = $('mention-pop');
+    if (!mention.el || !p || p.style.display === 'none' || e.target !== mention.el) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopImmediatePropagation(); mention.idx = (mention.idx + (e.key === 'ArrowDown' ? 1 : -1) + mention.list.length) % mention.list.length; mentionRendre(); }
+    else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); e.stopImmediatePropagation(); mentionChoisir(mention.idx); }
+    else if (e.key === 'Escape') { e.preventDefault(); mentionFermer(); }
+}, true);
+document.addEventListener('input', e => { const t = e.target; if (t && t.matches && t.matches('textarea[data-mention]')) mentionMaj(t); });
+document.addEventListener('click', e => { if (!e.target.closest('#mention-pop')) mentionFermer(); });
+
+// ----- Sourdine -----
+async function forumSourdineGlobal() {
+    if (!estAdmin) return;
+    const p = P(); p.forumSourdine = !p.forumSourdine;
+    if (!(await sauvegarder())) { p.forumSourdine = !p.forumSourdine; return alert("Échec de l'enregistrement.\n\nDétail : " + derniereErreur); }
+    rafraichirForum();
+}
+async function forumSourdineSujet(id) {
+    const s = donneesSite.sujets.find(x => x._id === id); if (!estAdmin || !s) return;
+    s.sourdine = !s.sourdine;
+    if (!(await sauvegarder())) { s.sourdine = !s.sourdine; return alert("Échec de l'enregistrement.\n\nDétail : " + derniereErreur); }
+    rafraichirForum();
+}
+
+$('faq-ecran').innerHTML = Object.entries(ECRANS).map(([k, v]) => `<option value="${k}">Redirige vers : ${v}</option>`).join('');
+
+
+// Initialisation FAQ par défaut (une seule fois) après le chargement
+window.addEventListener('load', () => setTimeout(() => { initialiserFaq().catch(console.warn); majMaintenance(); }, 1500));
+
+
+// =====================================================================
+//  MODULES v5 : « À rendre » + délai, aperçu intégré du sujet + zone
+//  d'écriture, espace prof/sponsors, message d'annonce (10 s),
+//  suivi des propositions fiabilisé, messages en temps réel.
+// =====================================================================
+
+// ---------- Rôles et droits ----------
+const tagUtilisateur = () => (!estAdmin && utilisateurActif) ? tagDe(utilisateurActif.id) : '';
+const estProf = () => tagUtilisateur() === 'prof';
+const estSponsor = () => tagUtilisateur() === 'sponsor';
+const peutPanelProf = () => estAdmin || estProf();                    // panel d'ajout (admins + profs)
+const peutEspaceProf = () => estAdmin || estProf() || estSponsor();   // catégorie « Espace prof/sponsors »
+const auteurEstAdmin = id => !id || String(id).startsWith('@');
+const ecranActif = () => { const e = document.querySelector('.screen.active-screen'); return e ? e.id : ''; };
+
+function listeDe(type) { return { pdf: 'pdfs', cours: 'cours', evaluation: 'evaluations', exoValide: 'exercicesValides', photo: 'photos' }[type]; }
+// Un admin gère tout ; un prof gère uniquement ce qu'il a lui-même ajouté.
+function peutGerer(it) {
+    if (!it) return false;
+    if (estAdmin) return true;
+    return estProf() && !!utilisateurActif && it.auteurId === utilisateurActif.id;
+}
+
+// ---------- Évaluations : nature, « À rendre », délai ----------
+const aRendreEv = ev => !!ev && (ev.aRendre === true || ev.nature === 'rendre');   // 'rendre' = ancien format
+const natureEv = ev => (!ev || !ev.nature || ev.nature === 'rendre') ? 'personnel' : ev.nature;
+const evalInline = ev => !!ev && (!!ev.fileUrl || aRendreEv(ev));   // fichier PDF/photo ou « à rendre » : aperçu dans la page
+const delaiDepasse = ev => aRendreEv(ev) && !!ev.delai && Date.now() > ev.delai;
+const versLocal = ts => new Date(ts - new Date(ts).getTimezoneOffset() * 60000).toISOString().slice(0, 16);   // pour <input datetime-local>
+function texteReste(ms) {
+    const m = Math.floor(ms / 60000), j = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60), mn = m % 60;
+    return j ? `${j} j ${h} h` : h ? `${h} h ${mn} min` : `${Math.max(mn, 1)} min`;
+}
+function delaiHtml(ev) {
+    if (!aRendreEv(ev) || !ev.delai) return '';
+    return delaiDepasse(ev)
+        ? `<span class="text-red-600">⛔ Délai dépassé depuis le ${fmt(ev.delai)} : l'envoi est fermé.</span>`
+        : `<span class="text-orange-600">⏳ À rendre avant le ${fmt(ev.delai)} (il reste ${texteReste(ev.delai - Date.now())})</span>`;
+}
 function tagsEval(ev) {
-    let h = ev.nature === 'rendre' ? '<span class="tag tag-rendre">📌 Devoir à rendre</span>' : '<span class="tag tag-perso">📖 Devoir personnel</span>';
-    (ev.formats || []).forEach(f => { h += f === 'qcm' ? '<span class="tag tag-qcm">✅ QCM</span>' : '<span class="tag tag-qr">✍️ Questions-réponses</span>'; });
+    const T = { personnel: ['tag-perso', '📖 Devoir personnel'], qcm: ['tag-qcm', '✅ QCM'], qr: ['tag-qr', '✍️ Questions-réponses'] };
+    const nat = natureEv(ev), [c, l] = T[nat] || T.personnel;
+    let h = `<span class="tag ${c}">${l}</span>`;
+    (ev.formats || []).forEach(f => { if (f !== nat) h += f === 'qcm' ? '<span class="tag tag-qcm">✅ QCM</span>' : '<span class="tag tag-qr">✍️ Questions-réponses</span>'; });
+    if (aRendreEv(ev)) {
+        h += '<span class="tag tag-rendre">📌 A rendre</span>';
+        if (ev.delai) h += delaiDepasse(ev)
+            ? '<span class="tag" style="background:#fee2e2;color:#991b1b">⛔ Délai dépassé</span>'
+            : `<span class="tag" style="background:#ffedd5;color:#9a3412">⏰ ${fmt(ev.delai)}</span>`;
+    }
     return h;
 }
 const renduDe = evId => utilisateurActif ? donneesSite.rendus.find(r => r.evalId === evId && r.auteurId === utilisateurActif.id) : null;
-function boutonsEval(ev, idx) {
-    const cls = 'block w-full text-center text-white py-2.5 rounded-lg font-medium transition border-none cursor-pointer';
-    if (ev.nature !== 'rendre') return `<button onclick="ouvrirEvaluation(${idx})" class="${cls} bg-blue-600 hover:bg-blue-700">Faire l'évaluation</button>`;
-    const ouvrir = `<button onclick="ouvrirEvaluation(${idx})" class="${cls} bg-blue-600 hover:bg-blue-700">Ouvrir le sujet</button>`;
-    if (estAdmin) return ouvrir + '<p class="text-xs text-slate-500 mt-2">Copies et correction : Admin → 📨 Devoirs rendus.</p>';
-    const r = renduDe(ev._id);
-    return ouvrir + `<button onclick="ouvrirRendu(${idx})" class="${cls} bg-orange-500 hover:bg-orange-600 mt-2">${r ? '✅ Rendu — modifier mon envoi' : '📨 Rendre mon devoir'}</button><p class="text-xs text-slate-500 mt-2">La correction sera communiquée par l'administrateur.</p>`;
+
+// Qui reçoit les copies : tous les admins + le prof auteur du devoir (ou tous les profs si le devoir vient d'un admin)
+function peutVoirCopiesEv(ev) {
+    if (estAdmin) return true;
+    if (!estProf() || !ev) return false;
+    return auteurEstAdmin(ev.auteurId) || ev.auteurId === utilisateurActif.id;
+}
+function peutVoirCopie(r) {
+    if (estAdmin) return true;
+    return estProf() && (!r.destProf || r.destProf === utilisateurActif.id);
 }
 
-// ----- Devoirs rendus (étudiant) -----
-let renduEval = null;
-function ouvrirRendu(idx) {
-    if (!utilisateurActif) return alert('Réservé aux étudiants connectés.');
-    const ev = donneesSite.evaluations[idx]; if (!ev || ev.nature !== 'rendre') return;
-    renduEval = ev._id;
-    const ex = renduDe(ev._id);
-    $('rendu-titre').textContent = '📨 Rendre : ' + ev.titre;
-    $('rendu-texte').value = ex ? (ex.texte || '') : ''; $('rendu-file').value = '';
-    $('rendu-info').textContent = ex ? `Déjà rendu le ${fmt(ex.date)}${ex.fileName ? ' (fichier : ' + ex.fileName + ')' : ''}. Un nouvel envoi remplace le précédent.` : '';
-    $('modal-rendu').classList.remove('hidden');
+function boutonsEval(ev, idx) {
+    const cls = 'block w-full text-center text-white py-2.5 rounded-lg font-medium transition border-none cursor-pointer';
+    if (!evalInline(ev)) return `<button onclick="ouvrirEvaluation(${idx})" class="${cls} bg-blue-600 hover:bg-blue-700">Faire l'évaluation</button>`;
+    const ar = aRendreEv(ev), staff = estAdmin || estProf(), r = renduDe(ev._id);
+    const lbl = staff ? 'Ouvrir le sujet' : (ar ? (r ? '✅ Rendu — voir / modifier mon envoi' : '📝 Ouvrir et répondre') : '📝 Ouvrir le sujet');
+    let h = `<button onclick="ouvrirEvalDetail(${idx})" class="${cls} bg-blue-600 hover:bg-blue-700">${lbl}</button>`;
+    if (ar && !staff) h += `<p class="text-xs text-slate-500 mt-2">${delaiDepasse(ev) ? '⛔ Délai dépassé : envoi fermé.' : 'Écris tes réponses sous le sujet puis « Faire évaluer ».'}</p>`;
+    if (ar && staff && peutVoirCopiesEv(ev)) h += `<p class="text-xs text-slate-500 mt-2">📨 Copies reçues : ${donneesSite.rendus.filter(x => x.evalId === ev._id && peutVoirCopie(x)).length}</p>`;
+    return h;
 }
-async function envoyerRendu() {
-    const ev = donneesSite.evaluations.find(e => e._id === renduEval); if (!ev || !utilisateurActif) return;
-    const texte = $('rendu-texte').value.trim(), f = $('rendu-file').files[0], ex = renduDe(ev._id);
-    if (!texte && !f && !(ex && ex.fileUrl)) return alert('Écrivez votre réponse ou joignez un fichier.');
-    const btn = $('rendu-btn'); btn.disabled = true; btn.textContent = 'Envoi…';
+
+// ---------- Ajout d'une évaluation (admin ou prof) ----------
+const estHtml = f => /\.html?$/i.test(f.name) || f.type === 'text/html';
+function evalFichierChange() {
+    const f = $('admin-eval-file').files[0];
+    $('admin-eval-hint').textContent = !f ? '' : estHtml(f)
+        ? "Page web : elle s'ouvre dans un onglet (ou directement dans la page si l'évaluation est « à rendre »)."
+        : "Photo / PDF : le sujet s'affichera directement dans la page, avec une zone d'écriture en dessous pour l'étudiant.";
+}
+function evalMajARendre() { $('admin-eval-arendre-box').classList.toggle('hidden', !$('admin-eval-arendre').checked); }
+async function adminAjouterEvaluation() {
+    if (!peutPanelProf()) return;
+    const m = moi(), btn = $('btn-add-eval');
+    const titre = $('admin-eval-titre').value.trim(), description = $('admin-eval-desc').value.trim(), fichier = $('admin-eval-file').files[0];
+    if (!titre || !fichier) return alert("Renseignez le titre et choisissez le fichier de l'évaluation (page .html, PDF ou photo).");
+    const html = estHtml(fichier);
+    if (!html && !(/\.pdf$/i.test(fichier.name) || /^image\//.test(fichier.type) || fichier.type === 'application/pdf')) return alert('Format non pris en charge : utilisez une page .html, un PDF ou une photo.');
+    const nature = $('admin-eval-nature').value, aRendre = $('admin-eval-arendre').checked;
+    let delai = null;
+    if (aRendre && $('admin-eval-delai').value) {
+        delai = new Date($('admin-eval-delai').value).getTime();
+        if (!(delai > Date.now())) return alert('La date limite doit être dans le futur.');
+    }
+    const fCorr = aRendre ? $('admin-eval-correction-file').files[0] : null;
+    btn.disabled = true; btn.textContent = 'Envoi…';
+    try {
+        const ev = { titre, description, sousCat: $('admin-eval-souscat').value, nature, aRendre, delai, auteurId: m.id, auteurNom: m.nom, date: Date.now() };
+        if (html) ev.contenuHtml = await fichier.text();
+        else { ev.fileUrl = await lireFichier(fichier); ev.fileName = fichier.name; }
+        if (fCorr) ev.correctionUrl = await lireFichier(fCorr);
+        donneesSite.evaluations.push(ev);
+        if (!(await sauvegarder())) {
+            donneesSite.evaluations.pop();
+            return alert("Ajout impossible : échec de l'enregistrement (connexion ou fichier trop volumineux).");
+        }
+        ['admin-eval-titre', 'admin-eval-desc', 'admin-eval-file', 'admin-eval-correction-file', 'admin-eval-delai'].forEach(id => $(id).value = '');
+        $('admin-eval-arendre').checked = false; evalMajARendre(); evalFichierChange();
+        alert('Évaluation ajoutée !');
+        rafraichirAffichagePublic();
+    } catch (err) {
+        console.error(err);
+        alert("Erreur lors de la lecture du fichier\n\nDétail : " + ((err && (err.message || err.error || err.details)) || String(err)));
+    } finally { btn.disabled = false; btn.textContent = 'Ajouter'; }
+}
+
+function ouvrirPageHtml(contenu) {
+    const url = URL.createObjectURL(new Blob([contenu], { type: 'text/html' }));
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+function ouvrirEvaluation(idx) {
+    const ev = donneesSite.evaluations[idx];
+    if (!ev) return;
+    if (evalInline(ev)) return ouvrirEvalDetail(idx);
+    if (ev.contenuHtml) ouvrirPageHtml(ev.contenuHtml);
+    else if (ev.lien) window.open(ev.lien, '_blank');
+}
+function evalOuvrirOnglet(id) { const ev = donneesSite.evaluations.find(e => e._id === id); if (ev && ev.contenuHtml) ouvrirPageHtml(ev.contenuHtml); }
+
+// ---------- Page d'une évaluation : sujet affiché dans la page + zone d'écriture ----------
+let evalDetailId = null;
+const estImageUrl = (u, nom) => /^data:image\//.test(u) || /\.(jpe?g|png|gif|webp|bmp)(\?|#|$)/i.test(u) || /\.(jpe?g|png|gif|webp|bmp)$/i.test(nom || '');
+const cleBrouillon = id => 'brouillon:' + (utilisateurActif ? utilisateurActif.id : 'x') + ':' + id;
+function lireBrouillon(id) { try { return localStorage.getItem(cleBrouillon(id)); } catch (e) { return null; } }
+function ecrireBrouillon(id, v) { try { v ? localStorage.setItem(cleBrouillon(id), v) : localStorage.removeItem(cleBrouillon(id)); } catch (e) { } }
+const evalEcritureAutorisee = () => !!utilisateurActif && !estAdmin && !estProf();
+
+function ouvrirEvalDetail(idx) {
+    const ev = donneesSite.evaluations[idx]; if (!ev) return;
+    evalDetailId = ev._id;
+    evalDetailConstruire(ev);
+    changerEcran('eval-detail');
+}
+function evalDetailConstruire(ev) {
+    $('ed-titre').textContent = ev.titre;
+    $('ed-desc').textContent = ev.description || '';
+    const box = $('ed-sujet'); box.innerHTML = '';
+    let lien = '';
+    if (ev.contenuHtml) {
+        const f = document.createElement('iframe');
+        f.className = 'w-full block bg-white border-none'; f.style.height = '72vh'; f.style.minHeight = '420px';
+        f.setAttribute('sandbox', 'allow-scripts allow-forms allow-popups allow-modals');
+        f.srcdoc = ev.contenuHtml; box.appendChild(f);
+        lien = `<button onclick="evalOuvrirOnglet('${ev._id}')" class="underline text-blue-600 bg-transparent border-none cursor-pointer p-0 text-xs">↗ Ouvrir ce sujet en plein écran dans un onglet</button>`;
+    } else if (ev.fileUrl) {
+        if (estImageUrl(ev.fileUrl, ev.fileName)) {
+            const im = document.createElement('img');
+            im.src = ev.fileUrl; im.alt = ev.titre; im.className = 'w-full h-auto block cursor-zoom-in';
+            im.onclick = () => ouvrirLecteurDirect(ev.titre, ev.fileUrl);
+            box.appendChild(im);
+        } else {
+            const f = document.createElement('iframe');
+            f.className = 'w-full block bg-white border-none'; f.style.height = '75vh'; f.style.minHeight = '420px'; f.src = ev.fileUrl; box.appendChild(f);
+        }
+        lien = `<a href="${esc(ev.fileUrl)}" target="_blank" rel="noopener" class="underline text-blue-600 text-xs">Le sujet ne s'affiche pas bien ? Ouvrir ou télécharger le fichier</a>`;
+    } else if (ev.lien) {
+        box.innerHTML = `<div class="p-6 text-center"><a href="${esc(ev.lien)}" target="_blank" rel="noopener" class="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium no-underline">Ouvrir le sujet</a></div>`;
+    }
+    $('ed-ouvrir').innerHTML = lien;
+    if (evalEcritureAutorisee()) {
+        const ex = renduDe(ev._id), br = lireBrouillon(ev._id), t = $('ed-texte');
+        t.value = br !== null ? br : (ex ? (ex.texte || '') : '');
+        $('ed-file').value = '';
+        let timer = null;
+        t.oninput = () => { clearTimeout(timer); timer = setTimeout(() => ecrireBrouillon(ev._id, t.value), 400); };
+    }
+    evalDetailMaj(true);
+}
+// Met à jour uniquement les infos dynamiques (ne touche ni au sujet ni au texte en cours d'écriture)
+function evalDetailMaj(force) {
+    if (force !== true && !$('eval-detail').classList.contains('active-screen')) return;
+    const ev = donneesSite.evaluations.find(e => e._id === evalDetailId);
+    if (!ev) { if (force !== true) { evalDetailId = null; changerEcran('evaluations'); } return; }
+    const ar = aRendreEv(ev), late = delaiDepasse(ev), ex = renduDe(ev._id), ecrit = evalEcritureAutorisee();
+    $('ed-tags').innerHTML = tagsEval(ev);
+    $('ed-delai').innerHTML = delaiHtml(ev);
+    $('ed-zone-ecriture').classList.toggle('hidden', !ecrit);
+    $('ed-staff').classList.toggle('hidden', ecrit);
+    if (ecrit) {
+        const b = $('ed-btn-envoyer');
+        b.classList.toggle('hidden', !ar);
+        b.disabled = late; b.classList.toggle('opacity-50', late);
+        b.textContent = ex ? '📨 Faire évaluer à nouveau (remplace mon envoi)' : '📨 Faire évaluer';
+        $('ed-fichier-box').classList.toggle('hidden', !ar);
+        $('ed-info').textContent = !ar
+            ? "Ce devoir n'est pas à rendre : tes réponses restent enregistrées sur cet appareil, rien n'est envoyé."
+            : late ? "⛔ Le délai est dépassé : l'envoi est fermé."
+            : ex ? `✅ Envoyé le ${fmt(ex.date)} à l'administrateur et au professeur.${ex.fileName ? ' Fichier : ' + ex.fileName + '.' : ''} Tu peux le modifier avant la date limite.`
+            : "Ton envoi sera transmis à l'administrateur et au professeur pour correction.";
+    } else {
+        const n = ar ? donneesSite.rendus.filter(x => x.evalId === ev._id && peutVoirCopie(x)).length : 0;
+        $('ed-staff').innerHTML = ar
+            ? `<p class="text-sm">📨 <b>${n}</b> copie(s) reçue(s) pour ce devoir.</p>${peutVoirCopiesEv(ev) ? '<button onclick="evalVoirCopies()" class="mt-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">Voir les copies</button>' : ''}`
+            : "<p class='text-sm text-slate-600'>Ce devoir n'est pas « à rendre » : aucune copie n'est reçue.</p>";
+    }
+}
+function evalVoirCopies() {
+    if (estAdmin) { ongletAdmin = 'rendus'; changerEcran('admin-panel'); }
+    else { epOnglet = 'panel'; changerEcran('espace-prof'); }
+}
+async function evalEnvoyer() {
+    const ev = donneesSite.evaluations.find(e => e._id === evalDetailId);
+    if (!ev || !evalEcritureAutorisee() || !aRendreEv(ev)) return;
+    if (delaiDepasse(ev)) return alert("Le délai est dépassé : l'envoi est fermé.");
+    const texte = $('ed-texte').value.trim(), f = $('ed-file').files[0];
+    if (!texte && !f && !(renduDe(ev._id) || {}).fileUrl) return alert('Écris tes réponses ou joins un fichier.');
+    const btn = $('ed-btn-envoyer'), libelle = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Envoi…';
     let avant = null, cree = null;
     try {
-        const fileUrl = f ? await lireFichier(f) : (ex ? ex.fileUrl : '');
-        const fileName = f ? f.name : (ex ? ex.fileName : '');
-        if (ex) { avant = { ...ex }; Object.assign(ex, { texte, fileUrl, fileName, date: Date.now() }); }
-        else { cree = { evalId: ev._id, evalTitre: ev.titre, auteurId: utilisateurActif.id, auteurNom: `${utilisateurActif.prenoms} ${utilisateurActif.nom}`, texte, fileUrl, fileName, date: Date.now() }; donneesSite.rendus.push(cree); }
+        const fileUrl0 = f ? await lireFichier(f) : null;
+        const ex = renduDe(ev._id);   // relu après l'envoi du fichier (les données ont pu être rechargées entre-temps)
+        const fileUrl = fileUrl0 !== null ? fileUrl0 : (ex ? ex.fileUrl || '' : ''), fileName = f ? f.name : (ex ? ex.fileName || '' : '');
+        const destProf = auteurEstAdmin(ev.auteurId) ? '' : ev.auteurId;
+        if (ex) { avant = { ...ex }; Object.assign(ex, { texte, fileUrl, fileName, destProf, evalTitre: ev.titre, date: Date.now() }); }
+        else {
+            cree = { evalId: ev._id, evalTitre: ev.titre, destProf, auteurId: utilisateurActif.id, auteurNom: `${utilisateurActif.prenoms} ${utilisateurActif.nom}`, texte, fileUrl, fileName, date: Date.now() };
+            donneesSite.rendus.push(cree);
+        }
         if (!(await sauvegarder())) {
             if (cree) donneesSite.rendus = donneesSite.rendus.filter(r => r !== cree); else Object.assign(ex, avant);
             return alert("Envoi impossible : échec de l'enregistrement.\n\nDétail : " + derniereErreur);
         }
-        $('modal-rendu').classList.add('hidden'); rafraichirAffichagePublic();
-        alert('Devoir envoyé aux administrateurs ✅');
+        ecrireBrouillon(ev._id, ''); $('ed-file').value = '';
+        evalDetailMaj(true); rafraichirAffichagePublic();
+        alert("Devoir envoyé à l'administrateur et au professeur ✅");
     } catch (err) {
         console.error(err); alert("Erreur lors de l'envoi\n\nDétail : " + ((err && (err.message || err.details)) || String(err)));
-    } finally { btn.disabled = false; btn.textContent = 'Envoyer'; }
+    } finally { btn.disabled = delaiDepasse(ev); btn.textContent = libelle; evalDetailMaj(true); }
 }
 
-// ----- Devoirs rendus (admin) -----
-function rafraichirRendus() {
-    const c = $('admin-liste-rendus'); if (!c) return;
-    const groupes = donneesSite.evaluations.filter(e => e.nature === 'rendre').map(e => ({ id: e._id, titre: e.titre, ev: e }));
-    donneesSite.rendus.forEach(r => { if (!groupes.some(g => g.id === r.evalId)) groupes.push({ id: r.evalId, titre: r.evalTitre + ' (évaluation supprimée ou modifiée)', ev: null }); });
-    c.innerHTML = groupes.map(g => {
-        const L = donneesSite.rendus.filter(r => r.evalId === g.id).sort((a, b) => b.date - a.date);
+// ---------- Copies reçues (admin + prof) ----------
+function htmlRendus() {
+    const evs = donneesSite.evaluations.filter(e => (aRendreEv(e) || donneesSite.rendus.some(r => r.evalId === e._id)) && peutVoirCopiesEv(e));
+    const groupes = evs.map(e => ({ id: e._id, titre: e.titre, ev: e }));
+    if (estAdmin) donneesSite.rendus.forEach(r => { if (!groupes.some(g => g.id === r.evalId)) groupes.push({ id: r.evalId, titre: r.evalTitre + ' (évaluation supprimée)', ev: null }); });
+    return groupes.map(g => {
+        const L = donneesSite.rendus.filter(r => r.evalId === g.id && peutVoirCopie(r)).sort((a, b) => b.date - a.date);
         const iv = g.ev ? donneesSite.evaluations.indexOf(g.ev) : -1;
         const corr = g.ev ? (g.ev.correctionUrl ? bt('bg-emerald-600 text-white', '✅ Voir la correction', `evalCorrection(${iv})`) : '<span class="text-xs italic text-slate-400">Aucune correction jointe (📂 pour en ajouter)</span>') : '';
+        const dl = g.ev && g.ev.delai ? `<div class="text-xs mt-1">${delaiHtml(g.ev) || ''}</div>` : '';
         return `<div class="p-4 bg-white border rounded-xl space-y-3">
-            <div class="flex justify-between items-center gap-2 flex-wrap"><div><h4 class="font-bold text-blue-800">${esc(g.titre)}</h4><span class="text-xs text-slate-500">${L.length} copie(s) rendue(s)</span></div>${corr}</div>
+            <div class="flex justify-between items-center gap-2 flex-wrap"><div><h4 class="font-bold text-blue-800">${esc(g.titre)}</h4><span class="text-xs text-slate-500">${L.length} copie(s) reçue(s)</span>${dl}</div>${corr}</div>
             ${L.map(r => `<div class="p-3 border rounded-lg bg-slate-50 text-sm space-y-1">
                 <div class="flex justify-between gap-2 items-center flex-wrap"><span>${auteurBtn(r.auteurId, r.auteurNom)} <span class="text-xs text-slate-400">${fmt(r.date)}</span></span>
-                <span class="flex gap-1">${r.fileUrl ? bt('bg-blue-600 text-white', '📎 ' + esc(r.fileName || 'Fichier'), `rendreOuvrir('${r._id}')`) : ''}${bt('bg-red-600 text-white', '🗑️', `rendreSupprimer('${r._id}')`)}</span></div>
+                <span class="flex gap-1">${r.fileUrl ? bt('bg-blue-600 text-white', '📎 ' + esc(r.fileName || 'Fichier'), `rendreOuvrir('${r._id}')`) : ''}${estAdmin ? bt('bg-red-600 text-white', '🗑️', `rendreSupprimer('${r._id}')`) : ''}</span></div>
                 ${r.texte ? `<p class="whitespace-pre-wrap break-words">${esc(r.texte)}</p>` : ''}</div>`).join('') || '<p class="text-xs italic text-slate-500">Aucune copie pour le moment.</p>'}
         </div>`;
-    }).join('') || "<p class='text-sm text-slate-500 italic'>Aucun devoir à rendre pour le moment.</p>";
+    }).join('') || "<p class='text-sm text-slate-500 italic'>Aucun devoir « à rendre » pour le moment.</p>";
 }
-function evalCorrection(idx) { const ev = donneesSite.evaluations[idx]; if (estAdmin && ev && ev.correctionUrl) ouvrirLecteurDirect('Correction : ' + ev.titre, ev.correctionUrl); }
-function rendreOuvrir(id) { const r = donneesSite.rendus.find(x => x._id === id); if (estAdmin && r && r.fileUrl) ouvrirLecteurDirect('Devoir : ' + r.auteurNom, r.fileUrl); }
+function rafraichirRendus() {
+    const h = htmlRendus();
+    ['admin-liste-rendus', 'ep-liste-rendus'].forEach(id => { const c = $(id); if (c) c.innerHTML = h; });
+}
+function evalCorrection(idx) {
+    const ev = donneesSite.evaluations[idx];
+    if ((estAdmin || estProf()) && ev && ev.correctionUrl && peutVoirCopiesEv(ev)) ouvrirLecteurDirect('Correction : ' + ev.titre, ev.correctionUrl);
+}
+function rendreOuvrir(id) { const r = donneesSite.rendus.find(x => x._id === id); if (r && r.fileUrl && peutVoirCopie(r)) ouvrirLecteurDirect('Devoir : ' + r.auteurNom, r.fileUrl); }
 async function rendreSupprimer(id) {
     if (!estAdmin || !confirm('Supprimer cette copie ?')) return;
     donneesSite.rendus = donneesSite.rendus.filter(r => r._id !== id);
     await sauvegarderOuAlerter(); rafraichirRendus();
 }
 
-// ----- Classement : sous-catégorie + tags -----
+// ---------- Classement : sous-catégorie, type, « À rendre », délai ----------
 const CLASSER = { pdf: { liste: 'pdfs', section: 'revisions' }, cours: { liste: 'cours', section: 'cours' }, evaluation: { liste: 'evaluations', section: 'evaluations' }, exoValide: { liste: 'exercicesValides', section: 'exercices' } };
 let classerCible = null;
+function clMajARendre() { $('cl-arendre-box').classList.toggle('hidden', !$('cl-arendre').checked); }
 function ouvrirClasser(type, idx) {
-    if (!estAdmin) return;
-    const c = CLASSER[type], it = donneesSite[c.liste][idx]; if (!it) return;
+    const c = CLASSER[type], it = donneesSite[c.liste][idx];
+    if (!it || !peutGerer(it)) return;
     classerCible = { type, id: it._id, idx };
     $('cl-souscat').innerHTML = '<option value="">— Sans sous-catégorie —</option>' + donneesSite.sousCategories.filter(x => x.section === c.section).map(x => `<option value="${x._id}">${esc(x.nom)}</option>`).join('');
     $('cl-souscat').value = it.sousCat || '';
     const ev = type === 'evaluation';
     $('cl-eval').classList.toggle('hidden', !ev);
     if (ev) {
-        $('cl-nature').value = it.nature === 'rendre' ? 'rendre' : 'personnel';
-        $('cl-qcm').checked = (it.formats || []).includes('qcm'); $('cl-qr').checked = (it.formats || []).includes('qr');
-        $('cl-corr-box').classList.toggle('hidden', $('cl-nature').value !== 'rendre'); $('cl-correction-file').value = '';
+        $('cl-nature').value = natureEv(it);
+        $('cl-arendre').checked = aRendreEv(it);
+        $('cl-delai').value = it.delai ? versLocal(it.delai) : '';
+        $('cl-correction-file').value = '';
+        clMajARendre();
     }
     $('modal-classer').classList.remove('hidden');
 }
 async function enregistrerClasser() {
-    if (!estAdmin || !classerCible) return;
+    if (!classerCible) return;
     const c = CLASSER[classerCible.type], liste = donneesSite[c.liste];
-    const it = liste.find(x => x._id === classerCible.id) || liste[classerCible.idx]; if (!it) return;
+    const it = liste.find(x => x._id === classerCible.id) || liste[classerCible.idx];
+    if (!it || !peutGerer(it)) return;
     const avant = { ...it };
     it.sousCat = $('cl-souscat').value;
     try {
         if (classerCible.type === 'evaluation') {
-            it.nature = $('cl-nature').value;
-            it.formats = [...($('cl-qcm').checked ? ['qcm'] : []), ...($('cl-qr').checked ? ['qr'] : [])];
-            const f = $('cl-correction-file').files[0];
-            if (it.nature === 'rendre' && f) it.correctionUrl = await lireFichier(f);
+            it.nature = $('cl-nature').value; it.formats = []; it.aRendre = $('cl-arendre').checked;
+            if (it.aRendre) {
+                const v = $('cl-delai').value; it.delai = v ? new Date(v).getTime() : null;
+                const f = $('cl-correction-file').files[0];
+                if (f) it.correctionUrl = await lireFichier(f);
+            } else it.delai = null;
         }
     } catch (err) { Object.assign(it, avant); console.error(err); return alert("Erreur lors de l'envoi de la correction\n\nDétail : " + ((err && (err.message || err.details)) || String(err))); }
-    if (!(await sauvegarder())) { Object.assign(it, avant); return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
+    if (!(await sauvegarder())) { Object.assign(it, avant); return alert('Enregistrement impossible.\n\nDétail : ' + derniereErreur); }
     $('modal-classer').classList.add('hidden'); rafraichirAffichagePublic(); rafraichirRendus();
 }
 
-$('faq-ecran').innerHTML = Object.entries(ECRANS).map(([k, v]) => `<option value="${k}">Redirige vers : ${v}</option>`).join('');
+// ---------- Espace prof/sponsors ----------
+let epOnglet = 'panel';
+function majNavProf() { const b = $('nav-btn-prof'); if (b) b.classList.toggle('hidden', !peutEspaceProf()); }
+function epOuvrir() { epTab(epOnglet); }
+function epTab(t) {
+    if (t === 'panel' && !peutPanelProf()) t = 'discussion';
+    if (t === 'discussion' && !peutEspaceProf()) return;
+    epOnglet = t;
+    $('ep-btn-panel').classList.toggle('hidden', !peutPanelProf());
+    document.querySelectorAll('#ep-tabs .atab-btn').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+    $('ep-panel').classList.toggle('hidden', t !== 'panel');
+    $('ep-discussion').classList.toggle('hidden', t !== 'discussion');
+    $('ep-intro').textContent = estAdmin ? 'Vous voyez et gérez tout cet espace en tant qu\'administrateur.'
+        : peutPanelProf() ? 'Ajoutez vos cours et évaluations, puis recevez les copies des étudiants. Discutez avec les sponsors dans l\'onglet de discussion.'
+        : 'Espace de discussion entre les professeurs et les sponsors.';
+    if (t === 'panel') {
+        const slot = $('ep-contenu-slot'), f = $('contenu-forms');
+        if (slot && f && f.parentNode !== slot) slot.appendChild(f);   // même panel que l'admin
+        rafraichirSousCats();
+    }
+    rafraichirRendus(); rafraichirChatProf();
+    if (t === 'discussion') { const c = $('chat-prof-liste'); c.scrollTop = c.scrollHeight; }
+}
+function rafraichirEspaceProf() {
+    if (!$('espace-prof').classList.contains('active-screen')) return;
+    if (!peutEspaceProf()) return changerEcran('accueil');
+    if (!peutPanelProf() && epOnglet === 'panel') return epTab('discussion');
+    $('ep-btn-panel').classList.toggle('hidden', !peutPanelProf());
+    rafraichirRendus(); rafraichirChatProf();
+}
+function rafraichirChatProf() {
+    const c = $('chat-prof-liste'); if (!c) return;
+    if (!peutEspaceProf()) { c.innerHTML = ''; return; }
+    const bas = c.scrollTop + c.clientHeight >= c.scrollHeight - 40, haut = c.scrollTop;
+    c.innerHTML = [...donneesSite.chatProf].sort((a, b) => a.date - b.date).slice(-200).map(x => `
+        <div class="p-2.5 rounded-xl bg-white border text-sm"><div class="flex justify-between items-center gap-2"><span>${auteurBtn(x.aid, x.nom)} <span class="text-xs text-slate-400">${fmt(x.date)}</span></span>${estAdmin && x._id ? bt('bg-red-600 text-white', '🗑️', `epChatSupprimer('${x._id}')`) : ''}</div><p class="whitespace-pre-wrap break-words mt-1">${texteMsg(x.texte)}</p></div>`).join('') || "<p class='text-sm italic text-slate-500'>Aucun message. Lancez la discussion !</p>";
+    c.scrollTop = bas ? c.scrollHeight : haut;
+}
+async function epChatEnvoyer() {
+    if (!peutEspaceProf()) return;
+    const inp = $('chat-prof-input'), t = inp.value.trim(); if (!t) return;
+    if (monBan()) return alert('Vous êtes banni : écriture impossible.');
+    const m = moi(), msg = { aid: m.id, nom: m.nom, texte: t, date: Date.now() };
+    donneesSite.chatProf.push(msg); inp.value = '';
+    rafraichirChatProf(); $('chat-prof-liste').scrollTop = 1e9;
+    if (!(await sauvegarder())) {
+        donneesSite.chatProf = donneesSite.chatProf.filter(x => x !== msg); inp.value = t; rafraichirChatProf();
+        alert("Message non envoyé : échec de l'enregistrement.\n\nDétail : " + derniereErreur);
+    }
+}
+async function epChatSupprimer(id) {
+    if (!estAdmin || !confirm('Supprimer ce message ?')) return;
+    donneesSite.chatProf = donneesSite.chatProf.filter(x => x._id !== id);
+    await sauvegarderOuAlerter(); rafraichirChatProf();
+}
 
-// Mise à jour « instantanée » : vérifie la base toutes les 10 s (maintenance, forum, chat…)
-const sigDonnees = () => Object.values(instantane).join('|');
-setInterval(async () => {
-    if (document.hidden || synchroEnCours > 0) return;
-    const avant = sigDonnees();
-    try { await chargerDonnees(false); } catch (e) { return; }
-    if (sigDonnees() === avant) return;
+// ---------- Message d'annonce (admin principal) : 10 s en haut, sans bloquer les boutons ----------
+let annonceTimer = null, annonceVue;   // annonceVue : undefined tant que la 1re lecture n'a pas eu lieu
+function annonceAfficher(texte) {
+    const b = $('annonce-bandeau'); $('annonce-texte').textContent = texte;
+    b.classList.remove('visible'); void b.offsetWidth; b.classList.add('visible');
+    clearTimeout(annonceTimer); annonceTimer = setTimeout(() => b.classList.remove('visible'), 10000);
+}
+function annonceVerifier() {
+    const a = (donneesSite.parametres[0] || {}).annonce, id = a ? a.id : null;
+    if (annonceVue === undefined) { annonceVue = id; return; }   // un message déjà présent au chargement n'est pas rejoué
+    if (id && id !== annonceVue) { annonceVue = id; annonceAfficher(a.texte); }
+}
+async function annonceEnvoyer() {
+    if (!estPrincipal()) return;
+    const t = $('annonce-input').value.trim();
+    if (!t) return alert('Écrivez le message à afficher.');
+    const p = P(), avant = p.annonce;
+    p.annonce = { id: crypto.randomUUID(), texte: t, date: Date.now() };
+    annonceVue = p.annonce.id; annonceAfficher(t);
+    if (!(await sauvegarder())) { p.annonce = avant; return alert("Message non diffusé : échec de l'enregistrement.\n\nDétail : " + derniereErreur); }
+    $('annonce-input').value = '';
+}
+
+// ---------- Mon suivi (propositions) ----------
+let sigSuivi = '';
+function rafraichirSuivi() {
+    const c = $('historique-utilisateur'); if (!c) return;
+    const m = moi(), ids = m ? [m.id, ...(estAdmin ? ['Administrateur'] : [])] : [];
+    const vus = new Set(), L = [];
+    [...donneesSite.exercicesEnAttente, ...donneesSite.exercicesValides, ...(donneesSite.exercicesRejetes || []), ...donneesSite.propositionsArchivees].forEach(x => {
+        if (!ids.includes(x.auteurId)) return;
+        const k = x._id || ('p' + x.id); if (vus.has(k)) return; vus.add(k); L.push(x);
+    });
+    L.sort((a, b) => (+b.id || 0) - (+a.id || 0));   // plus récentes en premier
+    const sig = JSON.stringify([m && m.id, L.map(x => [x._id || x.id, x.statut, x.titre])]);
+    if (sig === sigSuivi) return; sigSuivi = sig;
+    c.innerHTML = L.map(d => {
+        const st = String(d.statut || ''), ok = /^valid/i.test(st), ko = /^rejet/i.test(st);
+        const [cl, lb] = ok ? ['bg-green-100 text-green-700', '✅ Validé'] : ko ? ['bg-red-100 text-red-700', '❌ Rejeté'] : ['bg-amber-100 text-amber-700', '⏳ En attente de validation'];
+        return `<div class="p-3 border rounded-lg bg-slate-50 text-sm space-y-1">
+            <div class="font-bold break-words">${esc(d.titre)}</div>
+            <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500"><span>${libelleType(d.type)}</span>${+d.id > 1e12 ? `<span>· ${fmt(+d.id)}</span>` : ''}<span class="px-2 py-0.5 rounded-full font-semibold ${cl}">${lb}</span></div>
+        </div>`;
+    }).join('') || "<p class='text-xs text-slate-500 italic'>Vous n'avez fait aucune proposition pour le moment.</p>";
+}
+
+// ---------- Alertes discrètes (ne bloquent aucun bouton) ----------
+const notifActives = () => { try { return localStorage.getItem('notif_msgs') !== '0'; } catch (e) { return true; } };
+function notifBasculer(v) { try { localStorage.setItem('notif_msgs', v ? '1' : '0'); } catch (e) { } }
+function toast(msg) {
+    if (!notifActives()) return;
+    const z = $('toast-zone'); if (!z) return;
+    const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+    z.appendChild(t); while (z.children.length > 3) z.removeChild(z.firstChild);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 4500);
+}
+
+// ---------- Temps réel (Supabase Realtime) ----------
+let rtOk = false, rtDejaConnecte = false, rtFile = [], rtTimer = null;
+const canon = o => JSON.stringify(o, (k, v) => (v && typeof v === 'object' && !Array.isArray(v)) ? Object.keys(v).sort().reduce((r, x) => (r[x] = v[x], r), {}) : v);
+function trouverParId(id) {
+    for (const c of COLLECTIONS) { const i = donneesSite[c].findIndex(x => x._id === id); if (i >= 0) return { c, i }; }
+    return null;
+}
+function notifierRT(col, prev, it, nouveau) {
+    const m = moi(); if (!m) return;
+    const ecran = ecranActif(), moiId = utilisateurActif ? utilisateurActif.id : null;
+    if (col === 'chatAdmin') {
+        if (nouveau && estAdmin && it.aid !== m.id && !(ecran === 'admin-panel' && ongletAdmin === 'chat')) toast(`💬 Chat admin — ${it.nom}`);
+    } else if (col === 'chatProf') {
+        if (nouveau && peutEspaceProf() && it.aid !== m.id && !(ecran === 'espace-prof' && epOnglet === 'discussion')) toast(`💬 Discussion prof/sponsors — ${it.nom}`);
+    } else if (col === 'sujets') {
+        if (nouveau && it.auteurId !== m.id) toast(`💬 Nouveau sujet du forum : « ${it.titre} »`);
+        else if (prev && (it.messages || []).length > (prev.messages || []).length) {
+            const l = it.messages[it.messages.length - 1];
+            if (l && l.aid !== m.id && !(ecran === 'forum' && forumOuvert === it._id)) toast(`💬 ${l.nom} a répondu dans « ${it.titre} »`);
+        }
+    } else if (col === 'rendus') {
+        const neuf = nouveau || (prev && prev.date !== it.date);
+        if (neuf && it.auteurId !== moiId && peutVoirCopie(it)) toast(`📨 Nouvelle copie : ${it.auteurNom} — ${it.evalTitre}`);
+    } else if (col === 'dons') {
+        if (nouveau && estAdmin && it.auteurId !== m.id) toast(`💝 Nouveau don déclaré : ${it.auteurNom} — ${it.montant} FCFA`);
+        else if (prev && prev.statut !== it.statut && it.auteurId === m.id) toast(it.statut === 'recu' ? '✅ Votre don a bien été reçu. Merci !' : it.statut === 'non_recu' ? "⚠️ Votre don n'a pas été retrouvé par l'administration." : '⏳ Votre don est en attente de vérification');
+    } else if (col === 'exercicesEnAttente') {
+        if (nouveau && estAdmin && it.auteurId !== m.id) toast(`📤 Nouvelle proposition : « ${it.titre} »`);
+    }
+    // Suivi des propositions : prévient l'auteur quand le statut change
+    if (['exercicesEnAttente', 'exercicesValides', 'exercicesRejetes', 'propositionsArchivees'].includes(col) && (it.auteurId === m.id || (estAdmin && it.auteurId === 'Administrateur'))) {
+        const st = String(it.statut || '');
+        if ((prev && prev.statut !== it.statut) || (!prev && col === 'propositionsArchivees')) {
+            if (/^valid/i.test(st)) toast(`✅ Votre proposition « ${it.titre} » a été validée`);
+            else if (/^rejet/i.test(st)) toast(`❌ Votre proposition « ${it.titre} » a été rejetée`);
+        }
+    }
+}
+// Applique un changement reçu de la base sans tout recharger. Retourne true si l'affichage doit être rafraîchi.
+function appliquerRT(p) {
+    const type = p.eventType, n = p.new, o = p.old;
+    if (type === 'DELETE') {
+        const id = o && o.id; if (!id) return false;
+        const f = trouverParId(id); delete instantane[id];
+        if (!f) return false;
+        donneesSite[f.c].splice(f.i, 1); versionRT++; return true;
+    }
+    if (!n || !n.id) return false;
+    const col = n.collection, data = (n.data && typeof n.data === 'object') ? n.data : null;
+    if (!data) { rattraper(); return false; }
+    if (col === 'developpeur') {
+        const nv = Object.assign({ photo: '', nom: '', prenom: '', role: '' }, data, { _id: n.id });
+        if (canon(nv) === canon(donneesSite.developpeur)) return false;
+        donneesSite.developpeur = nv; instantane[n.id] = JSON.stringify(nv); versionRT++; return true;
+    }
+    if (!Array.isArray(donneesSite[col])) return false;
+    const it = Object.assign({}, data, { _id: n.id }), f = trouverParId(n.id);
+    const prev = f ? donneesSite[f.c][f.i] : null;
+    if (f && f.c === col && canon(prev) === canon(it)) { instantane[n.id] = JSON.stringify(prev); return false; }   // écho de ma propre sauvegarde
+    const prevCopie = prev ? JSON.parse(JSON.stringify(prev)) : null;
+    let cible;
+    if (f && f.c === col) { Object.keys(prev).forEach(k => delete prev[k]); Object.assign(prev, it); cible = prev; }   // mise à jour sur place
+    else { if (f) donneesSite[f.c].splice(f.i, 1); donneesSite[col].push(it); cible = it; }
+    instantane[n.id] = JSON.stringify(cible);
+    versionRT++;
+    try { notifierRT(col, prevCopie, cible, !prev); } catch (e) { console.warn(e); }
+    return true;
+}
+function planifierRT() { clearTimeout(rtTimer); rtTimer = setTimeout(flushRT, 150); }
+function flushRT() {
+    if (synchroEnCours > 0) { rtTimer = setTimeout(flushRT, 300); return; }   // on attend la fin de mes propres sauvegardes
+    const lot = rtFile.splice(0); if (!lot.length) return;
+    let maj = false;
+    lot.forEach(p => { try { if (appliquerRT(p)) maj = true; } catch (e) { console.warn('Temps réel :', e); } });
+    if (maj) majApresChangement();
+}
+function majApresChangement() {
     rafraichirAffichagePublic();
     if (estAdmin) {
         rafraichirAdminLeger();
@@ -2080,11 +2663,185 @@ setInterval(async () => {
         if (ongletAdmin === 'utilisateurs' && !dansUser) rafraichirUtilisateursAdmin();
         if (ongletAdmin === 'moderation') _rafAdmin();
     }
-}, 10000);
+}
+// Relecture complète (reconnexion, retour sur l'onglet, message trop gros pour le temps réel)
+async function rattraper() {
+    if (synchroEnCours > 0) return;
+    try { if (!(await chargerDonnees(false))) return; } catch (e) { return; }
+    majApresChangement();
+}
+function demarrerTempsReel() {
+    try {
+        sb.channel('maj-site')
+            .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, p => { rtFile.push(p); planifierRT(); })
+            .subscribe(st => {
+                const ok = st === 'SUBSCRIBED';
+                if (ok && rtDejaConnecte) rattraper();   // reconnexion : on rattrape ce qui a été manqué
+                if (ok) rtDejaConnecte = true;
+                rtOk = ok;
+            });
+    } catch (e) { console.warn('Temps réel indisponible :', e); }
+}
+// Filet de sécurité : relecture complète de la base (rapide si le temps réel est coupé, lente sinon)
+const sigDonnees = () => Object.values(instantane).join('|');
+async function pollUnefois() {
+    if (document.hidden || synchroEnCours > 0) return;
+    const avant = sigDonnees();
+    try { await chargerDonnees(false); } catch (e) { return; }
+    if (sigDonnees() !== avant) majApresChangement();
+}
+(function planifierPoll() { setTimeout(async () => { await pollUnefois(); planifierPoll(); }, rtOk ? 45000 : 6000); })();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) rattraper(); });
+setInterval(() => {   // échéances : met à jour les comptes à rebours
+    if (document.hidden) return;
+    try { evalDetailMaj(); if (ecranActif() === 'evaluations') rafraichirAffichagePublic(); } catch (e) { }
+}, 30000);
 
-// Initialisation FAQ par défaut (une seule fois) après le chargement
-window.addEventListener('load', () => setTimeout(() => { initialiserFaq().catch(console.warn); majMaintenance(); }, 1500));
+window.addEventListener('load', () => { demarrerTempsReel(); });
 
 </script>
+<script>
+// =====================================================================
+//  MODULE DONS : page Dons, déclaration (Oui/Non + montant), suivi admin
+//  (Reçu / Pas reçu), tag « Donateur » indépendant, messages modifiables
+// =====================================================================
+const DONS_DEF = {
+    message: "Votre générosité aide cette plateforme à grandir et à offrir des cours, des révisions et des évaluations à tous les étudiants. Chaque don, même petit, fait une vraie différence. Merci de votre soutien ! 🙏",
+    merci: "Merci infiniment pour votre don ! ❤️ Votre soutien nous encourage à continuer. L'administration va le vérifier très bientôt.",
+    note: "Paiement par Wave uniquement."
+};
+TAGS.donateur = { i: '💝', l: 'Donateur' };
+let donsEditSale = false;
+const fmtMontant = n => Number(n || 0).toLocaleString('fr-FR');
+const donsParam = () => donneesSite.parametres[0] || {};
+
+// Tag principal + tag « Donateur » (qui vient en complément, sans remplacer l'ancien)
+function tagsHtml(aid) {
+    let h = tagHtml(tagDe(aid));
+    const u = String(aid).startsWith('@') ? null : userParId(aid);
+    if (u && u.donateur) h += (h ? ' ' : '') + tagHtml('donateur');
+    return h;
+}
+function donsBadge(st) {
+    return st === 'recu' ? ['bg-green-100 text-green-700', '✅ Reçu']
+        : st === 'non_recu' ? ['bg-red-100 text-red-700', '❌ Pas reçu']
+        : ['bg-amber-100 text-amber-700', '⏳ En attente de vérification'];
+}
+
+// ---------- Côté membre ----------
+function rafraichirDons() {
+    const p = donsParam();
+    $('dons-message').textContent = p.donsMessage || DONS_DEF.message;
+    $('dons-note').textContent = p.donsNote || DONS_DEF.note;
+    const m = moi();
+    const L = m ? donneesSite.dons.filter(d => d.auteurId === m.id).sort((a, b) => b.date - a.date) : [];
+    $('dons-historique-box').classList.toggle('hidden', !L.length);
+    $('dons-historique').innerHTML = L.map(d => {
+        const [c, l] = donsBadge(d.statut);
+        return `<div class="p-3 border rounded-lg bg-slate-50 text-sm flex justify-between items-center gap-2 flex-wrap"><span><b>${fmtMontant(d.montant)} FCFA</b> <span class="text-xs text-slate-400">${fmt(d.date)}</span></span><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${c}">${l}</span></div>`;
+    }).join('');
+}
+// Le lien Wave s'ouvre dans un nouvel onglet ; la question apparaît sur cette même page
+function donsApresClic() {
+    $('dons-merci').classList.add('hidden');
+    $('dons-question').classList.remove('hidden');
+    setTimeout(() => { try { $('dons-question').scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { } }, 300);
+}
+function donsNon() {
+    $('dons-montant').value = '';
+    $('dons-question').classList.add('hidden');
+}
+async function donsOui() {
+    const m = moi();
+    if (!m) return alert('Connectez-vous pour continuer.');
+    const brut = $('dons-montant').value.trim(), montant = Math.round(Number(brut));
+    if (!brut || !(montant > 0)) return alert("Indiquez le montant de votre don avant de répondre « Oui ».");
+    if (montant > 100000000) return alert('Montant invalide.');
+    const btn = $('dons-oui'), lib = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Envoi…';
+    const d = { auteurId: m.id, auteurNom: m.nom, montant, date: Date.now(), statut: 'attente' };
+    donneesSite.dons.push(d);
+    try {
+        if (!(await sauvegarder())) {
+            donneesSite.dons = donneesSite.dons.filter(x => x !== d);
+            return alert("Envoi impossible : échec de l'enregistrement. Vérifiez votre connexion puis réessayez.\n\nDétail : " + derniereErreur);
+        }
+        $('dons-montant').value = '';
+        $('dons-question').classList.add('hidden');
+        $('dons-merci').textContent = donsParam().donsMerci || DONS_DEF.merci;
+        $('dons-merci').classList.remove('hidden');
+        rafraichirDons();
+    } finally { btn.disabled = false; btn.textContent = lib; }
+}
+
+// ---------- Côté administration ----------
+function rafraichirDonsAdmin() {
+    const c = $('admin-liste-dons'); if (!c) return;
+    const L = [...donneesSite.dons].sort((a, b) => b.date - a.date);
+    const attente = L.filter(d => d.statut !== 'recu' && d.statut !== 'non_recu').length;
+    const bTab = document.querySelector('#admin-tabs [data-t="dons"]');
+    if (bTab) bTab.textContent = '💝 Dons' + (attente ? ` (${attente})` : '');
+    c.innerHTML = L.map(d => {
+        const [cl, lb] = donsBadge(d.statut), u = String(d.auteurId).startsWith('@') ? null : userParId(d.auteurId);
+        return `<div class="p-3 bg-white border rounded-xl text-sm space-y-2">
+            <div class="flex justify-between items-center gap-2 flex-wrap"><span>${auteurBtn(d.auteurId, d.auteurNom)} <span class="text-xs text-slate-400">${fmt(d.date)}</span></span><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${cl}">${lb}</span></div>
+            <div class="font-bold text-rose-700">💰 ${fmtMontant(d.montant)} FCFA <span class="text-xs font-normal text-slate-500">(montant déclaré)</span></div>
+            <div class="flex gap-1 flex-wrap">${bt('bg-emerald-600 text-white', '✅ Reçu', `donsStatut('${d._id}','recu')`)}${bt('bg-red-600 text-white', '❌ Pas reçu', `donsStatut('${d._id}','non_recu')`)}${estPrincipal() && u ? `<button data-u="${esc(u.id)}" onclick="donsTagDonateur(this.dataset.u)" class="bg-rose-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer">${u.donateur ? '💝 Retirer le tag Donateur' : '💝 Donner le tag Donateur'}</button>` : ''}${estPrincipal() ? bt('bg-slate-200 text-slate-800', '🗑️', `donsSupprimer('${d._id}')`) : ''}</div>
+        </div>`;
+    }).join('') || "<p class='text-sm text-slate-500 italic'>Aucun don déclaré pour le moment.</p>";
+    // Éditeur des messages (administrateur principal) : ne remplace pas un texte en cours de saisie
+    if (estPrincipal() && !donsEditSale) {
+        const p = donsParam();
+        [['dons-edit-message', p.donsMessage || DONS_DEF.message], ['dons-edit-merci', p.donsMerci || DONS_DEF.merci], ['dons-edit-note', p.donsNote || DONS_DEF.note]]
+            .forEach(([id, v]) => { const e = $(id); if (e && document.activeElement !== e) e.value = v; });
+    }
+}
+async function donsStatut(id, statut) {
+    if (!estAdmin) return;
+    const d = donneesSite.dons.find(x => x._id === id); if (!d) return;
+    const avant = d.statut; d.statut = statut; d.parAdmin = adminNom || 'Admin'; d.dateTraitement = Date.now();
+    if (!(await sauvegarder())) { d.statut = avant; return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
+    rafraichirDonsAdmin(); rafraichirDons();
+}
+async function donsSupprimer(id) {
+    if (!estPrincipal() || !confirm('Supprimer cette déclaration de don ?')) return;
+    const avant = donneesSite.dons;
+    donneesSite.dons = donneesSite.dons.filter(x => x._id !== id);
+    if (!(await sauvegarder())) { donneesSite.dons = avant; return alert("Suppression impossible.\n\nDétail : " + derniereErreur); }
+    rafraichirDonsAdmin(); rafraichirDons();
+}
+// Tag « Donateur » : réservé à l'administrateur principal, indépendant du tag existant
+async function basculerDonateur(userId) {
+    const u = userParId(userId); if (!estPrincipal() || !u) return false;
+    u.donateur = !u.donateur;
+    if (!(await sauvegarder())) { u.donateur = !u.donateur; alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); return false; }
+    sigForum = ''; rafraichirAffichagePublic();
+    return true;
+}
+async function donsTagDonateur(userId) { if (await basculerDonateur(userId)) rafraichirDonsAdmin(); }
+async function profilDonateur(userId) { if (await basculerDonateur(userId)) apresProfil(userId); }
+
+async function donsEnregistrerMessages() {
+    if (!estPrincipal()) return;
+    const p = P(), avant = { m: p.donsMessage, r: p.donsMerci, n: p.donsNote };
+    p.donsMessage = $('dons-edit-message').value.trim();
+    p.donsMerci = $('dons-edit-merci').value.trim();
+    p.donsNote = $('dons-edit-note').value.trim();
+    if (!(await sauvegarder())) {
+        p.donsMessage = avant.m; p.donsMerci = avant.r; p.donsNote = avant.n;
+        return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur);
+    }
+    donsEditSale = false; rafraichirDons(); rafraichirDonsAdmin();
+    alert('Messages de la page Dons enregistrés.');
+}
+['dons-edit-message', 'dons-edit-merci', 'dons-edit-note'].forEach(id => $(id).addEventListener('input', () => { donsEditSale = true; }));
+
+// ---------- Branchement sur le code existant ----------
+const _rafPublicDons = rafraichirAffichagePublic;
+rafraichirAffichagePublic = function () { _rafPublicDons(); try { rafraichirDons(); } catch (e) { console.error('Dons :', e); } };
+const _rafAdminLegerDons = rafraichirAdminLeger;
+rafraichirAdminLeger = function () { _rafAdminLegerDons(); try { rafraichirDonsAdmin(); } catch (e) { console.error('Dons admin :', e); } };
+</script>
+
 </body>
 </html>
