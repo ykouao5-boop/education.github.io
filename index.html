@@ -24,6 +24,14 @@
         #diaporama::-webkit-scrollbar { display: none; }
         #menu-deroulant { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
         #menu-deroulant.ouvert { max-height: 600px; }
+    
+        .tag{display:inline-flex;align-items:center;gap:3px;padding:1px 9px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;box-shadow:0 1px 3px #0003;white-space:nowrap}
+        .tag-principal{background:linear-gradient(135deg,#fbbf24,#f97316);color:#451a03}
+        .tag-secondaire{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff}
+        .tag-prof{background:linear-gradient(135deg,#10b981,#0d9488);color:#fff}
+        .tag-etudiant{background:linear-gradient(135deg,#38bdf8,#3b82f6);color:#fff}
+        .atab-btn{padding:.5rem .9rem;border-radius:.6rem;font-size:.85rem;font-weight:700;white-space:nowrap;border:none;cursor:pointer;background:#f1f5f9;color:#475569}
+        .atab-btn.on{background:#4338ca;color:#fff}
     </style>
 </head>
 <body>
@@ -78,6 +86,7 @@
 
     <!-- Barre de Navigation -->
     <header class="bg-blue-700 text-white shadow-md sticky top-0 z-40">
+        <div id="bandeau-maint" class="hidden bg-red-600 text-white text-center text-xs py-1 font-bold">🚧 Maintenance active : le site est masqué pour les visiteurs</div>
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <h1 class="text-lg sm:text-2xl font-bold tracking-wide leading-tight cursor-pointer" onclick="changerEcran('accueil')">📚 Mon Site Éducatif <span class="font-medium text-blue-200">(Logistique)</span></h1>
             <button id="btn-menu" onclick="basculerMenu()" aria-label="Menu" aria-expanded="false" class="p-2 rounded-lg hover:bg-blue-600 text-white bg-transparent border-none cursor-pointer">
@@ -93,6 +102,9 @@
                 <button onclick="changerEcran('evaluations')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">📝 Évaluations</button>
                 <button onclick="changerEcran('exercices')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">💡 Exercices Corrigés</button>
                 <button onclick="changerEcran('propositions')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">📤 Propositions</button>
+                <button onclick="changerEcran('forum')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">💬 Forum</button>
+                <button onclick="changerEcran('faq')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">❓ FAQ</button>
+                <button id="nav-btn-maint" onclick="basculerMaintenance()" class="hidden text-left w-full px-3 py-3 text-white bg-red-700 border-none cursor-pointer hover:bg-red-800 rounded-lg font-bold text-base mt-1"></button>
                 <button id="nav-btn-admin" onclick="changerEcran('admin-panel')" class="hidden text-left w-full px-3 py-3 text-white bg-indigo-800 border-none cursor-pointer hover:bg-indigo-900 rounded-lg font-bold text-base mt-1">🛡️ Admin</button>
                 <button onclick="deconnexion()" class="text-left w-full px-3 py-3 text-white bg-red-600 border-none cursor-pointer hover:bg-red-700 rounded-lg font-medium text-base mt-1 mb-2">🚪 Déconnexion</button>
             </div>
@@ -186,6 +198,10 @@
                                 <option value="photo">Photo</option>
                             </select>
                         </div>
+                        <div id="prop-souscat-box" class="hidden">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Sous-catégorie</label>
+                            <select id="prop-souscat" class="w-full p-2.5 border rounded-lg bg-white text-sm"></select>
+                        </div>
                         <div>
                             <label id="lbl-prop-titre" class="block text-sm font-medium text-slate-700 mb-1">Titre</label>
                             <input type="text" id="prop-titre" placeholder="Ex: Examen Blanc" class="w-full p-2.5 border rounded-lg bg-white text-sm">
@@ -222,52 +238,124 @@
             </div>
         </div>
 
-        <div id="admin-panel" class="screen space-y-8">
-            <div class="bg-white p-8 rounded-2xl shadow-md border border-slate-100">
-                <div class="flex justify-between items-center mb-6 pb-4 border-b">
-                    <h3 class="text-2xl font-bold text-blue-800">🛡️ Panneau Administrateur</h3>
-                    <button onclick="changerEcran('accueil')" class="bg-slate-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-slate-700 font-medium border-none cursor-pointer">Fermer Admin</button>
+        <div id="faq" class="screen space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
+                <h3 class="text-2xl font-bold text-blue-800 mb-2">❓ Questions fréquentes</h3>
+                <p class="text-slate-600 mb-4 text-sm">Cliquez sur une question pour voir la réponse et aller directement à la page concernée.</p>
+                <div id="faq-liste" class="space-y-3"></div>
+                <div id="faq-admin" class="hidden mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-xl space-y-2">
+                    <h4 class="font-bold text-indigo-900">➕ Ajouter une question (administrateur principal)</h4>
+                    <input id="faq-q" placeholder="Question" class="w-full p-2 border rounded bg-white text-sm">
+                    <textarea id="faq-r" rows="3" placeholder="Réponse" class="w-full p-2 border rounded bg-white text-sm"></textarea>
+                    <select id="faq-ecran" class="w-full p-2 border rounded bg-white text-sm"></select>
+                    <button onclick="faqAjouter()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">Ajouter</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="forum" class="screen space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-4">
+                <div class="flex justify-between items-center gap-2">
+                    <h3 class="text-2xl font-bold text-blue-800">💬 Forum</h3>
+                    <button id="btn-nouveau-sujet" onclick="forumNouveau()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold border-none cursor-pointer">+ Nouveau sujet</button>
+                </div>
+                <p class="text-slate-500 text-xs">Espace libre de discussion, sans évaluation. Respectez les autres : tout message peut être signalé 🚩.</p>
+                <div id="forum-ban-info"></div>
+                <div id="forum-nouveau" class="hidden p-4 bg-slate-50 border rounded-xl space-y-2">
+                    <input id="fn-titre" placeholder="Titre du sujet" maxlength="120" class="w-full p-2 border rounded bg-white text-sm">
+                    <textarea id="fn-texte" rows="4" placeholder="Votre message" class="w-full p-2 border rounded bg-white text-sm"></textarea>
+                    <button onclick="forumCreer()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">Publier</button>
+                </div>
+                <div id="forum-liste" class="space-y-3"></div>
+                <div id="forum-sujet" class="hidden space-y-3"></div>
+            </div>
+        </div>
+
+        <div id="admin-panel" class="screen">
+            <div class="bg-white p-5 sm:p-8 rounded-2xl shadow-md border border-slate-100">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-2xl font-bold text-blue-800">🛡️ Administration</h3>
+                    <button onclick="changerEcran('accueil')" class="bg-slate-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-slate-700 font-medium border-none cursor-pointer">Fermer</button>
+                </div>
+                <div id="admin-tabs" class="flex gap-2 overflow-x-auto pb-3 mb-5 border-b">
+                    <button class="atab-btn" data-t="contenu" onclick="adminTab('contenu')">📁 Contenu</button>
+                    <button class="atab-btn" data-t="moderation" onclick="adminTab('moderation')">✅ Modération</button>
+                    <button class="atab-btn" data-t="utilisateurs" onclick="adminTab('utilisateurs')">👥 Utilisateurs</button>
+                    <button class="atab-btn" data-t="sanctions" onclick="adminTab('sanctions')">🔨 Sanctions</button>
+                    <button class="atab-btn" data-t="chat" onclick="adminTab('chat')">💬 Chat admin</button>
+                    <button id="tab-site" class="atab-btn hidden" data-t="site" onclick="adminTab('site')">⚙️ Site</button>
                 </div>
 
-                <div class="space-y-8">
-                    <div class="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                        <h4 class="font-bold text-lg text-slate-900">👥 Gestion des utilisateurs</h4>
-                        <div id="admin-liste-utilisateurs" class="space-y-3"></div>
+                <div id="atab-contenu" class="atab grid md:grid-cols-2 gap-4">
+                    <div class="p-4 bg-indigo-50 border border-indigo-200 rounded-xl space-y-2">
+                        <h4 class="font-bold text-indigo-900">📚 Document de révision</h4>
+                        <input type="text" id="admin-pdf-titre" placeholder="Titre" class="w-full p-2 border rounded bg-white text-sm">
+                        <select id="admin-pdf-souscat" class="w-full p-2 border rounded bg-white text-sm"></select>
+                        <input type="file" id="admin-pdf-file" accept=".pdf" class="w-full p-2 border rounded bg-white text-sm">
+                        <button onclick="adminAjouterPdf()" class="bg-indigo-600 text-white px-4 py-2 rounded font-medium border-none cursor-pointer text-sm">Uploader</button>
                     </div>
-
-                    <div class="p-5 bg-indigo-50 border border-indigo-200 rounded-xl space-y-3">
-                        <h4 class="font-bold text-lg text-indigo-900">Ajouter un document de révision</h4>
+                    <div class="p-4 bg-sky-50 border border-sky-200 rounded-xl space-y-2">
+                        <h4 class="font-bold text-sky-900">🎓 Cours</h4>
+                        <input type="text" id="admin-cours-titre" placeholder="Titre du cours" class="w-full p-2 border rounded bg-white text-sm">
+                        <input type="file" id="admin-cours-file" accept=".pdf,image/*" class="w-full p-2 border rounded bg-white text-sm">
+                        <button onclick="adminAjouterCours()" class="bg-sky-600 text-white px-4 py-2 rounded font-medium border-none cursor-pointer text-sm">Ajouter</button>
+                    </div>
+                    <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+                        <h4 class="font-bold text-emerald-900">📝 Évaluation</h4>
+                        <input type="text" id="admin-eval-titre" placeholder="Titre" class="w-full p-2 border rounded bg-white text-sm">
+                        <input type="text" id="admin-eval-desc" placeholder="Description" class="w-full p-2 border rounded bg-white text-sm">
+                        <input type="file" id="admin-eval-file" accept=".html,.htm,text/html" class="w-full p-2 border rounded bg-white text-sm">
+                        <button onclick="adminAjouterEvaluation()" class="bg-emerald-600 text-white px-4 py-2 rounded font-medium border-none cursor-pointer text-sm">Ajouter</button>
+                    </div>
+                    <div class="p-4 bg-violet-50 border border-violet-200 rounded-xl space-y-3">
+                        <h4 class="font-bold text-violet-900">🗂️ Sous-catégories</h4>
                         <div class="flex gap-2 flex-wrap">
-                            <input type="text" id="admin-pdf-titre" placeholder="Titre du document" class="p-2 border rounded flex-grow bg-white text-sm">
-                            <input type="file" id="admin-pdf-file" accept=".pdf" class="p-1.5 border rounded bg-white text-sm">
-                            <button onclick="adminAjouterPdf()" class="bg-indigo-600 text-white px-4 py-2 rounded font-medium hover:bg-indigo-700 border-none cursor-pointer text-sm">Uploader</button>
+                            <select id="souscat-section" class="p-2 border rounded bg-white text-sm"><option value="revisions">Révisions</option><option value="exercices">Exercices</option></select>
+                            <input id="souscat-nom" placeholder="Nom (ex: Transport)" class="p-2 border rounded bg-white text-sm flex-grow">
+                            <button onclick="sousCatAjouter()" class="bg-violet-600 text-white px-3 py-2 rounded text-sm font-bold border-none cursor-pointer">Ajouter</button>
                         </div>
+                        <div id="souscat-liste" class="space-y-2"></div>
                     </div>
+                </div>
 
-                    <div class="p-5 bg-sky-50 border border-sky-200 rounded-xl space-y-3">
-                        <h4 class="font-bold text-lg text-sky-900">Ajouter un cours</h4>
-                        <div class="flex gap-2 flex-wrap">
-                            <input type="text" id="admin-cours-titre" placeholder="Titre du cours" class="p-2 border rounded flex-grow bg-white text-sm">
-                            <input type="file" id="admin-cours-file" accept=".pdf,image/*" class="p-1.5 border rounded bg-white text-sm">
-                            <button onclick="adminAjouterCours()" class="bg-sky-600 text-white px-4 py-2 rounded font-medium hover:bg-sky-700 border-none cursor-pointer text-sm">Ajouter</button>
-                        </div>
+                <div id="atab-moderation" class="atab hidden space-y-6">
+                    <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+                        <h4 class="font-bold text-amber-900">Propositions en attente</h4>
+                        <div id="admin-liste-moderation" class="space-y-3"></div>
                     </div>
-
-                    <div class="p-5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-3">
-                        <h4 class="font-bold text-lg text-emerald-900">Ajouter une évaluation</h4>
-                        <div class="flex gap-2 flex-wrap">
-                            <input type="text" id="admin-eval-titre" placeholder="Titre de l'évaluation" class="p-2 border rounded flex-grow bg-white text-sm">
-                            <input type="text" id="admin-eval-desc" placeholder="Description" class="p-2 border rounded flex-grow bg-white text-sm">
-                            <input type="file" id="admin-eval-file" accept=".html,.htm,text/html" class="p-1.5 border rounded bg-white text-sm">
-                            <button onclick="adminAjouterEvaluation()" class="bg-emerald-600 text-white px-4 py-2 rounded font-medium hover:bg-emerald-700 border-none cursor-pointer text-sm">Ajouter</button>
-                        </div>
+                    <div class="p-4 bg-red-50 border border-red-200 rounded-xl space-y-3">
+                        <h4 class="font-bold text-red-900">🚩 Signalements du forum</h4>
+                        <div id="admin-liste-signalements" class="space-y-3"></div>
                     </div>
+                </div>
 
-                    <div class="p-5 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
-                        <h4 class="font-bold text-lg text-amber-900">Modération des propositions (en attente)</h4>
-                        <div id="admin-liste-moderation" class="space-y-3">
-                            <p class="text-sm text-slate-500 italic">Aucune proposition en attente.</p>
-                        </div>
+                <div id="atab-utilisateurs" class="atab hidden space-y-3">
+                    <input id="admin-user-filtre" oninput="rafraichirUtilisateursAdmin()" placeholder="🔍 Rechercher un utilisateur" class="w-full p-2 border rounded bg-white text-sm">
+                    <div id="admin-liste-utilisateurs" class="space-y-2"></div>
+                </div>
+
+                <div id="atab-sanctions" class="atab hidden space-y-6">
+                    <div><h4 class="font-bold mb-2">Utilisateurs bannis du forum</h4><div id="admin-liste-bans" class="space-y-2"></div></div>
+                    <div><h4 class="font-bold mb-2">Demandes de levée de ban</h4><div id="admin-liste-demandes" class="space-y-2"></div></div>
+                </div>
+
+                <div id="atab-chat" class="atab hidden space-y-3">
+                    <p class="text-xs text-slate-500">Discussion réservée aux administrateurs. Seul l'administrateur principal peut supprimer des messages.</p>
+                    <div id="chat-admin-liste" class="h-80 overflow-y-auto space-y-2 p-3 bg-slate-50 border rounded-xl"></div>
+                    <div class="flex gap-2">
+                        <textarea id="chat-input" rows="2" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatEnvoyer();}" placeholder="Message aux administrateurs…" class="flex-grow p-2 border rounded bg-white text-sm"></textarea>
+                        <button onclick="chatEnvoyer()" class="bg-indigo-600 text-white px-4 rounded-lg font-bold border-none cursor-pointer">Envoyer</button>
+                    </div>
+                </div>
+
+                <div id="atab-site" class="atab hidden space-y-4">
+                    <div class="p-4 border rounded-xl space-y-3">
+                        <h4 class="font-bold text-lg">🚧 Mode maintenance <span class="text-xs font-normal text-slate-500">(administrateur principal uniquement)</span></h4>
+                        <p id="maint-etat" class="text-sm font-semibold"></p>
+                        <button id="btn-maint" onclick="basculerMaintenance()" class="px-5 py-2.5 rounded-xl text-sm font-bold text-white border-none cursor-pointer"></button>
+                        <label class="block text-sm font-medium">Message affiché aux visiteurs</label>
+                        <textarea id="maint-input" rows="3" class="w-full p-2 border rounded bg-white text-sm"></textarea>
+                        <button onclick="enregistrerMessageMaintenance()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">Enregistrer le message</button>
                     </div>
                 </div>
             </div>
@@ -317,6 +405,19 @@
 
     </main>
 
+    <div id="modal-profil" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center z-[55] p-4">
+        <div id="profil-contenu" class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-5 shadow-2xl space-y-4"></div>
+    </div>
+
+    <div id="ecran-maintenance" class="hidden fixed inset-0 z-[70] bg-slate-900 text-white flex flex-col items-center justify-center text-center p-6 overflow-auto">
+        <div class="text-8xl mb-4">🚧</div>
+        <h2 class="text-4xl sm:text-6xl font-extrabold mb-4">Site en maintenance</h2>
+        <p id="maint-msg" class="text-lg sm:text-2xl text-slate-300 max-w-2xl mb-8"></p>
+        <a href="https://wa.me/2250152801988?text=Bonjour,%20le%20site%20est%20en%20maintenance." target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl text-lg font-bold no-underline">💬 Assistance</a>
+        <p class="text-sm text-slate-400 mt-3 max-w-xs">Pour plus d'informations, contactez le service client.</p>
+        <button onclick="ouvrirPortailAdmin()" class="mt-12 text-xs text-slate-600 bg-transparent border-none cursor-pointer underline">Accès administrateur</button>
+    </div>
+
     <!-- Bouton WhatsApp Assistance -->
     <a href="https://wa.me/2250152801988?text=Bonjour,%20j'ai%20un%20problème%20de%20connexion%20sur%20la%20plateforme%20éducative." target="_blank" class="fixed bottom-4 right-4 z-30 bg-emerald-600 text-white px-3 py-2 rounded-xl shadow-lg flex items-center space-x-2 border border-emerald-400 hover:bg-emerald-700 transition text-xs">
         <span class="text-base">💬</span>
@@ -359,7 +460,8 @@
             exercicesEnAttente: [],
             exercicesRejetes: [],
             propositionsArchivees: [],
-            utilisateurs: []
+            utilisateurs: [],
+            faqs: [], sujets: [], chatAdmin: [], signalements: [], demandesBan: [], sousCategories: [], parametres: []
         };
 
         // ===== Connexion à la base de données Supabase =====
@@ -606,6 +708,9 @@
             if (code === CLE_ADMIN_PRINCIPAL) role = 'principal';
             else if (code === CLE_ADMIN_SECONDAIRE) role = 'secondaire';
             if (!role) return alert("Code administrateur incorrect.");
+            const n = (prompt("Votre nom d'administrateur (affiché dans le forum et le chat) :") || '').trim().slice(0, 30);
+            if (!n) return alert("Un nom est obligatoire.");
+            adminNom = n; ecrireSession('admin_nom', JSON.stringify(n));
 
             estAdmin = true;
             roleAdmin = role;
@@ -620,7 +725,7 @@
         function deconnexion() {
             sessionStorage.removeItem('utilisateur_actif');
             sessionStorage.removeItem('est_admin');
-            sessionStorage.removeItem('role_admin');
+            sessionStorage.removeItem('role_admin'); sessionStorage.removeItem('admin_nom');
             utilisateurActif = null;
             estAdmin = false;
             window.location.reload();
@@ -741,13 +846,13 @@
         }
 
         function boutonSupprimer(type, idx) {
-            return estAdmin ? `<button onclick="adminSupprimerFichier('${type}', ${idx})" class="bg-red-600 text-white px-2.5 py-1.5 rounded-lg text-xs hover:bg-red-700 border-none cursor-pointer">Supprimer</button>` : '';
+            return estAdmin ? `<span class="inline-flex gap-1"><button onclick="adminRenommer('${type}', ${idx})" title="Modifier le nom et la description" class="bg-blue-600 text-white px-2.5 py-1.5 rounded-lg text-xs hover:bg-blue-700 border-none cursor-pointer">✏️</button><button onclick="adminSupprimerFichier('${type}', ${idx})" class="bg-red-600 text-white px-2.5 py-1.5 rounded-lg text-xs hover:bg-red-700 border-none cursor-pointer">🗑️</button></span>` : '';
         }
 
         function rafraichirAffichagePublic() {
-            document.getElementById('liste-pdfs-public').innerHTML = donneesSite.pdfs.map((p, idx) => `
+            document.getElementById('liste-pdfs-public').innerHTML = grouper('revisions', donneesSite.pdfs, (p, idx) => `
                 <div class="p-4 bg-blue-50 border border-blue-200 rounded-xl flex justify-between items-center gap-2 shadow-sm">
-                    <span class="font-medium text-blue-900">${esc(p.titre)}</span>
+                    <span class="font-medium text-blue-900">${esc(p.titre)}${descr(p)}</span>
                     <div class="flex items-center gap-2">
                         <button onclick="ouvrirDoc('pdfs', ${idx}, 'fileUrl', '')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700 font-medium cursor-pointer border-none">Lire en ligne</button>
                         ${boutonSupprimer('pdf', idx)}
@@ -757,7 +862,7 @@
 
             document.getElementById('liste-cours').innerHTML = donneesSite.cours.map((c, idx) => `
                 <div class="p-4 bg-sky-50 border border-sky-200 rounded-xl flex justify-between items-center gap-2 shadow-sm">
-                    <span class="font-medium text-sky-900">${esc(c.titre)}</span>
+                    <span class="font-medium text-sky-900">${esc(c.titre)}${descr(c)}</span>
                     <div class="flex items-center gap-2">
                         <button onclick="ouvrirDoc('cours', ${idx}, 'fileUrl', '')" class="bg-sky-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-sky-700 font-medium cursor-pointer border-none">Consulter</button>
                         ${boutonSupprimer('cours', idx)}
@@ -781,10 +886,10 @@
                 </div>
             `).join('') || "<p class='text-slate-500 italic'>Aucune évaluation disponible.</p>";
 
-            document.getElementById('liste-exercices-valides').innerHTML = donneesSite.exercicesValides.map((e, idx) => `
+            document.getElementById('liste-exercices-valides').innerHTML = grouper('exercices', donneesSite.exercicesValides, (e, idx) => `
                 <div class="p-4 border rounded-xl bg-slate-50 shadow-sm space-y-2">
                     <div class="flex justify-between items-center gap-2">
-                        <h5 class="font-bold text-blue-700 text-base">${esc(e.titre)}</h5>
+                        <h5 class="font-bold text-blue-700 text-base">${esc(e.titre)}${descr(e)}</h5>
                         ${boutonSupprimer('exoValide', idx)}
                     </div>
                     <div class="flex gap-3 text-sm flex-wrap">
@@ -825,6 +930,7 @@
             const titre = document.getElementById('prop-titre').value.trim();
             if (!titre) return alert(type === 'photo' ? "Veuillez écrire une description pour la photo." : "Veuillez donner un titre à votre proposition.");
 
+            if (!document.getElementById('prop-souscat-box').classList.contains('hidden') && !document.getElementById('prop-souscat').value) return alert("Choisissez une sous-catégorie.");
             const fEnonce = document.getElementById('prop-enonce-file').files[0];
             const fCorrige = document.getElementById('prop-corrige-file').files[0];
             const fRevision = document.getElementById('prop-revision-file').files[0];
@@ -842,7 +948,7 @@
                     type,
                     titre,
                     auteurId: utilisateurActif ? utilisateurActif.id : 'Administrateur',
-                    statut: "En attente de validation"
+                    statut: "En attente de validation", sousCat: (type === 'photo' ? '' : document.getElementById('prop-souscat').value)
                 };
                 if (type === 'exercice') {
                     [proposition.enonceUrl, proposition.corrigeUrl] = await Promise.all([lireFichier(fEnonce), lireFichier(fCorrige)]);
@@ -916,7 +1022,7 @@
             if (!titre || !fichier) return alert("Renseignez le titre et choisissez un document.");
             try {
                 const fileUrl = await lireFichier(fichier);
-                donneesSite.pdfs.push({ titre, fileUrl, fileName: fichier.name });
+                donneesSite.pdfs.push({ titre, fileUrl, fileName: fichier.name, sousCat: document.getElementById('admin-pdf-souscat').value });
                 if (!(await sauvegarder())) {
                     donneesSite.pdfs.pop();
                     return alert("Ajout impossible : échec de l'enregistrement (connexion ou fichier trop volumineux).");
@@ -991,7 +1097,7 @@
             const p = donneesSite.exercicesEnAttente.splice(index, 1)[0];
             if (!p) return;
             if (p.type === 'revision') {
-                donneesSite.pdfs.push({ titre: p.titre, fileUrl: p.fileUrl, fileName: p.fileName });
+                donneesSite.pdfs.push({ titre: p.titre, fileUrl: p.fileUrl, fileName: p.fileName, sousCat: p.sousCat || '' });
                 donneesSite.propositionsArchivees.push({ id: p.id, type: 'revision', titre: p.titre, auteurId: p.auteurId, statut: 'Validé' });
             } else if (p.type === 'photo') {
                 donneesSite.photos.push({ titre: p.titre, description: p.description || p.titre, fileUrl: p.fileUrl, auteurId: p.auteurId });
@@ -1212,5 +1318,435 @@
             rafraichirAffichagePublic();
         };
     </script>
+<script>
+// =====================================================================
+//  MODULES v2 : tags, forum, FAQ, maintenance, sanctions, chat admin,
+//  sous-catégories, renommage. (Organisé par sections)
+// =====================================================================
+const $ = id => document.getElementById(id);
+const fmt = ts => new Date(ts).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+const bt = (c, t, o) => `<button onclick="${o}" class="${c} px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer">${t}</button>`;
+
+const TAGS = {
+    principal:  { i: '👑', l: 'Admin principal' },
+    secondaire: { i: '🛡️', l: 'Admin' },
+    prof:       { i: '🎓', l: 'Prof' },
+    etudiant:   { i: '📘', l: 'Étudiant' }
+};
+const ECRANS = { accueil: '🏠 Accueil', cours: '🎓 Cours', revisions: '📚 Révisions', evaluations: '📝 Évaluations', exercices: '💡 Exercices', propositions: '📤 Propositions', forum: '💬 Forum' };
+const MSG_MAINT = "Le site est actuellement en maintenance. Nous revenons très vite.";
+const uid = (n, k) => `00000000-0000-0000-000${k}-` + String(n).padStart(12, '0');
+const FAQ_DEFAUT = [
+    ['Comment accéder aux cours ?', "Ouvrez le menu ☰ puis « Cours ». Cliquez sur un cours pour le lire directement en ligne.", 'cours'],
+    ['Où trouver les documents de révision ?', "Dans « Révisions », classés par sous-catégories. Cliquez sur un document pour le consulter.", 'revisions'],
+    ['Comment passer une évaluation ?', "Rendez-vous dans « Évaluations », choisissez-en une et cliquez sur « Faire ». Elle s'ouvre dans une page dédiée.", 'evaluations'],
+    ['Où voir les exercices corrigés ?', "Dans « Exercices Corrigés » : chaque exercice propose son énoncé et son corrigé.", 'exercices'],
+    ['Comment proposer un exercice, une révision ou une photo ?', "Dans « Propositions », choisissez le type, puis la sous-catégorie. Un administrateur vérifie avant publication ; suivez l'état dans « Mon suivi ».", 'propositions'],
+    ["J'ai oublié mon code de sécurité, que faire ?", "Sur la page de connexion, cliquez sur « Code de sécurité oublié ? » ou contactez l'assistance via WhatsApp.", 'accueil'],
+    ['Comment participer au forum ?', "Dans « Forum », créez un sujet ou répondez à un sujet existant. Il n'y a aucune évaluation. Utilisez 🚩 Signaler en cas de message inapproprié.", 'forum'],
+    ['Que signifient les tags ?', "👑 Admin principal, 🛡️ Admin, 🎓 Prof, 📘 Étudiant. Seuls les administrateurs peuvent les attribuer. Cliquez sur un nom pour voir le profil.", 'forum'],
+    ['Que se passe-t-il si je suis banni du forum ?', "Vous pouvez toujours lire le forum, mais plus écrire. Le ban peut être temporaire (durée en heures) ou définitif jusqu'à décision d'un administrateur.", 'forum']
+].map((f, i) => ({ _id: uid(i + 1, 1), q: f[0], r: f[1], ecran: f[2] }));
+
+let voirPortail = false, forumOuvert = null, sigForum = '', ongletAdmin = 'contenu';
+let adminNom = lireStockage('sessionStorage', 'admin_nom', '');
+
+// ---------- Identité, tags, bans ----------
+function moi() {
+    if (estAdmin) return { id: `@${roleAdmin}:${adminNom || 'Admin'}`, nom: adminNom || 'Administrateur' };
+    return utilisateurActif ? { id: utilisateurActif.id, nom: utilisateurActif.nom } : null;
+}
+const identAdmin = () => `${roleAdmin}:${adminNom || 'Admin'}`;
+const userParId = id => donneesSite.utilisateurs.find(u => u.id === id);
+const tagDe = aid => String(aid).startsWith('@') ? aid.slice(1).split(':')[0] : ((userParId(aid) || {}).tag || '');
+const tagHtml = t => TAGS[t] ? `<span class="tag tag-${t}">${TAGS[t].i} ${TAGS[t].l}</span>` : '';
+const nomDe = (aid, snap) => (userParId(aid) || {}).nom || snap;
+const auteurBtn = (aid, nom) => `<button data-a="${esc(aid)}" onclick="event.stopPropagation();ouvrirProfil(this.dataset.a)" class="font-bold text-slate-900 hover:text-blue-700 bg-transparent border-none cursor-pointer p-0 text-sm">${esc(nomDe(aid, nom))}</button> ${tagHtml(tagDe(aid))}`;
+function banActif(u) { const b = u && u.ban; return !b || (b.type === 'temp' && b.fin <= Date.now()) ? null : b; }
+const monBan = () => utilisateurActif ? banActif(userParId(utilisateurActif.id)) : null;
+const txtBan = b => b.type === 'def' ? 'définitivement' : `jusqu'au ${fmt(b.fin)}`;
+const descr = x => x.description ? `<small class="block text-xs font-normal text-slate-500">${esc(x.description)}</small>` : '';
+
+// ---------- 1. Renommer sans supprimer ----------
+async function adminRenommer(type, idx) {
+    if (!estAdmin) return;
+    const liste = { pdf: 'pdfs', cours: 'cours', evaluation: 'evaluations', exoValide: 'exercicesValides' }[type];
+    const it = (donneesSite[liste] || [])[idx]; if (!it) return;
+    const t = prompt('Nouveau nom :', it.titre); if (t === null) return;
+    const d = prompt('Description (vide = aucune) :', it.description || ''); if (d === null) return;
+    if (t.trim()) it.titre = t.trim();
+    it.description = d.trim();
+    await sauvegarderOuAlerter(); rafraichirAffichagePublic();
+}
+
+// ---------- 2. Maintenance ----------
+function P() {
+    let p = donneesSite.parametres[0];
+    if (!p) { p = { _id: uid(1, 2), maintenance: { actif: false, message: '' }, faqInit: false }; donneesSite.parametres.push(p); }
+    return p;
+}
+function majMaintenance() {
+    const m = P().maintenance || {};
+    const bloque = m.actif && !estAdmin && !(voirPortail && !utilisateurActif);
+    $('ecran-maintenance').classList.toggle('hidden', !bloque);
+    $('maint-msg').textContent = m.message || MSG_MAINT;
+    document.body.style.overflow = bloque ? 'hidden' : '';
+    $('bandeau-maint').classList.toggle('hidden', !(m.actif && estAdmin));
+    const nb = $('nav-btn-maint'); nb.classList.toggle('hidden', !estPrincipal());
+    nb.textContent = m.actif ? '✅ Désactiver la maintenance' : '🚧 Activer la maintenance';
+    $('maint-etat').textContent = m.actif ? '🔴 Maintenance ACTIVE : le site est masqué.' : '🟢 Site en ligne.';
+    const bm = $('btn-maint'); bm.textContent = m.actif ? '✅ Remettre le site en ligne' : '🚧 Mettre en maintenance maintenant';
+    bm.className = 'px-5 py-2.5 rounded-xl text-sm font-bold text-white border-none cursor-pointer ' + (m.actif ? 'bg-emerald-600' : 'bg-red-600');
+    if (document.activeElement !== $('maint-input')) $('maint-input').value = m.message || MSG_MAINT;
+}
+async function basculerMaintenance() {
+    if (!estPrincipal()) return;
+    const p = P(); p.maintenance = p.maintenance || {};
+    if (!p.maintenance.actif && !confirm("Mettre le site en maintenance MAINTENANT ? Tous les visiteurs seront bloqués.")) return;
+    p.maintenance.actif = !p.maintenance.actif;
+    await sauvegarderOuAlerter(); majMaintenance(); fermerMenu();
+}
+async function enregistrerMessageMaintenance() {
+    if (!estPrincipal()) return;
+    const p = P(); p.maintenance = p.maintenance || {};
+    p.maintenance.message = $('maint-input').value.trim();
+    await sauvegarderOuAlerter(); majMaintenance(); alert('Message enregistré.');
+}
+function ouvrirPortailAdmin() { voirPortail = true; majMaintenance(); }
+
+// ---------- 3. FAQ ----------
+function rafraichirFaq() {
+    $('faq-liste').innerHTML = donneesSite.faqs.map(f => `
+        <details class="p-4 border rounded-xl bg-slate-50">
+            <summary class="font-semibold text-blue-800 cursor-pointer">${esc(f.q)}</summary>
+            <p class="mt-3 text-sm text-slate-700 whitespace-pre-wrap">${esc(f.r)}</p>
+            <div class="mt-3 flex gap-2 flex-wrap">
+                ${ECRANS[f.ecran] ? bt('bg-blue-600 text-white', '➜ Aller à : ' + ECRANS[f.ecran], `changerEcran('${f.ecran}')`) : ''}
+                ${estPrincipal() ? bt('bg-red-600 text-white', '🗑️ Supprimer', `faqSupprimer('${f._id}')`) : ''}
+            </div>
+        </details>`).join('') || "<p class='text-slate-500 italic'>Aucune question.</p>";
+    $('faq-admin').classList.toggle('hidden', !estPrincipal());
+}
+async function faqAjouter() {
+    if (!estPrincipal()) return;
+    const q = $('faq-q').value.trim(), r = $('faq-r').value.trim();
+    if (!q || !r) return alert('Question et réponse obligatoires.');
+    donneesSite.faqs.push({ q, r, ecran: $('faq-ecran').value });
+    $('faq-q').value = $('faq-r').value = '';
+    await sauvegarderOuAlerter(); rafraichirFaq();
+}
+async function faqSupprimer(id) {
+    if (!estPrincipal() || !confirm('Supprimer cette question ?')) return;
+    donneesSite.faqs = donneesSite.faqs.filter(f => f._id !== id);
+    await sauvegarderOuAlerter(); rafraichirFaq();
+}
+async function initialiserFaq() {
+    const p = P(); if (p.faqInit) return;
+    p.faqInit = true; FAQ_DEFAUT.forEach(f => donneesSite.faqs.push({ ...f }));
+    await sauvegarder(); rafraichirFaq();
+}
+
+// ---------- 4. Forum ----------
+function rafraichirForum() {
+    let s = donneesSite.sujets.find(x => x._id === forumOuvert);
+    if (!s) forumOuvert = null;
+    const m = moi(), b = monBan();
+    const sig = JSON.stringify([donneesSite.sujets, donneesSite.utilisateurs.map(u => [u.id, u.nom, u.tag, u.ban]), forumOuvert, estAdmin, !!b, m && m.id]);
+    if (sig === sigForum) return; sigForum = sig;
+    const rep = $('forum-reply'), saved = rep ? rep.value : '', actif = rep && document.activeElement === rep;
+    $('forum-ban-info').innerHTML = b ? `<div class="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800">🔨 Vous êtes banni du forum ${txtBan(b)}. Vous pouvez lire, mais plus écrire.</div>` : '';
+    const peutEcrire = !!m && !b;
+    $('btn-nouveau-sujet').classList.toggle('hidden', !peutEcrire || !!forumOuvert);
+    $('forum-liste').classList.toggle('hidden', !!forumOuvert);
+    $('forum-sujet').classList.toggle('hidden', !forumOuvert);
+    if (!forumOuvert) $('forum-nouveau').classList.contains('hidden') || 0;
+    if (!s) {
+        const dernier = x => Math.max(x.date, ...x.messages.map(k => k.date));
+        $('forum-liste').innerHTML = [...donneesSite.sujets].sort((a, c) => dernier(c) - dernier(a)).map(x => `
+            <div onclick="forumOuvrir('${x._id}')" class="p-4 border rounded-xl bg-slate-50 hover:bg-blue-50 cursor-pointer flex justify-between gap-3 items-start">
+                <div class="min-w-0">
+                    <h4 class="font-bold text-blue-800 break-words">${esc(x.titre)}</h4>
+                    <div class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-1.5">${auteurBtn(x.auteurId, x.auteurNom)} · ${fmt(x.date)} · 💬 ${x.messages.length}</div>
+                </div>
+                ${estAdmin ? `<span class="flex gap-1" onclick="event.stopPropagation()">${bt('bg-blue-600 text-white', '✏️', `forumRenommer('${x._id}')`)}${bt('bg-red-600 text-white', '🗑️', `forumSupprimer('${x._id}')`)}</span>` : ''}
+            </div>`).join('') || "<p class='text-slate-500 italic'>Aucun sujet. Lancez la discussion !</p>";
+        return;
+    }
+    const posts = [{ id: '_main', aid: s.auteurId, nom: s.auteurNom, texte: s.texte, date: s.date }, ...s.messages];
+    $('forum-sujet').innerHTML = `
+        <div class="flex justify-between gap-2 items-center flex-wrap">
+            <button onclick="forumOuvrir(null)" class="text-sm text-blue-700 bg-transparent border-none cursor-pointer p-0 font-semibold">← Tous les sujets</button>
+            ${estAdmin ? `<span class="flex gap-1">${bt('bg-blue-600 text-white', '✏️ Renommer', `forumRenommer('${s._id}')`)}${bt('bg-red-600 text-white', '🗑️ Supprimer', `forumSupprimer('${s._id}')`)}</span>` : ''}
+        </div>
+        <h4 class="text-xl font-extrabold text-slate-900 break-words">${esc(s.titre)}</h4>
+        ${posts.map(p => `
+            <div class="p-4 rounded-xl border bg-white space-y-2">
+                <div class="flex justify-between gap-2 items-center flex-wrap">
+                    <div class="flex items-center gap-1.5 flex-wrap">${auteurBtn(p.aid, p.nom)}<span class="text-xs text-slate-400">${fmt(p.date)}</span></div>
+                    <div class="flex gap-1">
+                        ${m && p.aid !== m.id ? bt('bg-amber-100 text-amber-800 hover:bg-amber-200', '🚩 Signaler', `forumSignaler('${s._id}','${p.id}')`) : ''}
+                        ${estAdmin && p.id !== '_main' ? bt('bg-red-600 text-white', '🗑️', `forumSupprimerMsg('${s._id}','${p.id}')`) : ''}
+                    </div>
+                </div>
+                <p class="text-sm whitespace-pre-wrap break-words">${esc(p.texte)}</p>
+            </div>`).join('')}
+        ${peutEcrire ? `<div class="space-y-2"><textarea id="forum-reply" rows="3" placeholder="Votre message…" class="w-full p-3 border rounded-xl text-sm bg-white"></textarea><button onclick="forumRepondre()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold border-none cursor-pointer">Envoyer</button></div>` : (b ? '' : '<p class="text-sm italic text-slate-500">Connectez-vous pour participer.</p>')}`;
+    const r2 = $('forum-reply');
+    if (r2 && saved) { r2.value = saved; if (actif) r2.focus(); }
+}
+function forumOuvrir(id) { forumOuvert = id; $('forum-nouveau').classList.add('hidden'); rafraichirForum(); window.scrollTo(0, 0); }
+function forumNouveau() { $('forum-nouveau').classList.toggle('hidden'); }
+
+// Recharge, vérifie le ban, applique, enregistre
+async function ecritureForum(fn) {
+    if (!moi()) return alert('Connectez-vous pour participer.');
+    try { await chargerDonnees(true); } catch (e) { }
+    if (monBan()) { rafraichirForum(); return alert('Vous êtes banni du forum : écriture impossible.'); }
+    fn(); await sauvegarderOuAlerter(); rafraichirForum();
+}
+async function forumCreer() {
+    const titre = $('fn-titre').value.trim(), texte = $('fn-texte').value.trim();
+    if (!titre || !texte) return alert('Titre et message obligatoires.');
+    $('fn-titre').value = $('fn-texte').value = ''; $('forum-nouveau').classList.add('hidden');
+    await ecritureForum(() => {
+        const m = moi(), s = { _id: crypto.randomUUID(), titre, texte, auteurId: m.id, auteurNom: m.nom, date: Date.now(), messages: [] };
+        donneesSite.sujets.push(s); forumOuvert = s._id;
+    });
+}
+async function forumRepondre() {
+    const t = $('forum-reply').value.trim(); if (!t) return;
+    $('forum-reply').value = '';
+    await ecritureForum(() => {
+        const s = donneesSite.sujets.find(x => x._id === forumOuvert); if (!s) return;
+        const m = moi(); s.messages.push({ id: crypto.randomUUID(), aid: m.id, nom: m.nom, texte: t, date: Date.now() });
+    });
+}
+async function forumSignaler(sid, mid) {
+    const m = moi(); if (!m) return;
+    const s = donneesSite.sujets.find(x => x._id === sid); if (!s) return;
+    const p = mid === '_main' ? { aid: s.auteurId, nom: s.auteurNom, texte: s.texte } : s.messages.find(x => x.id === mid); if (!p) return;
+    const motif = prompt('Motif du signalement :'); if (motif === null) return;
+    donneesSite.signalements.push({ sujetId: sid, sujetTitre: s.titre, msgId: mid, auteurId: p.aid, auteurNom: p.nom, extrait: p.texte.slice(0, 200), par: m.nom, motif: motif.trim() || '—', date: Date.now(), statut: 'ouvert' });
+    await sauvegarderOuAlerter(); alert('Merci, le signalement a été transmis aux administrateurs.');
+}
+async function forumRenommer(sid) {
+    const s = donneesSite.sujets.find(x => x._id === sid); if (!estAdmin || !s) return;
+    const t = prompt('Nouveau titre :', s.titre); if (!t || !t.trim()) return;
+    s.titre = t.trim(); await sauvegarderOuAlerter(); rafraichirForum();
+}
+async function forumSupprimer(sid) {
+    if (!estAdmin || !confirm('Supprimer ce sujet et toutes ses réponses ?')) return;
+    donneesSite.sujets = donneesSite.sujets.filter(x => x._id !== sid); forumOuvert = null;
+    await sauvegarderOuAlerter(); rafraichirForum(); rafraichirSignalements();
+}
+async function forumSupprimerMsg(sid, mid) {
+    const s = donneesSite.sujets.find(x => x._id === sid); if (!estAdmin || !s || !confirm('Supprimer ce message ?')) return;
+    s.messages = s.messages.filter(x => x.id !== mid);
+    await sauvegarderOuAlerter(); rafraichirForum();
+}
+
+// ---------- Profil (clic sur un nom) : infos, tag, ban ----------
+function ouvrirProfil(aid) {
+    const adm = aid.startsWith('@'), u = adm ? null : userParId(aid);
+    const nom = adm ? aid.slice(1).split(':').slice(1).join(':') : (u ? u.nom : 'Utilisateur supprimé');
+    let h = `<div class="flex justify-between items-start gap-2"><div><h3 class="text-xl font-extrabold text-slate-900">${esc(nom)}</h3><div class="mt-1">${tagHtml(tagDe(aid)) || '<span class="text-xs text-slate-400">Aucun tag</span>'}</div></div><button onclick="$('modal-profil').classList.add('hidden')" class="text-2xl bg-transparent border-none cursor-pointer text-slate-500">&times;</button></div>`;
+    if (adm) h += '<p class="text-sm text-slate-500">Compte administrateur.</p>';
+    else if (u) {
+        const b = banActif(u), du = `data-u="${esc(u.id)}"`;
+        h += estAdmin
+            ? `<dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm bg-slate-50 rounded-xl p-3"><dt class="text-slate-500">Identifiant</dt><dd class="font-semibold">${esc(u.id)}</dd><dt class="text-slate-500">Nom</dt><dd class="font-semibold">${esc(u.nom)}</dd><dt class="text-slate-500">Prénoms</dt><dd class="font-semibold">${esc(u.prenoms)}</dd><dt class="text-slate-500">Téléphone</dt><dd class="font-semibold">${esc(u.telephone)}</dd></dl>`
+            : '<p class="text-sm text-slate-500">Membre de la plateforme.</p>';
+        if (b) h += `<div class="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800">🔨 Banni ${txtBan(b)}${estAdmin ? `<br><span class="text-xs">Par ${esc(b.parNom)}${b.motif ? ' · ' + esc(b.motif) : ''}</span>` : ''}</div>`;
+        if (estAdmin) {
+            const oTag = (t, l) => `<button ${du} onclick="profilTag(this.dataset.u,'${t}')" class="px-2.5 py-1 rounded-lg text-xs font-bold border cursor-pointer ${u.tag === t ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700'}">${l}</button>`;
+            h += `<div class="space-y-2"><h4 class="font-bold text-sm">🏷️ Tag</h4><div class="flex gap-1.5 flex-wrap">${oTag('etudiant', '📘 Étudiant')}${oTag('prof', '🎓 Prof')}${estPrincipal() ? oTag('secondaire', '🛡️ Admin') + oTag('principal', '👑 Principal') : ''}${oTag('', 'Retirer')}</div></div>`;
+            h += b
+                ? `<button ${du} onclick="profilLever(this.dataset.u)" class="w-full bg-emerald-600 text-white py-2 rounded-xl text-sm font-bold border-none cursor-pointer">Lever la sanction</button>`
+                : `<div class="space-y-2"><h4 class="font-bold text-sm">🔨 Bannir du forum</h4>
+                    <select id="pb-type" onchange="$('pb-h-box').classList.toggle('hidden',this.value!=='temp')" class="w-full p-2 border rounded text-sm bg-white"><option value="temp">Temporaire</option><option value="def">Définitif</option></select>
+                    <div id="pb-h-box"><input id="pb-h" type="number" min="1" value="24" class="w-full p-2 border rounded text-sm bg-white"><span class="text-xs text-slate-500">Durée en heures avant fin du blocage</span></div>
+                    <input id="pb-motif" placeholder="Motif (optionnel)" class="w-full p-2 border rounded text-sm bg-white">
+                    <button ${du} onclick="profilBannir(this.dataset.u)" class="w-full bg-red-600 text-white py-2 rounded-xl text-sm font-bold border-none cursor-pointer">Bannir</button></div>`;
+        }
+    }
+    $('profil-contenu').innerHTML = h; $('modal-profil').classList.remove('hidden');
+}
+function apresProfil(id) { ouvrirProfil(id); rafraichirAffichagePublic(); if (estAdmin) { rafraichirAdminLeger(); if (ongletAdmin === 'utilisateurs') rafraichirUtilisateursAdmin(); } }
+async function profilTag(id, tag) {
+    const u = userParId(id); if (!estAdmin || !u) return;
+    if (['principal', 'secondaire'].includes(tag) && !estPrincipal()) return alert("Réservé à l'administrateur principal.");
+    if (tag) u.tag = tag; else delete u.tag;
+    await sauvegarderOuAlerter(); apresProfil(id);
+}
+async function profilBannir(id) {
+    const u = userParId(id); if (!estAdmin || !u) return;
+    const type = $('pb-type').value; let fin = null;
+    if (type === 'temp') { const h = parseFloat($('pb-h').value); if (!(h > 0)) return alert('Indiquez la durée en heures.'); fin = Date.now() + h * 3600000; }
+    u.ban = { type, fin, par: identAdmin(), parNom: adminNom || 'Admin', motif: $('pb-motif').value.trim(), date: Date.now() };
+    await sauvegarderOuAlerter(); apresProfil(id);
+}
+async function profilLever(id) {
+    const u = userParId(id); if (!estAdmin || !u || !u.ban) return;
+    if (u.ban.type === 'def' && !estPrincipal() && u.ban.par !== identAdmin()) {
+        if (donneesSite.demandesBan.some(d => d.userId === id && d.statut === 'attente')) return alert('Une demande est déjà en attente.');
+        donneesSite.demandesBan.push({ userId: id, userNom: u.nom, demandeur: identAdmin(), demandeurNom: adminNom, approbateur: u.ban.par, approbateurNom: u.ban.parNom, statut: 'attente', date: Date.now() });
+        await sauvegarderOuAlerter(); alert(`Demande envoyée : ${u.ban.parNom} doit approuver la levée du ban.`);
+    } else { delete u.ban; await sauvegarderOuAlerter(); }
+    apresProfil(id);
+}
+async function demandeTraiter(did, ok) {
+    const d = donneesSite.demandesBan.find(x => x._id === did); if (!d) return;
+    if (!estPrincipal() && identAdmin() !== d.approbateur) return alert("Seul l'administrateur qui a banni peut décider.");
+    if (ok) { const u = userParId(d.userId); if (u) delete u.ban; }
+    donneesSite.demandesBan = donneesSite.demandesBan.filter(x => x._id !== did);
+    await sauvegarderOuAlerter(); rafraichirSanctions(); rafraichirAffichagePublic();
+}
+
+// ---------- 5. Panneau admin : onglets ----------
+function adminTab(t) {
+    if (t === 'site' && !estPrincipal()) t = 'contenu';
+    ongletAdmin = t;
+    document.querySelectorAll('.atab').forEach(e => e.classList.toggle('hidden', e.id !== 'atab-' + t));
+    document.querySelectorAll('#admin-tabs .atab-btn').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+    $('tab-site').classList.toggle('hidden', !estPrincipal());
+    if (t === 'utilisateurs') rafraichirUtilisateursAdmin();
+    if (t === 'contenu') rafraichirSousCats();
+    rafraichirAdminLeger();
+    if (t === 'chat') { const c = $('chat-admin-liste'); c.scrollTop = c.scrollHeight; }
+}
+function rafraichirAdminLeger() { rafraichirSignalements(); rafraichirSanctions(); rafraichirChat(); majMaintenance(); }
+
+function rafraichirUtilisateursAdmin() {
+    const f = ($('admin-user-filtre').value || '').toLowerCase();
+    const inp = (id, v, w, p) => `<input type="text" value="${esc(v)}" id="${id}" class="p-1 border rounded ${w} text-xs" placeholder="${p}">`;
+    $('admin-liste-utilisateurs').innerHTML = donneesSite.utilisateurs.map((u, i) => ({ u, i })).filter(({ u }) => [u.id, u.nom, u.prenoms, u.telephone].join(' ').toLowerCase().includes(f)).map(({ u, i }) => `
+        <div class="p-3 bg-white border rounded-xl text-sm">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2 flex-wrap"><strong>${esc(u.nom)} ${esc(u.prenoms)}</strong>${tagHtml(u.tag)}${banActif(u) ? '<span class="tag" style="background:#fee2e2;color:#991b1b">🔨 banni</span>' : ''}<span class="text-xs text-slate-400">@${esc(u.id)}</span></div>
+                <div class="flex gap-1"><button data-a="${esc(u.id)}" onclick="ouvrirProfil(this.dataset.a)" class="bg-indigo-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer">Profil · tag · ban</button>${bt('bg-red-600 text-white', '🗑️', `adminSupprimerUtilisateur(${i})`)}</div>
+            </div>
+            <details class="mt-2"><summary class="text-xs text-blue-700 cursor-pointer">Modifier les informations</summary>
+                <div class="flex gap-2 flex-wrap items-center mt-2">${inp('u-id-' + i, u.id, 'w-20', 'Identifiant')}${inp('u-nom-' + i, u.nom, 'w-24', 'Nom')}${inp('u-prenoms-' + i, u.prenoms, 'w-28', 'Prénoms')}${inp('u-tel-' + i, u.telephone, 'w-24', 'Téléphone')}${inp('u-code-' + i, u.code, 'w-20', 'Code')}${bt('bg-blue-600 text-white', 'Mettre à jour', `adminModifierUtilisateur(${i})`)}</div>
+            </details>
+        </div>`).join('') || "<p class='text-xs text-slate-500 italic'>Aucun utilisateur.</p>";
+}
+
+function rafraichirSignalements() {
+    const L = donneesSite.signalements.filter(x => x.statut === 'ouvert');
+    $('admin-liste-signalements').innerHTML = L.map(r => `
+        <div class="p-3 bg-white border rounded-lg text-sm space-y-1">
+            <div class="text-xs text-slate-500">🚩 par ${esc(r.par)} · ${fmt(r.date)} · sujet « ${esc(r.sujetTitre)} »</div>
+            <div><b>${esc(r.auteurNom)}</b> : ${esc(r.extrait)}</div>
+            <div class="text-xs text-red-700">Motif : ${esc(r.motif)}</div>
+            <div class="flex gap-1 flex-wrap pt-1"><button data-a="${esc(r.auteurId)}" onclick="ouvrirProfil(this.dataset.a)" class="bg-indigo-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer">Voir le profil</button>${bt('bg-red-600 text-white', 'Supprimer le message', `sigSupprimer('${r._id}')`)}${bt('bg-slate-200 text-slate-800', 'Classer', `sigClasser('${r._id}')`)}</div>
+        </div>`).join('') || "<p class='text-sm text-slate-500 italic'>Aucun signalement.</p>";
+}
+async function sigClasser(id) { const r = donneesSite.signalements.find(x => x._id === id); if (!r) return; r.statut = 'traité'; await sauvegarderOuAlerter(); rafraichirSignalements(); }
+async function sigSupprimer(id) {
+    const r = donneesSite.signalements.find(x => x._id === id); if (!r || !estAdmin) return;
+    const s = donneesSite.sujets.find(x => x._id === r.sujetId);
+    if (s) {
+        if (r.msgId === '_main') { if (!confirm('Ce message est le début du sujet : supprimer tout le sujet ?')) return; donneesSite.sujets = donneesSite.sujets.filter(x => x._id !== s._id); }
+        else s.messages = s.messages.filter(x => x.id !== r.msgId);
+    }
+    r.statut = 'traité'; await sauvegarderOuAlerter(); rafraichirSignalements(); rafraichirForum();
+}
+
+function rafraichirSanctions() {
+    const bans = donneesSite.utilisateurs.filter(u => banActif(u));
+    $('admin-liste-bans').innerHTML = bans.map(u => `<div class="p-3 bg-white border rounded-lg text-sm flex justify-between items-center gap-2 flex-wrap"><div><b>${esc(u.nom)}</b> ${tagHtml(u.tag)}<div class="text-xs text-slate-500">Banni ${txtBan(u.ban)} · par ${esc(u.ban.parNom)}${u.ban.motif ? ' · ' + esc(u.ban.motif) : ''}</div></div><button data-u="${esc(u.id)}" onclick="profilLever(this.dataset.u)" class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer">Lever</button></div>`).join('') || "<p class='text-sm text-slate-500 italic'>Aucun ban en cours.</p>";
+    $('admin-liste-demandes').innerHTML = donneesSite.demandesBan.map(d => {
+        const peut = estPrincipal() || identAdmin() === d.approbateur;
+        return `<div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm flex justify-between items-center gap-2 flex-wrap"><div>Levée du ban de <b>${esc(d.userNom)}</b><div class="text-xs text-slate-500">Demandée par ${esc(d.demandeurNom)} · à approuver par ${esc(d.approbateurNom)}</div></div>${peut ? `<span class="flex gap-1">${bt('bg-emerald-600 text-white', 'Approuver', `demandeTraiter('${d._id}',true)`)}${bt('bg-red-600 text-white', 'Refuser', `demandeTraiter('${d._id}',false)`)}</span>` : '<span class="text-xs italic text-slate-500">En attente</span>'}</div>`;
+    }).join('') || "<p class='text-sm text-slate-500 italic'>Aucune demande.</p>";
+}
+
+function rafraichirChat() {
+    const c = $('chat-admin-liste'); if (!c) return;
+    const bas = c.scrollTop + c.clientHeight >= c.scrollHeight - 40;
+    c.innerHTML = [...donneesSite.chatAdmin].sort((a, b) => a.date - b.date).slice(-150).map(x => `
+        <div class="p-2.5 rounded-xl bg-white border text-sm"><div class="flex justify-between items-center gap-2"><span>${auteurBtn(x.aid, x.nom)} <span class="text-xs text-slate-400">${fmt(x.date)}</span></span>${estPrincipal() && x._id ? bt('bg-red-600 text-white', '🗑️', `chatSupprimer('${x._id}')`) : ''}</div><p class="whitespace-pre-wrap break-words mt-1">${esc(x.texte)}</p></div>`).join('') || "<p class='text-sm italic text-slate-500'>Aucun message.</p>";
+    if (bas) c.scrollTop = c.scrollHeight;
+}
+async function chatEnvoyer() {
+    if (!estAdmin) return; const t = $('chat-input').value.trim(); if (!t) return;
+    const m = moi(); donneesSite.chatAdmin.push({ aid: m.id, nom: m.nom, texte: t, date: Date.now() });
+    $('chat-input').value = ''; await sauvegarderOuAlerter(); rafraichirChat(); $('chat-admin-liste').scrollTop = 1e9;
+}
+async function chatSupprimer(id) {
+    if (!estPrincipal() || !confirm('Supprimer ce message ?')) return;
+    donneesSite.chatAdmin = donneesSite.chatAdmin.filter(x => x._id !== id);
+    await sauvegarderOuAlerter(); rafraichirChat();
+}
+
+// ---------- 7. Sous-catégories (révisions / exercices) ----------
+function rafraichirSousCats() {
+    const L = donneesSite.sousCategories;
+    $('souscat-liste').innerHTML = [['revisions', 'Révisions'], ['exercices', 'Exercices']].map(([s, nom]) => `
+        <div><div class="text-xs font-bold text-slate-500 uppercase mb-1">${nom}</div><div class="flex gap-2 flex-wrap">${L.filter(c => c.section === s).map(c => `<span class="inline-flex items-center gap-1 bg-white border rounded-full pl-3 pr-1 py-0.5 text-sm">${esc(c.nom)}<button onclick="sousCatSupprimer('${c._id}')" class="bg-transparent border-none cursor-pointer text-red-600">✕</button></span>`).join('') || '<span class="text-xs italic text-slate-400">Aucune</span>'}</div></div>`).join('');
+    const sel = $('admin-pdf-souscat'), v = sel.value;
+    sel.innerHTML = '<option value="">— Sans sous-catégorie —</option>' + L.filter(c => c.section === 'revisions').map(c => `<option value="${c._id}">${esc(c.nom)}</option>`).join('');
+    sel.value = v;
+}
+async function sousCatAjouter() {
+    const nom = $('souscat-nom').value.trim(); if (!estAdmin || !nom) return alert('Indiquez un nom.');
+    donneesSite.sousCategories.push({ section: $('souscat-section').value, nom });
+    $('souscat-nom').value = ''; await sauvegarderOuAlerter(); rafraichirSousCats(); rafraichirAffichagePublic();
+}
+async function sousCatSupprimer(id) {
+    if (!estAdmin || !confirm('Supprimer cette sous-catégorie ? Ses éléments passeront dans « Autres ».')) return;
+    donneesSite.sousCategories = donneesSite.sousCategories.filter(c => c._id !== id);
+    await sauvegarderOuAlerter(); rafraichirSousCats(); rafraichirAffichagePublic();
+}
+function majSousCatProp() {
+    const type = $('prop-type').value, s = type === 'revision' ? 'revisions' : type === 'exercice' ? 'exercices' : null;
+    const L = s ? donneesSite.sousCategories.filter(c => c.section === s) : [];
+    const sel = $('prop-souscat'), v = sel.value;
+    $('prop-souscat-box').classList.toggle('hidden', !L.length);
+    sel.innerHTML = '<option value="">— Choisir une sous-catégorie —</option>' + L.map(c => `<option value="${c._id}">${esc(c.nom)}</option>`).join('');
+    sel.value = v;
+}
+function grouper(section, liste, fn) {
+    const cats = donneesSite.sousCategories.filter(c => c.section === section), items = liste.map((it, i) => [it, i]);
+    if (!cats.length) return items.map(([it, i]) => fn(it, i));
+    const titre = t => `<h4 class="col-span-full text-sm font-extrabold uppercase tracking-wide text-indigo-700 border-b border-indigo-100 pb-1 mt-2">${esc(t)}</h4>`, out = [];
+    cats.forEach(c => { const g = items.filter(([it]) => it.sousCat === c._id); if (g.length) { out.push(titre(c.nom)); g.forEach(([it, i]) => out.push(fn(it, i))); } });
+    const r = items.filter(([it]) => !cats.some(c => c._id === it.sousCat));
+    if (r.length) { out.push(titre('Autres')); r.forEach(([it, i]) => out.push(fn(it, i))); }
+    return out;
+}
+
+// ---------- Branchement sur le code existant ----------
+const _rafPublic = rafraichirAffichagePublic;
+rafraichirAffichagePublic = function () { _rafPublic(); majMaintenance(); rafraichirFaq(); rafraichirForum(); majSousCatProp(); };
+const _rafAdmin = rafraichirAdmin;
+rafraichirAdmin = function () { _rafAdmin(); adminTab(ongletAdmin); };
+const _majForm = majFormProposition;
+majFormProposition = function () { _majForm(); majSousCatProp(); };
+const _verifSession = verifierSession;
+verifierSession = function () { _verifSession(); majMaintenance(); };
+
+$('faq-ecran').innerHTML = Object.entries(ECRANS).map(([k, v]) => `<option value="${k}">Redirige vers : ${v}</option>`).join('');
+
+// Mise à jour « instantanée » : vérifie la base toutes les 10 s (maintenance, forum, chat…)
+const sigDonnees = () => Object.values(instantane).join('|');
+setInterval(async () => {
+    if (document.hidden || synchroEnCours > 0) return;
+    const avant = sigDonnees();
+    try { await chargerDonnees(false); } catch (e) { return; }
+    if (sigDonnees() === avant) return;
+    rafraichirAffichagePublic();
+    if (estAdmin) {
+        rafraichirAdminLeger();
+        const dansUser = document.activeElement && document.activeElement.closest('#admin-liste-utilisateurs');
+        if (ongletAdmin === 'utilisateurs' && !dansUser) rafraichirUtilisateursAdmin();
+        if (ongletAdmin === 'moderation') _rafAdmin();
+    }
+}, 10000);
+
+// Initialisation FAQ par défaut (une seule fois) après le chargement
+window.addEventListener('load', () => setTimeout(() => { initialiserFaq().catch(console.warn); majMaintenance(); }, 1500));
+
+</script>
 </body>
 </html>
