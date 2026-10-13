@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mon Site Éducatif (Logistique)</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+      const SUPABASE_URL = 'https://sizxvfsrfkmjbqtjhbpb.supabase.co';
+      const SUPABASE_ANON_KEY = 'sb_publishable_X-wLiwe-nHWseZouv0Mwog_z2ogLydc';
+      const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    </script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -1021,88 +1027,4 @@
             const d = document.getElementById('diaporama');
             d.addEventListener('scroll', () => {
                 if (!d.clientWidth) return;
-                const i = Math.round(d.scrollLeft / d.clientWidth);
-                if (i !== diapoIndex && i >= 0 && i < donneesSite.photos.length) {
-                    diapoIndex = i;
-                    diapoMajDescription();
-                }
-            }, { passive: true });
-            ['touchstart', 'mousedown'].forEach(ev => d.addEventListener(ev, diapoPause, { passive: true }));
-            ['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach(ev => d.addEventListener(ev, diapoPlanifier, { passive: true }));
-            d.addEventListener('wheel', diapoPlanifier, { passive: true });
-            window.addEventListener('resize', () => {
-                if (d.clientWidth) d.scrollTo({ left: diapoIndex * d.clientWidth, behavior: 'instant' });
-            });
-        })();
-
-        function rafraichirDeveloppeur() {
-            const d = donneesSite.developpeur;
-            const rempli = d.nom || d.prenom || d.role || d.photo;
-            document.getElementById('section-developpeur').classList.toggle('hidden', !rempli && !estPrincipal());
-            document.getElementById('dev-admin').classList.toggle('hidden', !estPrincipal());
-            document.getElementById('dev-photo').innerHTML = d.photo ? `<img src="${d.photo}" alt="" class="block w-full h-auto">` : '<div class="h-40 flex items-center justify-center text-5xl">👤</div>';
-            document.getElementById('dev-nom-complet').textContent = [d.prenom, d.nom].filter(Boolean).join(' ') || 'À renseigner';
-            document.getElementById('dev-role').textContent = d.role || '';
-        }
-
-        function ouvrirModalDeveloppeur() {
-            if (!estPrincipal()) return;
-            const d = donneesSite.developpeur;
-            document.getElementById('dev-prenom').value = d.prenom || '';
-            document.getElementById('dev-nom').value = d.nom || '';
-            document.getElementById('dev-role-input').value = d.role || '';
-            document.getElementById('dev-photo-file').value = '';
-            document.getElementById('modal-developpeur').classList.remove('hidden');
-        }
-
-        function fermerModalDeveloppeur() {
-            document.getElementById('modal-developpeur').classList.add('hidden');
-        }
-
-        async function enregistrerDeveloppeur() {
-            if (!estPrincipal()) return;
-            const ancien = donneesSite.developpeur;
-            const nouveau = {
-                photo: ancien.photo || '',
-                prenom: document.getElementById('dev-prenom').value.trim(),
-                nom: document.getElementById('dev-nom').value.trim(),
-                role: document.getElementById('dev-role-input').value.trim()
-            };
-            const fichier = document.getElementById('dev-photo-file').files[0];
-            try {
-                if (fichier) nouveau.photo = await lireFichier(fichier, 800);
-            } catch (err) {
-                console.error(err);
-                return alert("Erreur lors de la lecture de la photo.");
-            }
-            donneesSite.developpeur = nouveau;
-            if (!sauvegarder()) {
-                donneesSite.developpeur = ancien;
-                return alert("Enregistrement impossible : mémoire du navigateur pleine.");
-            }
-            fermerModalDeveloppeur();
-            rafraichirDeveloppeur();
-        }
-
-        function adminModifierDescriptionPhoto() {
-            if (!estAdmin) return;
-            const ph = donneesSite.photos[diapoIndex];
-            if (!ph) return;
-            const nouvelle = prompt("Modifier la description de cette photo :", ph.description || ph.titre || '');
-            if (nouvelle === null) return;
-            ph.description = nouvelle.trim();
-            sauvegarder();
-            diapoMajDescription();
-        }
-
-        function adminSupprimerPhotoCourante() {
-            adminSupprimerFichier('photo', diapoIndex);
-        }
-
-        window.onload = () => {
-            verifierSession();
-            rafraichirAffichagePublic();
-        };
-    </script>
-</body>
-</html>
+                const i = Math.round(d.scrollLeft / d.clientWidth
