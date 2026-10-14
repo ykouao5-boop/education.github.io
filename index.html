@@ -88,6 +88,13 @@
                     <label class="block text-sm font-medium text-slate-700 mb-1">Numéro de téléphone</label>
                     <input type="tel" id="auth-tel" class="w-full p-3 border rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
+                <div id="champ-invit-container" class="hidden">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Code d'invitation</label>
+                    <input type="text" id="auth-invit" autocomplete="off" class="w-full p-3 border rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div id="champ-charte-container" class="hidden">
+                    <label class="flex items-start gap-2 text-xs text-slate-700 p-3 bg-slate-50 border rounded-xl"><input type="checkbox" id="auth-charte" class="mt-0.5 w-4 h-4"><span id="auth-charte-texte"></span></label>
+                </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Code de sécurité unique</label>
                     <input type="password" id="auth-code" class="w-full p-3 border rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
@@ -561,6 +568,46 @@
                         <textarea id="maint-input" rows="3" class="w-full p-2 border rounded bg-white text-sm"></textarea>
                         <button onclick="enregistrerMessageMaintenance()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">Enregistrer le message</button>
                     </div>
+
+                    <div class="p-4 border rounded-xl space-y-3">
+                        <h4 class="font-bold text-lg">⏱️ Maintenance automatique <span class="text-xs font-normal text-slate-500">(administrateur principal uniquement)</span></h4>
+                        <p class="text-xs text-slate-500">Un clic lance la procédure : les messages partent à T-15, T-10, T-5 min (modifiable), puis un décompte géant s'affiche, puis le site passe en maintenance.</p>
+                        <div id="mp-etapes" class="space-y-2"></div>
+                        <button type="button" onclick="mpAjouterEtape()" class="bg-slate-200 text-slate-800 px-3 py-1.5 rounded-lg text-xs font-bold border-none cursor-pointer">+ Ajouter une étape</button>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div><label class="block text-xs font-medium mb-1">Décompte final (secondes)</label><input id="mp-decompte" type="number" min="5" max="300" value="30" class="w-full p-2 border rounded bg-white text-sm"></div>
+                            <div><label class="block text-xs font-medium mb-1">Durée de la maintenance (min, vide = illimitée)</label><input id="mp-duree" type="number" min="1" class="w-full p-2 border rounded bg-white text-sm"></div>
+                        </div>
+                        <label class="flex items-center gap-2 text-sm"><input id="mp-reste" type="checkbox" class="w-4 h-4"> Afficher le compte à rebours du temps de maintenance restant (nécessite une durée)</label>
+                        <div class="flex gap-2 flex-wrap">
+                            <button onclick="mpEnregistrer()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">💾 Enregistrer les réglages</button>
+                            <button onclick="mpLancer()" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">🚧 Lancer la maintenance automatique</button>
+                            <button id="mp-annuler" onclick="mpAnnuler()" class="hidden bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">✖ Annuler la procédure</button>
+                        </div>
+                        <p id="mp-etat" class="text-sm font-semibold"></p>
+                    </div>
+                    <div class="p-4 border rounded-xl space-y-3">
+                        <h4 class="font-bold text-lg">🕒 Annonces automatiques à heures fixes <span class="text-xs font-normal text-slate-500">(heure GMT+0, administrateur principal uniquement)</span></h4>
+                        <textarea id="aa-texte" rows="2" maxlength="160" placeholder="Message à afficher" class="w-full p-2 border rounded bg-white text-sm"></textarea>
+                        <div><label class="block text-xs font-medium mb-1">Heures (GMT+0) — plusieurs possibles</label>
+                            <div class="flex gap-2"><input id="aa-heure" type="time" class="p-2 border rounded bg-white text-sm"><button type="button" onclick="aaAjouterHeure()" class="bg-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold border-none cursor-pointer">+ Ajouter l'heure</button></div>
+                            <div id="aa-heures" class="flex gap-1 flex-wrap mt-2"></div></div>
+                        <div><label class="block text-xs font-medium mb-1">Jours (aucun coché = tous les jours)</label>
+                            <div id="aa-jours" class="flex gap-2 flex-wrap text-sm"></div></div>
+                        <button onclick="aaCreer()" class="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">➕ Enregistrer cette annonce automatique</button>
+                        <div id="aa-liste" class="space-y-2 pt-2 border-t"></div>
+                    </div>
+                    <div class="p-4 border rounded-xl space-y-3">
+                        <h4 class="font-bold text-lg">📋 Règles du site <span class="text-xs font-normal text-slate-500">(administrateur principal uniquement)</span></h4>
+                        <label class="flex items-center gap-2 text-sm font-semibold"><input id="rg-invit-actif" type="checkbox" class="w-4 h-4"> Code d'invitation obligatoire pour s'inscrire</label>
+                        <textarea id="rg-invit-codes" rows="2" placeholder="Un code par ligne (ou séparés par des virgules)" class="w-full p-2 border rounded bg-white text-sm"></textarea>
+                        <label class="flex items-center gap-2 text-sm font-semibold"><input id="rg-charte-actif" type="checkbox" class="w-4 h-4"> Charte à accepter à l'inscription</label>
+                        <textarea id="rg-charte-texte" rows="3" maxlength="600" class="w-full p-2 border rounded bg-white text-sm"></textarea>
+                        <label class="flex items-center gap-2 text-sm font-semibold"><input id="rg-lecture" type="checkbox" class="w-4 h-4"> 🔒 Mode lecture seule (écriture bloquée sauf administrateurs)</label>
+                        <div><label class="block text-xs font-medium mb-1">Délai minimum entre deux messages (secondes, 0 = aucun)</label><input id="rg-spam" type="number" min="0" class="w-full p-2 border rounded bg-white text-sm"></div>
+                        <div><label class="block text-xs font-medium mb-1">Mots interdits (séparés par des virgules) : le message est bloqué</label><textarea id="rg-mots" rows="2" class="w-full p-2 border rounded bg-white text-sm"></textarea></div>
+                        <button onclick="reglesEnregistrer()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">💾 Enregistrer les règles</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -668,11 +715,13 @@
         <div class="text-8xl mb-4">🚧</div>
         <h2 class="text-4xl sm:text-6xl font-extrabold mb-4">Site en maintenance</h2>
         <p id="maint-msg" class="text-lg sm:text-2xl text-slate-300 max-w-2xl mb-8"></p>
+        <p id="maint-reste" class="hidden text-3xl sm:text-5xl font-extrabold text-amber-300 mb-8"></p>
         <a href="https://wa.me/2250152801988?text=Bonjour,%20le%20site%20est%20en%20maintenance." target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl text-lg font-bold no-underline">💬 Assistance</a>
         <p class="text-sm text-slate-400 mt-3 max-w-xs">Pour plus d'informations, contactez le service client.</p>
         <button onclick="ouvrirPortailAdmin()" class="mt-12 text-xs text-slate-400 bg-transparent border-none cursor-pointer underline">Accès administrateur</button>
     </div>
 
+    <div id="decompte-geant" class="hidden fixed inset-0 z-[96] bg-black/80 text-white flex flex-col items-center justify-center text-center pointer-events-none"><p class="text-xl sm:text-3xl font-bold mb-4">🚧 Maintenance dans</p><div id="decompte-chiffre" class="font-extrabold" style="font-size:min(40vw,18rem);line-height:1"></div><p class="text-lg mt-4">secondes</p></div>
     <div id="annonce-bandeau" aria-live="polite"><div class="annonce-boite"><span id="annonce-texte"></span><div class="annonce-barre"></div></div></div>
     <div id="toast-zone" aria-live="polite"></div>
 
@@ -3348,6 +3397,247 @@ const _rafLegerJ = rafraichirAdminLeger;
 rafraichirAdminLeger = function () { _rafLegerJ(); try { rafraichirJournal(); rafraichirPresets(); } catch (e) { console.error('Journal :', e); } };
 const _rafEspaceProfJ = rafraichirEspaceProf;
 rafraichirEspaceProf = function () { _rafEspaceProfJ(); try { rafraichirJournal(); } catch (e) { } };
+
+// =====================================================================
+//  MODULE v8 : maintenance automatique (messages + décompte) et
+//  annonces automatiques à heures fixes (GMT+0)
+// =====================================================================
+const MP_DEF = { etapes: [{ min: 15, texte: "⚠️ Maintenance dans 15 minutes. Terminez ce que vous faites." }, { min: 10, texte: "⚠️ Maintenance dans 10 minutes." }, { min: 5, texte: "⚠️ Maintenance dans 5 minutes. Pensez à envoyer vos devoirs !" }], decompte: 30, duree: null, reste: false };
+let mpEtapesEdit = null, mpSale = false, mpVus = {}, mpDernierPlan = null;
+const mpCfg = () => P().maintConfig || MP_DEF;
+function mpRendreEtapes() {
+    const c = $('mp-etapes'); if (!c) return;
+    if (!mpEtapesEdit) mpEtapesEdit = JSON.parse(JSON.stringify(mpCfg().etapes));
+    c.innerHTML = mpEtapesEdit.map((e, i) => `<div class="flex gap-2 items-start"><input type="number" min="1" value="${esc(e.min)}" oninput="mpEtapesEdit[${i}].min=+this.value;mpSale=true" class="w-16 p-2 border rounded bg-white text-sm" title="minutes avant"><span class="text-xs pt-2.5">min avant</span><input value="${esc(e.texte)}" maxlength="160" oninput="mpEtapesEdit[${i}].texte=this.value;mpSale=true" class="flex-grow p-2 border rounded bg-white text-sm"><button type="button" onclick="mpEtapesEdit.splice(${i},1);mpRendreEtapes();mpSale=true" class="bg-red-600 text-white px-2 py-2 rounded text-xs border-none cursor-pointer">✕</button></div>`).join('') || '<p class="text-xs italic text-slate-500">Aucune étape : décompte direct.</p>';
+}
+function mpAjouterEtape() { mpEtapesEdit = mpEtapesEdit || []; mpEtapesEdit.push({ min: 2, texte: '⚠️ Maintenance dans 2 minutes.' }); mpSale = true; mpRendreEtapes(); }
+function mpChargerChamps() {
+    if (!$('mp-decompte') || mpSale) return;
+    const c = mpCfg(); mpEtapesEdit = JSON.parse(JSON.stringify(c.etapes)); mpRendreEtapes();
+    $('mp-decompte').value = c.decompte || 30; $('mp-duree').value = c.duree || ''; $('mp-reste').checked = !!c.reste;
+}
+function mpLire() {
+    const et = (mpEtapesEdit || []).filter(e => e.min > 0 && (e.texte || '').trim()).map(e => ({ min: +e.min, texte: e.texte.trim() })).sort((a, b) => b.min - a.min);
+    const d = Math.max(5, Math.min(300, parseInt($('mp-decompte').value) || 30)), du = parseInt($('mp-duree').value) || null;
+    return { etapes: et, decompte: d, duree: du, reste: $('mp-reste').checked && !!du };
+}
+async function mpEnregistrer() {
+    if (!estPrincipal()) return;
+    const p = P(), av = p.maintConfig; p.maintConfig = mpLire();
+    if (!(await sauvegarder())) { p.maintConfig = av; return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
+    mpSale = false; mpChargerChamps(); alert('Réglages enregistrés.');
+}
+async function mpLancer() {
+    if (!estPrincipal()) return;
+    const p = P(); if (p.maintenance && p.maintenance.actif) return alert('Le site est déjà en maintenance.');
+    const cfg = mpLire(), avance = Math.max(0, ...cfg.etapes.map(e => e.min)) * 60000 + cfg.decompte * 1000;
+    if (!confirm('Lancer la maintenance automatique ? Les messages partiront aux visiteurs et le site sera bloqué à la fin du décompte.')) return;
+    const av = { c: p.maintConfig, m: p.maintPlan };
+    p.maintConfig = cfg;
+    p.maintPlan = { id: crypto.randomUUID(), debut: Date.now() + avance, etapes: cfg.etapes, decompte: cfg.decompte, duree: cfg.duree, reste: cfg.reste, lance: false };
+    if (!(await sauvegarder())) { p.maintConfig = av.c; p.maintPlan = av.m; return alert("Lancement impossible.\n\nDétail : " + derniereErreur); }
+    mpSale = false; mpTick();
+}
+async function mpAnnuler() {
+    if (!estPrincipal()) return;
+    const p = P(); if (!p.maintPlan || p.maintPlan.lance) return;
+    p.maintPlan = null; await sauvegarderOuAlerter(); mpTick();
+}
+function fmtRestant(ms) { const s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return (h ? h + ' h ' : '') + String(m).padStart(h ? 2 : 1, '0') + ' min ' + String(s % 60).padStart(2, '0') + ' s'; }
+async function mpTick() {
+    const p = donneesSite.parametres[0], plan = p && p.maintPlan, now = Date.now();
+    const bloc = $('decompte-geant'), reste = $('maint-reste');
+    let eta = '';
+    if (plan && !plan.lance) {
+        const t = plan.debut - now;
+        if (utilisateurActif || estAdmin) {
+            (plan.etapes || []).forEach(e => {
+                const k = plan.id + ':' + e.min;
+                if (t <= e.min * 60000 && t > plan.decompte * 1000 && !mpVus[k]) { mpVus[k] = 1; annonceAfficher(e.texte); }
+            });
+        }
+        if (t <= plan.decompte * 1000 && t > 0 && (utilisateurActif || estAdmin)) { bloc.classList.remove('hidden'); $('decompte-chiffre').textContent = Math.ceil(t / 1000); }
+        else bloc.classList.add('hidden');
+        eta = t > 0 ? `⏳ Maintenance dans ${fmtRestant(t)}` : '';
+        if (t <= 0) {
+            bloc.classList.add('hidden');
+            p.maintenance = p.maintenance || {}; p.maintenance.actif = true;
+            p.maintPlan = Object.assign({}, plan, { lance: true, fin: plan.duree ? now + plan.duree * 60000 : null });
+            if (estAdmin || utilisateurActif) { try { await sauvegarder(); } catch (e) { } }
+            majMaintenance();
+        }
+    } else bloc.classList.add('hidden');
+    const pl = p && p.maintPlan;
+    if (pl && pl.lance && p.maintenance && p.maintenance.actif) {
+        if (pl.fin && now >= pl.fin) {   // fin automatique
+            p.maintenance.actif = false; p.maintPlan = null;
+            try { await sauvegarder(); } catch (e) { } majMaintenance();
+        } else if (pl.fin && pl.reste) { reste.classList.remove('hidden'); reste.textContent = '⏳ Retour du site dans ' + fmtRestant(pl.fin - now); }
+        else reste.classList.add('hidden');
+    } else if (reste) reste.classList.add('hidden');
+    const ee = $('mp-etat'); if (ee) ee.textContent = eta || (pl && pl.lance && pl.fin ? 'Maintenance en cours, fin prévue à ' + new Date(pl.fin).toISOString().slice(11, 16) + ' GMT' : '');
+    const ba = $('mp-annuler'); if (ba) ba.classList.toggle('hidden', !(plan && !plan.lance));
+}
+setInterval(() => { try { mpTick(); } catch (e) { console.warn(e); } }, 1000);
+// Désactivation manuelle : on efface aussi le plan
+const _bascMaintV8 = basculerMaintenance;
+basculerMaintenance = async function () {
+    await _bascMaintV8.apply(this, arguments);
+    const p = P(); if (p.maintPlan && !(p.maintenance && p.maintenance.actif) && p.maintPlan.lance) { p.maintPlan = null; await sauvegarder(); }
+};
+
+// ----- Annonces automatiques (GMT+0) -----
+const JOURS_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+let aaHeures = [];
+function aaInit() {
+    const j = $('aa-jours'); if (!j || j.dataset.ok) return; j.dataset.ok = 1;
+    j.innerHTML = JOURS_FR.map((n, i) => `<label class="flex items-center gap-1"><input type="checkbox" value="${i}" class="aa-j w-4 h-4">${n}</label>`).join('');
+}
+function aaRendreHeures() { $('aa-heures').innerHTML = aaHeures.map((h, i) => `<span class="inline-flex items-center gap-1 bg-amber-100 rounded-full pl-3 pr-1 py-0.5 text-sm font-semibold">${h}<button type="button" onclick="aaHeures.splice(${i},1);aaRendreHeures()" class="bg-transparent border-none cursor-pointer text-red-600">✕</button></span>`).join('') || '<span class="text-xs italic text-slate-400">Aucune heure</span>'; }
+function aaAjouterHeure() { const v = $('aa-heure').value; if (!v) return; if (!aaHeures.includes(v)) aaHeures.push(v); aaHeures.sort(); aaRendreHeures(); }
+async function aaCreer() {
+    if (!estPrincipal()) return;
+    const t = $('aa-texte').value.trim(); if (!t) return alert('Écrivez le message.');
+    if (!aaHeures.length) return alert('Ajoutez au moins une heure.');
+    const jours = [...document.querySelectorAll('.aa-j:checked')].map(x => +x.value);
+    const p = P(), av = p.annoncesAuto;
+    p.annoncesAuto = [...(av || []), { id: crypto.randomUUID(), texte: t, heures: [...aaHeures], jours, actif: true }];
+    if (!(await sauvegarder())) { p.annoncesAuto = av; return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
+    $('aa-texte').value = ''; aaHeures = []; aaRendreHeures(); document.querySelectorAll('.aa-j').forEach(x => x.checked = false); aaListe();
+}
+function aaListe() {
+    const c = $('aa-liste'); if (!c) return;
+    c.innerHTML = (P().annoncesAuto || []).map(a => `<div class="p-2.5 bg-white border rounded-lg text-sm space-y-1"><div class="break-words">${esc(a.texte)}</div><div class="text-xs text-slate-500">🕒 ${a.heures.join(', ')} GMT · ${a.jours.length ? a.jours.map(j => JOURS_FR[j]).join(', ') : 'tous les jours'} · ${a.actif ? '🟢 actif' : '⚪ en pause'}</div><div class="flex gap-1">${bt('bg-slate-200 text-slate-800', a.actif ? '⏸ Pause' : '▶ Activer', `aaBasculer('${a.id}')`)}${bt('bg-red-600 text-white', '🗑️', `aaSupprimer('${a.id}')`)}</div></div>`).join('') || "<p class='text-xs italic text-slate-500'>Aucune annonce automatique.</p>";
+}
+async function aaBasculer(id) { if (!estPrincipal()) return; const a = (P().annoncesAuto || []).find(x => x.id === id); if (!a) return; a.actif = !a.actif; await sauvegarderOuAlerter(); aaListe(); }
+async function aaSupprimer(id) { if (!estPrincipal() || !confirm('Supprimer cette annonce automatique ?')) return; P().annoncesAuto = (P().annoncesAuto || []).filter(x => x.id !== id); await sauvegarderOuAlerter(); aaListe(); }
+function aaVerifier() {
+    if (!(utilisateurActif || estAdmin)) return;
+    const d = new Date(), hm = d.toISOString().slice(11, 16), jour = d.getUTCDay(), date = d.toISOString().slice(0, 10);
+    ((donneesSite.parametres[0] || {}).annoncesAuto || []).forEach(a => {
+        if (!a.actif || !a.heures.includes(hm) || (a.jours.length && !a.jours.includes(jour))) return;
+        const k = `aa:${a.id}:${date}:${hm}`;
+        try { if (localStorage.getItem(k)) return; localStorage.setItem(k, '1'); } catch (e) { if (mpVus[k]) return; mpVus[k] = 1; }
+        annonceAfficher(a.texte);
+    });
+}
+setInterval(() => { try { aaVerifier(); } catch (e) { console.warn(e); } }, 5000);
+const _rafLegerV8 = rafraichirAdminLeger;
+rafraichirAdminLeger = function () { _rafLegerV8(); try { aaInit(); aaRendreHeures(); aaListe(); mpChargerChamps(); } catch (e) { console.error('v8 :', e); } };
+// Journal des actions
+['mpLancer', 'mpAnnuler', 'mpEnregistrer', 'aaCreer', 'aaSupprimer'].forEach((n, i) => surveiller(n, 'action', () => ['Maintenance automatique lancée', 'Maintenance automatique annulée', 'Réglages de maintenance automatique modifiés', 'Annonce automatique ajoutée', 'Annonce automatique supprimée'][i]));
+
+
+// =====================================================================
+//  MODULE v9 : code d'invitation, charte, journal de connexion,
+//  mode lecture seule, anti-spam, mots interdits
+// =====================================================================
+const CHARTE_DEF = "Je m'engage à respecter les autres membres, à ne publier aucun contenu offensant ou illégal, et j'accepte que mes actions soient visibles des administrateurs.";
+function majChampsInscription() {
+    const p = P(), ins = modeAuthActif === 'inscription';
+    $('champ-invit-container').classList.toggle('hidden', !(ins && p.invitation && p.invitation.actif));
+    const ch = !!(p.charte && p.charte.actif);
+    $('champ-charte-container').classList.toggle('hidden', !(ins && ch));
+    $('auth-charte-texte').textContent = (p.charte && p.charte.texte) || CHARTE_DEF;
+}
+const _bmaV9 = basculerModeAuth;
+basculerModeAuth = function () { _bmaV9.apply(this, arguments); try { majChampsInscription(); } catch (e) { } };
+$('form-auth').addEventListener('submit', e => {
+    if (modeAuthActif !== 'inscription') return;
+    const p = P(), stop = m => { e.preventDefault(); e.stopImmediatePropagation(); alert(m); };
+    if (p.invitation && p.invitation.actif && !(p.invitation.codes || []).includes($('auth-invit').value.trim())) return stop("Code d'invitation invalide : demandez-le à l'administration.");
+    if (p.charte && p.charte.actif && !$('auth-charte').checked) return stop("Vous devez accepter la charte du site pour vous inscrire.");
+    window._charteOk = !!(p.charte && p.charte.actif);
+}, true);
+
+// ----- Journal de connexion -----
+function journalVisite() {
+    if (!utilisateurActif || sessionStorage.getItem('visite_ok') === utilisateurActif.id) return;
+    const u = userParId(utilisateurActif.id); if (!u) return;
+    try { sessionStorage.setItem('visite_ok', u.id); } catch (e) { }
+    u.derniereVisite = Date.now(); u.nbConnexions = (u.nbConnexions || 0) + 1;
+    if (window._charteOk) { u.charteDate = Date.now(); window._charteOk = false; }
+    sauvegarder().catch(() => { });
+}
+const _vsV9 = verifierSession;
+verifierSession = function () { _vsV9.apply(this, arguments); try { journalVisite(); majChampsInscription(); } catch (e) { console.warn(e); } };
+const _deconV9 = deconnexion;
+deconnexion = function () { try { sessionStorage.removeItem('visite_ok'); } catch (e) { } return _deconV9.apply(this, arguments); };
+const _opV9 = ouvrirProfil;
+ouvrirProfil = function (aid) {
+    _opV9.apply(this, arguments);
+    if (!estAdmin || String(aid).startsWith('@')) return;
+    const u = userParId(aid); if (!u) return;
+    const d = document.createElement('div');
+    d.className = 'text-xs bg-slate-50 border rounded-xl p-3 space-y-1';
+    d.innerHTML = `<div><b>Dernière visite :</b> ${u.derniereVisite ? fmt(u.derniereVisite) : 'jamais enregistrée'}</div><div><b>Nombre de connexions :</b> ${u.nbConnexions || 0}</div><div><b>Charte acceptée :</b> ${u.charteDate ? fmt(u.charteDate) : '—'}</div>`;
+    $('profil-contenu').appendChild(d);
+};
+
+// ----- Lecture seule, anti-spam, mots interdits -----
+function ecritureBloquee() {
+    if (!estAdmin && P().lectureSeule) { alert("Le site est en mode lecture seule : la consultation reste possible, l'écriture est bloquée."); return true; }
+    return false;
+}
+function texteAutorise(txt) {
+    if (estAdmin || !txt.trim()) return true;
+    const p = P(), n = norm(txt);
+    const mot = (p.motsInterdits || []).find(m => m && n.includes(norm(m)));
+    if (mot) { alert("Votre message contient un mot interdit : « " + mot + " »."); return false; }
+    const sec = p.antiSpamSec || 0;
+    if (sec > 0) {
+        let last = 0; try { last = +localStorage.getItem('dernier_msg') || 0; } catch (e) { }
+        const reste = Math.ceil((last + sec * 1000 - Date.now()) / 1000);
+        if (reste > 0) { alert('Patientez encore ' + reste + ' s avant d\'envoyer un autre message.'); return false; }
+        try { localStorage.setItem('dernier_msg', String(Date.now())); } catch (e) { }
+    }
+    return true;
+}
+function garder(nom, lire) {
+    const o = window[nom];
+    window[nom] = async function () {
+        if (ecritureBloquee()) return;
+        if (lire && !texteAutorise(lire())) return;
+        return o.apply(this, arguments);
+    };
+}
+garder('forumCreer', () => $('fn-titre').value + ' ' + $('fn-texte').value);
+garder('forumRepondre', () => ($('forum-reply') || {}).value || '');
+garder('epChatEnvoyer', () => $('chat-prof-input').value);
+garder('validerEditMsg', () => $('edit-msg-texte').value);
+garder('evalEnvoyer', null);
+$('form-proposition').addEventListener('submit', e => { if (ecritureBloquee()) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+
+// ----- Réglages (administrateur principal) -----
+let reglesSale = false;
+function reglesChamps() {
+    if (!estPrincipal() || reglesSale || !$('rg-invit-actif')) return;
+    const p = P();
+    $('rg-invit-actif').checked = !!(p.invitation && p.invitation.actif);
+    $('rg-invit-codes').value = ((p.invitation || {}).codes || []).join('\n');
+    $('rg-charte-actif').checked = !!(p.charte && p.charte.actif);
+    $('rg-charte-texte').value = (p.charte && p.charte.texte) || CHARTE_DEF;
+    $('rg-lecture').checked = !!p.lectureSeule;
+    $('rg-spam').value = p.antiSpamSec || 0;
+    $('rg-mots').value = (p.motsInterdits || []).join(', ');
+}
+async function reglesEnregistrer() {
+    if (!estPrincipal()) return;
+    const p = P(), av = { i: p.invitation, c: p.charte, l: p.lectureSeule, s: p.antiSpamSec, m: p.motsInterdits };
+    p.invitation = { actif: $('rg-invit-actif').checked, codes: $('rg-invit-codes').value.split(/[\n,;]+/).map(x => x.trim()).filter(Boolean) };
+    if (p.invitation.actif && !p.invitation.codes.length) { Object.assign(p, { invitation: av.i }); return alert("Ajoutez au moins un code d'invitation ou désactivez l'option."); }
+    p.charte = { actif: $('rg-charte-actif').checked, texte: $('rg-charte-texte').value.trim() || CHARTE_DEF };
+    p.lectureSeule = $('rg-lecture').checked;
+    p.antiSpamSec = Math.max(0, parseInt($('rg-spam').value) || 0);
+    p.motsInterdits = $('rg-mots').value.split(/[,;\n]+/).map(x => x.trim()).filter(Boolean);
+    if (!(await sauvegarder())) { Object.assign(p, { invitation: av.i, charte: av.c, lectureSeule: av.l, antiSpamSec: av.s, motsInterdits: av.m }); return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
+    reglesSale = false; majChampsInscription(); alert('Règles enregistrées.');
+}
+['rg-invit-actif', 'rg-invit-codes', 'rg-charte-actif', 'rg-charte-texte', 'rg-lecture', 'rg-spam', 'rg-mots'].forEach(id => { const e = $(id); if (e) e.addEventListener('input', () => { reglesSale = true; }); });
+const _rafLegerV9 = rafraichirAdminLeger;
+rafraichirAdminLeger = function () { _rafLegerV9(); try { reglesChamps(); } catch (e) { console.error('v9 :', e); } };
+surveiller('reglesEnregistrer', 'action', () => "Règles du site modifiées (invitation, charte, lecture seule, anti-spam, mots interdits)");
+
 </script>
 
 </body>
