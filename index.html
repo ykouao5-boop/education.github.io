@@ -302,6 +302,7 @@
                 <div id="forum-nouveau" class="hidden p-4 bg-slate-50 border rounded-xl space-y-2">
                     <input id="fn-titre" placeholder="Titre du sujet" maxlength="120" class="w-full p-2 border rounded bg-white text-sm">
                     <textarea id="fn-texte" data-mention="1" rows="4" placeholder="Votre message" class="w-full p-2 border rounded bg-white text-sm"></textarea>
+                    <textarea id="fn-sondage" rows="3" placeholder="📊 Sondage (optionnel) : une option par ligne, 2 à 6" class="w-full p-2 border rounded bg-white text-sm"></textarea>
                     <button onclick="forumCreer()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">Publier</button>
                 </div>
                 <div id="forum-liste" class="space-y-3"></div>
@@ -313,6 +314,7 @@
             <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-md border border-slate-100 max-w-2xl mx-auto space-y-6 text-center">
                 <h3 class="text-2xl font-bold text-rose-600">❤️ Dons</h3>
                 <p id="dons-message" class="text-slate-700 whitespace-pre-wrap break-words"></p>
+                <div id="dons-jauge" class="hidden text-left p-4 bg-rose-50 border border-rose-200 rounded-2xl space-y-2"></div>
                 <a id="btn-faire-don" href="https://pay.wave.com/m/M_ci_T-r32Il5V0lx/c/ci/" target="_blank" rel="noopener" onclick="donsApresClic()" class="block w-full bg-rose-600 hover:bg-rose-700 text-white text-2xl font-extrabold py-5 rounded-2xl shadow-lg no-underline">❤️ FAITES UN DON</a>
                 <div id="dons-question" class="hidden text-left p-4 bg-rose-50 border border-rose-200 rounded-2xl space-y-3">
                     <p class="font-bold text-rose-900">Avez-vous effectué un don ?</p>
@@ -424,7 +426,7 @@
                     <button onclick="changerEcran('accueil')" class="bg-slate-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-slate-700 font-medium border-none cursor-pointer">Fermer</button>
                 </div>
                 <p class="text-xs text-slate-500">Les modérateurs peuvent traiter les signalements, supprimer des messages du forum et bannir temporairement (72 h maximum). Toutes ces actions sont visibles dans l'historique des administrateurs.</p>
-                <div><h4 class="font-bold mb-2">🚩 Signalements ouverts</h4><div id="modo-liste-signalements" class="space-y-3"></div></div>
+                <div><h4 class="font-bold mb-2">🚩 Signalements ouverts</h4><div data-lotbar="sig" class="hidden mb-2"></div><div id="modo-liste-signalements" class="space-y-3"></div></div>
                 <div><h4 class="font-bold mb-2">⏳ Bans temporaires en cours</h4><div id="modo-liste-bans" class="space-y-2"></div></div>
                 <div><h4 class="font-bold mb-2">💬 Derniers sujets du forum</h4><div id="modo-liste-sujets" class="space-y-2"></div></div>
             </div>
@@ -445,6 +447,7 @@
                     <button class="atab-btn" data-t="rendus" onclick="adminTab('rendus')">📨 Devoirs rendus</button>
                     <button class="atab-btn" data-t="dons" onclick="adminTab('dons')">💝 Dons</button>
                     <button class="atab-btn" data-t="historique" onclick="adminTab('historique')">📜 Historique</button>
+                    <button class="atab-btn" data-t="securite" onclick="adminTab('securite')">🛡️ Sécurité & bord</button>
                     <button id="tab-site" class="atab-btn hidden" data-t="site" onclick="adminTab('site')">⚙️ Site</button>
                 </div>
 
@@ -492,10 +495,12 @@
                 <div id="atab-moderation" class="atab hidden space-y-6">
                     <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
                         <h4 class="font-bold text-amber-900">Propositions en attente</h4>
+                        <div data-lotbar="prop" class="hidden"></div>
                         <div id="admin-liste-moderation" class="space-y-3"></div>
                     </div>
                     <div class="p-4 bg-red-50 border border-red-200 rounded-xl space-y-3">
                         <h4 class="font-bold text-red-900">🚩 Signalements du forum</h4>
+                        <div data-lotbar="sig" class="hidden"></div>
                         <div id="admin-liste-signalements" class="space-y-3"></div>
                     </div>
                 </div>
@@ -524,15 +529,69 @@
                     <div id="admin-liste-rendus" class="space-y-4"></div>
                 </div>
 
+                <div id="atab-securite" class="atab hidden space-y-4">
+                    <div class="p-4 border rounded-xl space-y-3"><h4 class="font-bold text-lg">📊 Tableau de bord</h4><div id="secu-dashboard"></div></div>
+                    <div class="p-4 border rounded-xl space-y-2"><h4 class="font-bold text-lg">🚨 Alertes de sécurité</h4><div id="secu-alertes" class="space-y-2 text-sm"></div></div>
+                    <div class="p-4 border rounded-xl space-y-2"><h4 class="font-bold text-lg">🗓️ Résumé des 7 derniers jours</h4><div id="secu-hebdo" class="text-sm"></div></div>
+                    <div id="secu-reglages" class="p-4 border rounded-xl space-y-3">
+                        <h4 class="font-bold text-lg">🔐 Réglages de sécurité <span class="text-xs font-normal text-slate-500">(administrateur principal)</span></h4>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div><label class="block text-xs font-medium mb-1">Erreurs de code avant blocage</label><input id="sc-max" type="number" min="3" max="20" class="w-full p-2 border rounded bg-white text-sm"></div>
+                            <div><label class="block text-xs font-medium mb-1">Durée du blocage (min)</label><input id="sc-bloc" type="number" min="1" max="1440" class="w-full p-2 border rounded bg-white text-sm"></div>
+                            <div><label class="block text-xs font-medium mb-1">Déconnexion après inactivité (min, 0 = jamais)</label><input id="sc-inact" type="number" min="0" max="1440" class="w-full p-2 border rounded bg-white text-sm"></div>
+                            <div><label class="block text-xs font-medium mb-1">Alerte si X comptes créés en 10 min</label><input id="sc-rafale" type="number" min="2" max="100" class="w-full p-2 border rounded bg-white text-sm"></div>
+                        </div>
+                        <button onclick="secuEnregistrer()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">💾 Enregistrer</button>
+                    </div>
+                    <div class="p-4 border rounded-xl space-y-2"><h4 class="font-bold text-lg">⛔ Appareils bannis du site</h4><p class="text-xs text-slate-500">Ajoutés automatiquement avec « Ban permanent du site » (bouton dans le profil d'un utilisateur).</p><div id="secu-bannis" class="space-y-2"></div></div>
+                    <div id="ann-carte" class="p-4 border rounded-xl space-y-3">
+                        <h4 class="font-bold text-lg">📢 Annonces <span class="text-xs font-normal text-slate-500">(administrateur principal, heure GMT+0)</span></h4>
+                        <p class="text-xs text-slate-500">Le message s'affiche en haut du site pendant 10 secondes pour les personnes ciblées, sans bloquer aucun bouton.</p>
+                        <textarea id="annonce-input" rows="2" maxlength="160" placeholder="Ex : Les cours de lundi sont reportés à mardi 8h." class="w-full p-2 border rounded bg-white text-sm"></textarea>
+                        <div><label class="block text-xs font-medium mb-1">Destinataires</label><select id="ann-cible" class="w-full p-2 border rounded bg-white text-sm"><option value="tous">Tous</option><option value="prof">Professeurs</option><option value="etudiant">Étudiants</option><option value="admin">Administrateurs</option></select></div>
+                        <div class="flex gap-3 flex-wrap text-sm">
+                            <label class="flex items-center gap-1"><input type="radio" name="ann-mode" value="now" checked onchange="annMode()"> Maintenant</label>
+                            <label class="flex items-center gap-1"><input type="radio" name="ann-mode" value="prog" onchange="annMode()"> Programmée</label>
+                            <label class="flex items-center gap-1"><input type="radio" name="ann-mode" value="rec" onchange="annMode()"> Heures fixes (récurrente)</label>
+                        </div>
+                        <div id="ann-sec-prog" class="hidden"><label class="block text-xs font-medium mb-1">Date et heure (GMT+0)</label><input id="ann-date" type="datetime-local" class="w-full p-2 border rounded bg-white text-sm"></div>
+                        <div id="ann-sec-rec" class="hidden space-y-2">
+                            <div><label class="block text-xs font-medium mb-1">Heures (GMT+0) — plusieurs possibles</label>
+                                <div class="flex gap-2"><input id="aa-heure" type="time" class="p-2 border rounded bg-white text-sm"><button type="button" onclick="aaAjouterHeure()" class="bg-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold border-none cursor-pointer">+ Ajouter l'heure</button></div>
+                                <div id="aa-heures" class="flex gap-1 flex-wrap mt-2"></div></div>
+                            <div><label class="block text-xs font-medium mb-1">Jours (aucun coché = tous les jours)</label><div id="aa-jours" class="flex gap-2 flex-wrap text-sm"></div></div>
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                            <button onclick="annSoumettre()" class="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">📢 Envoyer / programmer</button>
+                            <button onclick="annoncePreAjouter()" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">💾 Pré-enregistrer</button>
+                        </div>
+                        <div class="pt-2 border-t"><div class="text-xs font-bold text-slate-500 uppercase mb-2">Messages pré-enregistrés</div><div id="annonce-presets" class="space-y-2"></div></div>
+                        <div class="pt-2 border-t"><div class="text-xs font-bold text-slate-500 uppercase mb-2">🕒 Annonces à heures fixes</div><div id="aa-liste" class="space-y-2"></div></div>
+                        <div class="pt-2 border-t"><div class="text-xs font-bold text-slate-500 uppercase mb-2">Programmées et historique</div><div id="ann-liste" class="space-y-2"></div></div>
+                    </div>
+                </div>
+
                 <div id="atab-historique" class="atab hidden space-y-3">
                     <h4 class="font-bold text-lg">📜 Historique des actions <span class="text-xs font-normal text-slate-500">(visible par tous les administrateurs, modifiable par l'administrateur principal uniquement)</span></h4>
                     <p class="text-xs text-slate-500">Toutes les commandes effectuées sur le site par les administrateurs et les professeurs : ajouts, suppressions, sanctions, maintenance, annonces…</p>
                     <div class="flex items-center justify-between gap-2 flex-wrap"><span id="journal-admin-compte" class="text-xs font-semibold text-slate-600"></span>
                         <button id="journal-admin-vider" onclick="journalVider('tout')" class="hidden bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold border-none cursor-pointer">🧹 Vider tout l'historique</button></div>
                     <div id="journal-admin-liste" class="space-y-2"></div>
+                    <div id="hm-box" class="pt-5 mt-5 border-t space-y-3">
+                        <h4 class="font-bold text-lg">✏️ Modifications de messages <span class="text-xs font-normal text-slate-500">(visible par les administrateurs uniquement)</span></h4>
+                        <p class="text-xs text-slate-500">Quand un membre modifie son message (forum, chat des administrateurs, discussion profs / sponsors), l'ancienne version est conservée ici. « Annuler » remet le message dans son état précédent, en commençant par la modification la plus récente de chaque message.</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input id="hm-q" oninput="rafraichirHistMsgs()" placeholder="🔎 Auteur, lieu ou texte" class="p-2 border rounded bg-white text-sm col-span-2 sm:col-span-1">
+                            <select id="hm-etat" onchange="rafraichirHistMsgs()" class="p-2 border rounded bg-white text-sm col-span-2 sm:col-span-1"><option value="">Toutes les modifications</option><option value="active">Non annulées</option><option value="annulee">Annulées</option></select>
+                        </div>
+                        <div id="hm-compte" class="text-xs font-semibold text-slate-600"></div>
+                        <div id="hm-liste" class="space-y-2"></div>
+                    </div>
                 </div>
                 <div id="atab-dons" class="atab hidden space-y-3">
                     <p class="text-xs text-slate-500">Dons déclarés par les membres après un paiement Wave. Vérifiez dans Wave Business, puis indiquez « Reçu » ou « Pas reçu ». Le montant est celui que le membre a écrit.</p>
+                    <div id="admin-dons-resume" class="hidden p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm space-y-2"></div>
+                    <div data-lotbar="dons" class="hidden"></div>
                     <div id="admin-liste-dons" class="space-y-2"></div>
                 </div>
 
@@ -548,17 +607,20 @@
                         <button onclick="donsEnregistrerMessages()" class="bg-rose-600 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">Enregistrer les messages</button>
                     </div>
                     <div class="p-4 border rounded-xl space-y-3">
+                        <h4 class="font-bold text-lg">🎯 Objectif de collecte (jauge) <span class="text-xs font-normal text-slate-500">(administrateur principal uniquement)</span></h4>
+                        <p class="text-xs text-slate-500">La jauge s'affiche sur la page Dons dès qu'un objectif est indiqué. Seuls les dons marqués « Reçu » sont comptés. Laissez vide (ou 0) pour masquer la jauge.</p>
+                        <label class="block text-sm font-medium">Objectif (FCFA)</label>
+                        <input id="dons-edit-objectif" type="number" inputmode="numeric" min="0" step="1" placeholder="Ex : 100000" class="w-full p-2 border rounded bg-white text-sm">
+                        <label class="block text-sm font-medium">Intitulé de l'objectif (facultatif)</label>
+                        <input id="dons-edit-obj-titre" maxlength="80" placeholder="Ex : Hébergement du site" class="w-full p-2 border rounded bg-white text-sm">
+                        <label class="flex items-start gap-2 text-sm"><input id="dons-edit-zero" type="checkbox" class="mt-0.5 w-4 h-4"><span>Repartir de zéro : ne compter que les dons déclarés à partir de maintenant <span id="dons-depuis" class="text-xs text-slate-500"></span></span></label>
+                        <div id="dons-obj-apercu" class="hidden"></div>
+                        <button onclick="donsEnregistrerObjectif()" class="bg-rose-600 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">Enregistrer l'objectif</button>
+                    </div>
+                    <div class="p-4 border rounded-xl space-y-3">
                         <h4 class="font-bold text-lg">🛡️ Administrateurs <span class="text-xs font-normal text-slate-500">(administrateur principal uniquement)</span></h4>
                         <p class="text-xs text-slate-500">La clé universelle n'est plus affichée ici (elle est connue de vous seul). Elle ne sert qu'à créer une clé personnelle ; chaque administrateur se connecte ensuite avec la sienne.</p>
                         <div id="admin-liste-admins" class="space-y-2"></div>
-                    </div>
-                    <div class="p-4 border rounded-xl space-y-3">
-                        <h4 class="font-bold text-lg">📢 Message d'annonce <span class="text-xs font-normal text-slate-500">(administrateur principal uniquement)</span></h4>
-                        <p class="text-xs text-slate-500">Le message s'affiche en haut du site pour toutes les personnes connectées pendant 10 secondes, puis disparaît. Il ne bloque aucun bouton : on peut continuer à toucher l'écran à travers.</p>
-                        <textarea id="annonce-input" rows="2" maxlength="160" placeholder="Ex : Les cours de lundi sont reportés à mardi 8h." class="w-full p-2 border rounded bg-white text-sm"></textarea>
-                        <button onclick="annonceEnvoyer()" class="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">📢 Afficher maintenant</button>
-                        <button onclick="annoncePreAjouter()" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">💾 Pré-enregistrer</button>
-                        <div class="pt-2 border-t"><div class="text-xs font-bold text-slate-500 uppercase mb-2">Messages pré-enregistrés</div><div id="annonce-presets" class="space-y-2"></div></div>
                     </div>
                     <div class="p-4 border rounded-xl space-y-3">
                         <h4 class="font-bold text-lg">🚧 Mode maintenance <span class="text-xs font-normal text-slate-500">(administrateur principal uniquement)</span></h4>
@@ -584,18 +646,16 @@
                             <button onclick="mpLancer()" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">🚧 Lancer la maintenance automatique</button>
                             <button id="mp-annuler" onclick="mpAnnuler()" class="hidden bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">✖ Annuler la procédure</button>
                         </div>
+                        <div class="pt-3 border-t space-y-2">
+                            <div class="text-xs font-bold text-slate-500 uppercase">📅 Programmer à une date précise (heure GMT+0)</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div><label class="block text-xs font-medium mb-1">Début de la maintenance</label><input id="mp-prog-debut" type="datetime-local" class="w-full p-2 border rounded bg-white text-sm"></div>
+                                <div><label class="block text-xs font-medium mb-1">Fin (optionnel, sinon la durée ci-dessus)</label><input id="mp-prog-fin" type="datetime-local" class="w-full p-2 border rounded bg-white text-sm"></div>
+                            </div>
+                            <button onclick="mpProgrammer()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">📅 Programmer la maintenance</button>
+                            <p class="text-xs text-slate-500">Les messages (T-15, T-10, T-5…) et le décompte partent automatiquement avant l'heure choisie.</p>
+                        </div>
                         <p id="mp-etat" class="text-sm font-semibold"></p>
-                    </div>
-                    <div class="p-4 border rounded-xl space-y-3">
-                        <h4 class="font-bold text-lg">🕒 Annonces automatiques à heures fixes <span class="text-xs font-normal text-slate-500">(heure GMT+0, administrateur principal uniquement)</span></h4>
-                        <textarea id="aa-texte" rows="2" maxlength="160" placeholder="Message à afficher" class="w-full p-2 border rounded bg-white text-sm"></textarea>
-                        <div><label class="block text-xs font-medium mb-1">Heures (GMT+0) — plusieurs possibles</label>
-                            <div class="flex gap-2"><input id="aa-heure" type="time" class="p-2 border rounded bg-white text-sm"><button type="button" onclick="aaAjouterHeure()" class="bg-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold border-none cursor-pointer">+ Ajouter l'heure</button></div>
-                            <div id="aa-heures" class="flex gap-1 flex-wrap mt-2"></div></div>
-                        <div><label class="block text-xs font-medium mb-1">Jours (aucun coché = tous les jours)</label>
-                            <div id="aa-jours" class="flex gap-2 flex-wrap text-sm"></div></div>
-                        <button onclick="aaCreer()" class="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold border-none cursor-pointer">➕ Enregistrer cette annonce automatique</button>
-                        <div id="aa-liste" class="space-y-2 pt-2 border-t"></div>
                     </div>
                     <div class="p-4 border rounded-xl space-y-3">
                         <h4 class="font-bold text-lg">📋 Règles du site <span class="text-xs font-normal text-slate-500">(administrateur principal uniquement)</span></h4>
@@ -799,7 +859,7 @@
             exercicesRejetes: [],
             propositionsArchivees: [],
             utilisateurs: [],
-            faqs: [], sujets: [], chatAdmin: [], chatProf: [], signalements: [], demandesBan: [], sousCategories: [], parametres: [], rendus: [], admins: [], dons: [], journal: []
+            faqs: [], sujets: [], chatAdmin: [], chatProf: [], signalements: [], demandesBan: [], sousCategories: [], parametres: [], rendus: [], admins: [], dons: [], journal: [], messagesPrives: []
         };
 
         // ===== Connexion à la base de données Supabase =====
@@ -1217,7 +1277,7 @@
                     <span class="font-medium text-blue-900">${esc(p.titre)}${descr(p)}</span>
                     <div class="flex items-center gap-2">
                         <button onclick="ouvrirDoc('pdfs', ${idx}, 'fileUrl', '')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700 font-medium cursor-pointer border-none">Lire en ligne</button>
-                        ${boutonSupprimer('pdf', idx)}
+                        ${window.outilsV12 ? outilsV12('pdfs', idx, p) : ''}${boutonSupprimer('pdf', idx)}
                     </div>
                 </div>
             `).join('') || videMsg('revisions', "Aucun document disponible.");
@@ -1227,7 +1287,7 @@
                     <span class="font-medium text-sky-900">${esc(c.titre)}${descr(c)}</span>
                     <div class="flex items-center gap-2">
                         <button onclick="ouvrirDoc('cours', ${idx}, 'fileUrl', '')" class="bg-sky-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-sky-700 font-medium cursor-pointer border-none">Consulter</button>
-                        ${boutonSupprimer('cours', idx)}
+                        ${window.outilsV12 ? outilsV12('cours', idx, c) : ''}${boutonSupprimer('cours', idx)}
                     </div>
                 </div>
             `).join('') || videMsg('cours', "Aucun cours disponible.");
@@ -1240,7 +1300,7 @@
                     <div>
                         <div class="flex justify-between items-start mb-2 gap-2">
                             <h4 class="font-bold text-lg text-blue-800">${esc(ev.titre)}</h4>
-                            ${boutonSupprimer('evaluation', idx)}
+                            ${window.outilsV12 ? outilsV12('evaluations', idx, ev) : ''}${boutonSupprimer('evaluation', idx)}
                         </div>
                         <div class="flex flex-wrap gap-1 mb-2">${tagsEval(ev)}</div><p class="text-sm text-slate-600 mb-4">${esc(ev.description)}</p>
                     </div>
@@ -1335,7 +1395,8 @@
                     : `<button onclick="ouvrirDoc('exercicesEnAttente', ${i}, 'enonceUrl', 'Énoncé')" class="underline text-blue-600 bg-transparent border-none cursor-pointer p-0">Énoncé</button> • <button onclick="ouvrirDoc('exercicesEnAttente', ${i}, 'corrigeUrl', 'Corrigé')" class="underline text-blue-600 bg-transparent border-none cursor-pointer p-0">Corrigé</button>`;
                 return `
                 <div class="p-3 bg-white border rounded-lg flex justify-between items-center gap-2 text-sm shadow-sm">
-                    <div>
+                    ${window.lotCheck ? lotCheck('prop', ex._id || ex.id) : ''}
+                    <div class="flex-grow min-w-0">
                         <strong>${esc(ex.titre)}</strong> <span class="text-xs text-slate-400">(${libelleType(ex.type)})</span>
                         <div class="text-xs text-slate-500">Soumis par : ${esc(ex.auteurId)}</div>
                         <div class="text-xs flex gap-2 mt-1">${liens}</div>
@@ -1346,6 +1407,7 @@
                     </div>
                 </div>`;
             }).join('') || "<p class='text-sm text-slate-500 italic'>Aucune proposition en attente.</p>";
+            window.lotBarre && lotBarre('prop');
 
             document.getElementById('admin-liste-utilisateurs').innerHTML = donneesSite.utilisateurs.map((u, index) => `
                 <div class="p-3 bg-white border rounded-lg flex flex-wrap gap-2 items-center justify-between text-sm">
@@ -1772,7 +1834,7 @@ function rafraichirForum() {
     let s = donneesSite.sujets.find(x => x._id === forumOuvert);
     if (!s) forumOuvert = null;
     const m = moi(), b = monBan();
-    const sig = JSON.stringify([donneesSite.sujets, donneesSite.utilisateurs.map(u => [u.id, u.nom, u.prenoms, u.photo, u.tag, u.donateur, u.ban]), donneesSite.admins.map(a => [a._id, a.nom, a.prenoms, a.photo, a.role]), forumOuvert, estAdmin, peutModerer(), !!b, m && m.id, !!P().forumSourdine]);
+    const sig = JSON.stringify([donneesSite.sujets, donneesSite.utilisateurs.map(u => [u.id, u.nom, u.prenoms, u.photo, u.tag, u.donateur, u.ban]), donneesSite.admins.map(a => [a._id, a.nom, a.prenoms, a.photo, a.role]), forumOuvert, estAdmin, peutModerer(), !!b, m && m.id, !!P().forumSourdine, window.mesBloques ? mesBloques().join() : '']);
     if (sig === sigForum) return; sigForum = sig;
     const rep = $('forum-reply'), saved = rep ? rep.value : '', actif = rep && document.activeElement === rep;
     $('forum-ban-info').innerHTML = b ? `<div class="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800">🔨 Vous êtes banni du forum ${txtBan(b)}. Vous pouvez lire, mais plus écrire.</div>` : '';
@@ -1789,7 +1851,7 @@ function rafraichirForum() {
         $('forum-liste').innerHTML = [...donneesSite.sujets].sort((a, c) => dernier(c) - dernier(a)).map(x => `
             <div onclick="forumOuvrir('${x._id}')" class="p-4 border rounded-xl bg-slate-50 hover:bg-blue-50 cursor-pointer flex justify-between gap-3 items-start">
                 <div class="min-w-0">
-                    <h4 class="font-bold text-blue-800 break-words">${x.sourdine ? '🔇 ' : ''}${esc(x.titre)}</h4>
+                    <h4 class="font-bold text-blue-800 break-words">${x.sourdine ? '🔇 ' : ''}${x.meilleure ? '✅ ' : ''}${x.sondage ? '📊 ' : ''}${esc(x.titre)}</h4>
                     <div class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-1.5">${auteurBtn(x.auteurId, x.auteurNom)} · ${fmt(x.date)} · 💬 ${x.messages.length}</div>
                 </div>
                 ${estAdmin ? `<span class="flex gap-1" onclick="event.stopPropagation()">${bt('bg-blue-600 text-white', '✏️', `forumRenommer('${x._id}')`)}${bt('bg-red-600 text-white', '🗑️', `forumSupprimer('${x._id}')`)}</span>` : ''}
@@ -1803,7 +1865,7 @@ function rafraichirForum() {
             ${estAdmin ? `<span class="flex gap-1">${bt('bg-slate-700 text-white', s.sourdine ? '🔊 Réactiver' : '🔇 Sourdine', `forumSourdineSujet('${s._id}')`)}${bt('bg-blue-600 text-white', '✏️ Renommer', `forumRenommer('${s._id}')`)}${bt('bg-red-600 text-white', '🗑️ Supprimer', `forumSupprimer('${s._id}')`)}</span>` : ''}
         </div>
         <h4 class="text-xl font-extrabold text-slate-900 break-words">${esc(s.titre)}</h4>
-        ${posts.map(p => `
+        ${posts.filter(p => !(window.estBloque && estBloque(p.aid))).map(p => `
             <div class="p-4 rounded-xl border bg-white space-y-2">
                 <div class="flex justify-between gap-2 items-center flex-wrap">
                     <div class="flex items-center gap-1.5 flex-wrap">${auteurBtn(p.aid, p.nom)}<span class="text-xs text-slate-400">${fmt(p.date)}</span></div>
@@ -1813,7 +1875,7 @@ function rafraichirForum() {
                         ${peutModerer() && p.id !== '_main' ? bt('bg-red-600 text-white', '🗑️', `forumSupprimerMsg('${s._id}','${p.id}')`) : ''}
                     </div>
                 </div>
-                <p class="text-sm whitespace-pre-wrap break-words">${texteAff(p)}</p>${modifieHtml(p)}
+                <p class="text-sm whitespace-pre-wrap break-words">${texteAff(p)}</p>${modifieHtml(p)}${window.reactHtml ? reactHtml(s, p) : ''}
             </div>`).join('')}
         ${peutEcrire ? `<div class="space-y-2"><textarea id="forum-reply" data-mention="1" rows="3" placeholder="Votre message…" class="w-full p-3 border rounded-xl text-sm bg-white"></textarea><button onclick="forumRepondre()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold border-none cursor-pointer">Envoyer</button></div>` : (b ? '' : '<p class="text-sm italic text-slate-500">Connectez-vous pour participer.</p>')}`;
     const r2 = $('forum-reply');
@@ -1985,12 +2047,13 @@ function rafraichirSignalements() {
     const L = donneesSite.signalements.filter(x => x.statut === 'ouvert');
     const html = L.map(r => `
         <div class="p-3 bg-white border rounded-lg text-sm space-y-1">
-            <div class="text-xs text-slate-500">🚩 par ${esc(r.par)} · ${fmt(r.date)} · sujet « ${esc(r.sujetTitre)} »</div>
+            <div class="text-xs text-slate-500 flex items-center gap-2">${window.lotCheck ? lotCheck('sig', r._id) : ''}<span>🚩 par ${esc(r.par)} · ${fmt(r.date)} · sujet « ${esc(r.sujetTitre)} »</span></div>
             <div><b>${esc(r.auteurNom)}</b> : ${esc(r.extrait)}</div>
             <div class="text-xs text-red-700">Motif : ${esc(r.motif)}</div>
             <div class="flex gap-1 flex-wrap pt-1"><button data-a="${esc(r.auteurId)}" onclick="ouvrirProfil(this.dataset.a)" class="bg-indigo-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer">Voir le profil</button>${bt('bg-red-600 text-white', 'Supprimer le message', `sigSupprimer('${r._id}')`)}${bt('bg-slate-200 text-slate-800', 'Classer', `sigClasser('${r._id}')`)}</div>
         </div>`).join('') || "<p class='text-sm text-slate-500 italic'>Aucun signalement.</p>";
     ['admin-liste-signalements', 'modo-liste-signalements'].forEach(i => { const e = $(i); if (e) e.innerHTML = html; });
+    window.lotBarre && lotBarre('sig');
 }
 function rafraichirModo() {
     rafraichirSignalements();
@@ -2079,7 +2142,7 @@ function correspond(it, cats, termes) {
 function videMsg(section, defaut) { return `<p class='text-slate-500 italic'>${termesRecherche(section).length ? 'Aucun résultat pour cette recherche.' : defaut}</p>`; }
 function grouper(section, liste, fn) {
     const cats = donneesSite.sousCategories.filter(c => c.section === section), termes = termesRecherche(section);
-    const items = liste.map((it, i) => [it, i]).filter(([it]) => correspond(it, cats, termes));
+    const items = liste.map((it, i) => [it, i]).filter(([it]) => correspond(it, cats, termes) && (!window.visibleV12 || visibleV12(it)));
     if (!cats.length) return items.map(([it, i]) => fn(it, i));
     const titre = t => `<h4 class="col-span-full text-sm font-extrabold uppercase tracking-wide text-indigo-700 border-b border-indigo-100 pb-1 mt-2">${esc(t)}</h4>`, out = [];
     cats.forEach(c => { const g = items.filter(([it]) => it.sousCat === c._id); if (g.length) { out.push(titre(c.nom)); g.forEach(([it, i]) => out.push(fn(it, i))); } });
@@ -2578,11 +2641,11 @@ function htmlRendus() {
         const corr = g.ev ? (g.ev.correctionUrl ? bt('bg-emerald-600 text-white', '✅ Voir la correction', `evalCorrection(${iv})`) : '<span class="text-xs italic text-slate-400">Aucune correction jointe (📂 pour en ajouter)</span>') : '';
         const dl = g.ev && g.ev.delai ? `<div class="text-xs mt-1">${delaiHtml(g.ev) || ''}</div>` : '';
         return `<div class="p-4 bg-white border rounded-xl space-y-3">
-            <div class="flex justify-between items-center gap-2 flex-wrap"><div><h4 class="font-bold text-blue-800">${esc(g.titre)}</h4><span class="text-xs text-slate-500">${L.length} copie(s) reçue(s)</span>${dl}</div>${corr}</div>
+            <div class="flex justify-between items-center gap-2 flex-wrap"><div><h4 class="font-bold text-blue-800">${esc(g.titre)}</h4><span class="text-xs text-slate-500">${L.length} copie(s) reçue(s)</span>${dl}${window.statsHtml ? statsHtml(L) : ''}</div><span class="flex gap-1 flex-wrap">${corr}${window.exportBtn ? exportBtn(g.id) : ''}</span></div>
             ${L.map(r => `<div class="p-3 border rounded-lg bg-slate-50 text-sm space-y-1">
                 <div class="flex justify-between gap-2 items-center flex-wrap"><span>${auteurBtn(r.auteurId, r.auteurNom)} <span class="text-xs text-slate-400">${fmt(r.date)}</span></span>
                 <span class="flex gap-1">${r.fileUrl ? bt('bg-blue-600 text-white', '📎 ' + esc(r.fileName || 'Fichier'), `rendreOuvrir('${r._id}')`) : ''}${estAdmin ? bt('bg-red-600 text-white', '🗑️', `rendreSupprimer('${r._id}')`) : ''}</span></div>
-                ${r.texte ? `<p class="whitespace-pre-wrap break-words">${esc(r.texte)}</p>` : ''}</div>`).join('') || '<p class="text-xs italic text-slate-500">Aucune copie pour le moment.</p>'}
+                ${r.texte ? `<p class="whitespace-pre-wrap break-words">${esc(r.texte)}</p>` : ''}${window.correctionHtml ? correctionHtml(r) : ''}</div>`).join('') || '<p class="text-xs italic text-slate-500">Aucune copie pour le moment.</p>'}
         </div>`;
     }).join('') || "<p class='text-sm text-slate-500 italic'>Aucun devoir « à rendre » pour le moment.</p>";
 }
@@ -2715,11 +2778,7 @@ async function annonceEnvoyer() {
     if (!estPrincipal()) return;
     const t = $('annonce-input').value.trim();
     if (!t) return alert('Écrivez le message à afficher.');
-    const p = P(), avant = p.annonce;
-    p.annonce = { id: crypto.randomUUID(), texte: t, date: Date.now() };
-    annonceVue = p.annonce.id; annonceAfficher(t);
-    if (!(await sauvegarder())) { p.annonce = avant; return alert("Message non diffusé : échec de l'enregistrement.\n\nDétail : " + derniereErreur); }
-    $('annonce-input').value = '';
+    await annEcrire([...(P().annoncesCib || []), { id: crypto.randomUUID(), texte: t, cible: $('ann-cible').value || 'tous', date: Date.now(), par: adminNom || 'Admin' }], () => { $('annonce-input').value = ''; });
 }
 
 // ---------- Mon suivi (propositions) ----------
@@ -2888,9 +2947,24 @@ const DONS_DEF = {
     note: "Paiement par Wave uniquement."
 };
 TAGS.donateur = { i: '💝', l: 'Donateur' };
-let donsEditSale = false;
+let donsEditSale = false, donsObjSale = false;
 const fmtMontant = n => Number(n || 0).toLocaleString('fr-FR');
 const donsParam = () => donneesSite.parametres[0] || {};
+const pluriel = (n, s, pl) => n + ' ' + (n > 1 ? pl : s);
+// Jauge : seuls les dons « Reçu » (vérifiés par l'administration) comptent, à partir de la date de départ éventuelle
+function donsCollecte() {
+    const p = donsParam(), depuis = Number(p.donsDepuis) || 0;
+    const L = (donneesSite.dons || []).filter(d => d.statut === 'recu' && (d.date || 0) >= depuis);
+    return { total: L.reduce((n, d) => n + (Number(d.montant) || 0), 0), nb: L.length, objectif: Math.max(0, Math.round(Number(p.donsObjectif) || 0)), titre: p.donsObjectifTitre || '', depuis };
+}
+function donsJaugeHtml(c) {
+    if (!(c.objectif > 0)) return '';
+    const reel = Math.round(c.total * 100 / c.objectif), pc = Math.min(100, reel), atteint = c.total >= c.objectif;
+    return `<div class="flex justify-between items-baseline gap-2 flex-wrap"><b class="text-rose-900 text-sm break-words">${c.titre ? '🎯 ' + esc(c.titre) : '🎯 Objectif de collecte'}</b><span class="text-xs font-bold ${atteint ? 'text-emerald-700' : 'text-rose-700'}">${reel} %</span></div>
+        <div role="progressbar" aria-label="Progression de l'objectif de dons" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pc}" class="h-5 bg-white border border-rose-200 rounded-full overflow-hidden"><div class="h-full rounded-full ${atteint ? 'bg-emerald-500' : 'bg-rose-500'}" style="width:${pc}%;transition:width .6s ease"></div></div>
+        <div class="text-sm text-slate-700"><b>${fmtMontant(c.total)}</b> FCFA collectés sur <b>${fmtMontant(c.objectif)}</b> FCFA${atteint ? ' — 🎉 objectif atteint, merci !' : ' · il reste ' + fmtMontant(c.objectif - c.total) + ' FCFA'}</div>
+        <div class="text-xs text-slate-500">${pluriel(c.nb, 'don confirmé', 'dons confirmés')} par l'administration</div>`;
+}
 
 // Tag principal + tag « Donateur » (qui vient en complément, sans remplacer l'ancien)
 function tagsHtml(aid) {
@@ -2910,6 +2984,8 @@ function rafraichirDons() {
     const p = donsParam();
     $('dons-message').textContent = p.donsMessage || DONS_DEF.message;
     $('dons-note').textContent = p.donsNote || DONS_DEF.note;
+    const jg = $('dons-jauge'), jh = donsJaugeHtml(donsCollecte());
+    if (jg) { jg.classList.toggle('hidden', !jh); if (jg.dataset.h !== jh) { jg.dataset.h = jh; jg.innerHTML = jh; } }
     const m = moi();
     const L = m ? donneesSite.dons.filter(d => d.auteurId === m.id).sort((a, b) => b.date - a.date) : [];
     $('dons-historique-box').classList.toggle('hidden', !L.length);
@@ -2961,16 +3037,35 @@ function rafraichirDonsAdmin() {
     c.innerHTML = L.map(d => {
         const [cl, lb] = donsBadge(d.statut), u = String(d.auteurId).startsWith('@') ? null : userParId(d.auteurId);
         return `<div class="p-3 bg-white border rounded-xl text-sm space-y-2">
-            <div class="flex justify-between items-center gap-2 flex-wrap"><span>${auteurBtn(d.auteurId, d.auteurNom)} <span class="text-xs text-slate-400">${fmt(d.date)}</span></span><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${cl}">${lb}</span></div>
+            <div class="flex justify-between items-center gap-2 flex-wrap"><span class="flex items-center gap-2">${window.lotCheck ? lotCheck('dons', d._id) : ''}<span>${auteurBtn(d.auteurId, d.auteurNom)} <span class="text-xs text-slate-400">${fmt(d.date)}</span></span></span><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${cl}">${lb}</span></div>
             <div class="font-bold text-rose-700">💰 ${fmtMontant(d.montant)} FCFA <span class="text-xs font-normal text-slate-500">(montant déclaré)</span></div>
             <div class="flex gap-1 flex-wrap">${bt('bg-emerald-600 text-white', '✅ Reçu', `donsStatut('${d._id}','recu')`)}${bt('bg-red-600 text-white', '❌ Pas reçu', `donsStatut('${d._id}','non_recu')`)}${estPrincipal() && u ? `<button data-u="${esc(u.id)}" onclick="donsTagDonateur(this.dataset.u)" class="bg-rose-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer">${u.donateur ? '💝 Retirer le tag Donateur' : '💝 Donner le tag Donateur'}</button>` : ''}${estPrincipal() ? bt('bg-slate-200 text-slate-800', '🗑️', `donsSupprimer('${d._id}')`) : ''}</div>
         </div>`;
     }).join('') || "<p class='text-sm text-slate-500 italic'>Aucun don déclaré pour le moment.</p>";
+    window.lotBarre && lotBarre('dons');
+    // Résumé : total reçu / jauge, dons en attente
+    const co = donsCollecte(), rs = $('admin-dons-resume'), enAtt = L.filter(d => d.statut !== 'recu' && d.statut !== 'non_recu');
+    if (rs) {
+        const h = (co.objectif > 0 ? donsJaugeHtml(co) : `<div class="font-semibold text-rose-900">💰 Total reçu : ${fmtMontant(co.total)} FCFA (${pluriel(co.nb, 'don', 'dons')})</div>`)
+            + (co.depuis ? `<div class="text-xs text-slate-500">Compté depuis le ${fmt(co.depuis)}</div>` : '')
+            + (enAtt.length ? `<div class="text-xs text-amber-700">⏳ ${pluriel(enAtt.length, 'don en attente', 'dons en attente')} de vérification : ${fmtMontant(enAtt.reduce((n, d) => n + (Number(d.montant) || 0), 0))} FCFA (pas encore compté dans la jauge)</div>` : '');
+        rs.classList.toggle('hidden', !L.length && !(co.objectif > 0));
+        if (rs.dataset.h !== h) { rs.dataset.h = h; rs.innerHTML = h; }
+    }
     // Éditeur des messages (administrateur principal) : ne remplace pas un texte en cours de saisie
     if (estPrincipal() && !donsEditSale) {
         const p = donsParam();
         [['dons-edit-message', p.donsMessage || DONS_DEF.message], ['dons-edit-merci', p.donsMerci || DONS_DEF.merci], ['dons-edit-note', p.donsNote || DONS_DEF.note]]
             .forEach(([id, v]) => { const e = $(id); if (e && document.activeElement !== e) e.value = v; });
+    }
+    // Éditeur de l'objectif (administrateur principal) : ne remplace pas un texte en cours de saisie
+    if (estPrincipal()) {
+        const p = donsParam();
+        if (!donsObjSale) [['dons-edit-objectif', p.donsObjectif || ''], ['dons-edit-obj-titre', p.donsObjectifTitre || '']]
+            .forEach(([id, v]) => { const e = $(id); if (e && document.activeElement !== e) e.value = v; });
+        const dp = $('dons-depuis'); if (dp) dp.textContent = p.donsDepuis ? `(actuellement : depuis le ${fmt(p.donsDepuis)})` : '';
+        const ap = $('dons-obj-apercu'), ah = donsJaugeHtml(donsCollecte());
+        if (ap) { ap.className = ah ? 'p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-2' : 'hidden'; if (ap.dataset.h !== ah) { ap.dataset.h = ah; ap.innerHTML = ah; } }
     }
 }
 async function donsStatut(id, statut) {
@@ -3012,6 +3107,22 @@ async function donsEnregistrerMessages() {
     alert('Messages de la page Dons enregistrés.');
 }
 ['dons-edit-message', 'dons-edit-merci', 'dons-edit-note'].forEach(id => $(id).addEventListener('input', () => { donsEditSale = true; }));
+['dons-edit-objectif', 'dons-edit-obj-titre'].forEach(id => $(id).addEventListener('input', () => { donsObjSale = true; }));
+
+async function donsEnregistrerObjectif() {
+    if (!estPrincipal()) return;
+    const brut = $('dons-edit-objectif').value.trim(), obj = brut === '' ? 0 : Math.round(Number(brut));
+    if (!isFinite(obj) || obj < 0 || obj > 10000000000) return alert("Objectif invalide : indiquez un montant en FCFA (ou laissez vide pour masquer la jauge).");
+    const p = P(), avant = { o: p.donsObjectif, t: p.donsObjectifTitre, d: p.donsDepuis };
+    p.donsObjectif = obj; p.donsObjectifTitre = $('dons-edit-obj-titre').value.trim();
+    if ($('dons-edit-zero').checked) p.donsDepuis = Date.now();
+    if (!(await sauvegarder())) {
+        p.donsObjectif = avant.o; p.donsObjectifTitre = avant.t; p.donsDepuis = avant.d;
+        return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur);
+    }
+    $('dons-edit-zero').checked = false; donsObjSale = false; rafraichirDons(); rafraichirDonsAdmin();
+    alert(obj > 0 ? 'Objectif de collecte enregistré.' : 'Jauge masquée (aucun objectif).');
+}
 
 // ---------- Branchement sur le code existant ----------
 const _rafPublicDons = rafraichirAffichagePublic;
@@ -3072,11 +3183,14 @@ async function validerEditMsg() {
     if (!t) return alert('Le message ne peut pas être vide.');
     if (t === o.ref.texte) return fermerEditMsg();
     const btn = $('edit-msg-ok'); btn.disabled = true;
-    const avant = { texte: o.ref.texte, modifie: o.ref.modifie };
-    o.ref.texte = t; o.ref.modifie = Date.now();
+    const avant = { texte: o.ref.texte, modifie: o.ref.modifie, hist: o.ref.hist }, maintenant = Date.now();
+    // Historique des modifications (consultable uniquement par les administrateurs, avec bouton « Annuler »)
+    o.ref.hist = [...(o.ref.hist || []), { id: crypto.randomUUID(), ancien: avant.texte || '', nouveau: t, date: maintenant, par: m.id, parNom: m.nom }].slice(-30);
+    o.ref.texte = t; o.ref.modifie = maintenant;
     try {
         if (!(await sauvegarder())) {
             o.ref.texte = avant.texte;
+            if (avant.hist === undefined) delete o.ref.hist; else o.ref.hist = avant.hist;
             if (avant.modifie === undefined) delete o.ref.modifie; else o.ref.modifie = avant.modifie;
             return alert("Modification impossible : échec de l'enregistrement.\n\nDétail : " + derniereErreur);
         }
@@ -3357,16 +3471,17 @@ connecterAdmin = function (rec) {
     return r;
 };
 
-function journalHtml(L, edit) {
+function journalHtml(L, edit, lot) {
     if (!L.length) return "<p class='text-sm italic text-slate-500'>Aucune entrée.</p>";
-    return L.map(e => `<div class="p-2.5 bg-white border rounded-lg text-sm flex items-start justify-between gap-2"><div class="min-w-0"><div class="font-semibold break-words">${esc(e.action)}</div><div class="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-1.5">${tagHtml(e.role)}<span>${esc(e.nom || '')}</span><span>· ${fmt(e.date)}</span></div></div>${edit ? bt('bg-red-600 text-white', '🗑️', `journalSupprimer('${e._id}')`) : ''}</div>`).join('');
+    return L.map(e => `<div class="p-2.5 bg-white border rounded-lg text-sm flex items-start justify-between gap-2">${lot && edit && window.lotCheck ? lotCheck(lot, e._id) : ''}<div class="min-w-0 flex-grow"><div class="font-semibold break-words">${esc(e.action)}</div><div class="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-1.5">${tagHtml(e.role)}<span>${esc(e.nom || '')}</span><span>· ${fmt(e.date)}</span></div></div>${edit ? bt('bg-red-600 text-white', '🗑️', `journalSupprimer('${e._id}')`) : ''}</div>`).join('');
 }
 function rafraichirJournal() {
     const tri = L => [...L].sort((a, b) => b.date - a.date), J = donneesSite.journal || [], pr = estPrincipal();
     const c = $('journal-admin-liste');
     if (c && estAdmin) {
-        const L = tri(J), h = journalHtml(L.slice(0, 200), pr) + (pr ? '1' : '0');
+        const L = tri(J), h = journalHtml(L.slice(0, 200), pr, 'journal') + (pr ? '1' : '0');
         if (c.dataset.h !== h) { c.dataset.h = h; c.innerHTML = h; }
+        window.lotBarre && lotBarre('journal');
         $('journal-admin-compte').textContent = L.length + ' action(s) enregistrée(s)' + (L.length > 200 ? ' — les 200 plus récentes sont affichées' : '');
         $('journal-admin-vider').classList.toggle('hidden', !pr || !L.length);
     }
@@ -3444,39 +3559,72 @@ async function mpAnnuler() {
     p.maintPlan = null; await sauvegarderOuAlerter(); mpTick();
 }
 function fmtRestant(ms) { const s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return (h ? h + ' h ' : '') + String(m).padStart(h ? 2 : 1, '0') + ' min ' + String(s % 60).padStart(2, '0') + ' s'; }
+const fmtGMT = ms => new Date(ms).toISOString().slice(0, 16).replace('T', ' ');
+const mpFin = plan => plan.finFixe || (plan.duree ? plan.debut + plan.duree * 60000 : null);
+async function mpProgrammer() {
+    if (!estPrincipal()) return;
+    const p = P();
+    if (p.maintenance && p.maintenance.actif) return alert('Le site est déjà en maintenance.');
+    if (p.maintPlan && !p.maintPlan.lance) return alert("Une procédure est déjà en cours : annulez-la d'abord.");
+    const d = $('mp-prog-debut').value, f = $('mp-prog-fin').value;
+    const debut = d ? Date.parse(d + 'Z') : NaN, fin = f ? Date.parse(f + 'Z') : null;
+    if (isNaN(debut)) return alert("Choisissez la date et l'heure de début (GMT+0).");
+    if (debut <= Date.now() + 60000) return alert('Le début doit être dans le futur.');
+    if (f && (isNaN(fin) || fin <= debut)) return alert('La fin doit être après le début.');
+    const cfg = mpLire();
+    if (!confirm('Programmer la maintenance du ' + fmtGMT(debut) + (fin ? ' au ' + fmtGMT(fin) : '') + ' (GMT+0) ?')) return;
+    const av = { c: p.maintConfig, m: p.maintPlan };
+    p.maintConfig = cfg;
+    p.maintPlan = { id: crypto.randomUUID(), debut, etapes: cfg.etapes, decompte: cfg.decompte, duree: fin ? null : cfg.duree, finFixe: fin, reste: !!($('mp-reste').checked && (fin || cfg.duree)), lance: false };
+    if (!(await sauvegarder())) { p.maintConfig = av.c; p.maintPlan = av.m; return alert("Programmation impossible.\n\nDétail : " + derniereErreur); }
+    mpSale = false; mpTick();
+}
 async function mpTick() {
     const p = donneesSite.parametres[0], plan = p && p.maintPlan, now = Date.now();
-    const bloc = $('decompte-geant'), reste = $('maint-reste');
-    let eta = '';
-    if (plan && !plan.lance) {
+    const bloc = $('decompte-geant'), reste = $('maint-reste'), ee = $('mp-etat'), ba = $('mp-annuler');
+    const connecte = !!(utilisateurActif || estAdmin);
+    const fin = plan ? mpFin(plan) : null;
+    let etat = '', annulable = false;
+    if (!plan) { bloc.classList.add('hidden'); if (reste) reste.classList.add('hidden'); }
+    else {
         const t = plan.debut - now;
-        if (utilisateurActif || estAdmin) {
-            (plan.etapes || []).forEach(e => {
-                const k = plan.id + ':' + e.min;
-                if (t <= e.min * 60000 && t > plan.decompte * 1000 && !mpVus[k]) { mpVus[k] = 1; annonceAfficher(e.texte); }
+        if (t > 0) {                                   // ----- avant la maintenance -----
+            annulable = !plan.lance;
+            if (connecte) (plan.etapes || []).forEach(e => {
+                const k = 'mp:' + plan.id + ':' + e.min;
+                if (mpVus[k]) return;
+                const retard = now - (plan.debut - e.min * 60000);
+                if (retard < 0 || e.min * 60000 <= plan.decompte * 1000) return;
+                mpVus[k] = 1;
+                try { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); } catch (x) { }
+                if (retard <= 90000) annonceAfficher(e.texte);   // étape manquée (rechargement, retard) : pas de rafale de vieux messages
             });
-        }
-        if (t <= plan.decompte * 1000 && t > 0 && (utilisateurActif || estAdmin)) { bloc.classList.remove('hidden'); $('decompte-chiffre').textContent = Math.ceil(t / 1000); }
-        else bloc.classList.add('hidden');
-        eta = t > 0 ? `⏳ Maintenance dans ${fmtRestant(t)}` : '';
-        if (t <= 0) {
+            if (t <= plan.decompte * 1000 && connecte) { bloc.classList.remove('hidden'); $('decompte-chiffre').textContent = Math.ceil(t / 1000); }
+            else bloc.classList.add('hidden');
+            etat = '⏳ Maintenance le ' + fmtGMT(plan.debut) + ' GMT (dans ' + fmtRestant(t) + ')';
+        } else {                                       // ----- début atteint -----
             bloc.classList.add('hidden');
-            p.maintenance = p.maintenance || {}; p.maintenance.actif = true;
-            p.maintPlan = Object.assign({}, plan, { lance: true, fin: plan.duree ? now + plan.duree * 60000 : null });
-            if (estAdmin || utilisateurActif) { try { await sauvegarder(); } catch (e) { } }
-            majMaintenance();
+            if (fin && now >= fin) {                   // fin atteinte : retour en ligne
+                if (p.maintenance && p.maintenance.actif) p.maintenance.actif = false;
+                p.maintPlan = null;
+                if (estAdmin) { try { await sauvegarder(); } catch (x) { } }
+                majMaintenance();
+            } else {
+                if (!(p.maintenance && p.maintenance.actif)) {
+                    p.maintenance = p.maintenance || {}; p.maintenance.actif = true;
+                    p.maintPlan = Object.assign({}, plan, { lance: true });
+                    if (estAdmin) { try { await sauvegarder(); } catch (x) { } }
+                    majMaintenance();
+                }
+                if (fin && plan.reste) { reste.classList.remove('hidden'); reste.textContent = '⏳ Retour du site dans ' + fmtRestant(fin - now); }
+                else reste.classList.add('hidden');
+                etat = fin ? 'Maintenance en cours, fin prévue le ' + fmtGMT(fin) + ' GMT' : 'Maintenance en cours (durée illimitée)';
+            }
         }
-    } else bloc.classList.add('hidden');
-    const pl = p && p.maintPlan;
-    if (pl && pl.lance && p.maintenance && p.maintenance.actif) {
-        if (pl.fin && now >= pl.fin) {   // fin automatique
-            p.maintenance.actif = false; p.maintPlan = null;
-            try { await sauvegarder(); } catch (e) { } majMaintenance();
-        } else if (pl.fin && pl.reste) { reste.classList.remove('hidden'); reste.textContent = '⏳ Retour du site dans ' + fmtRestant(pl.fin - now); }
-        else reste.classList.add('hidden');
-    } else if (reste) reste.classList.add('hidden');
-    const ee = $('mp-etat'); if (ee) ee.textContent = eta || (pl && pl.lance && pl.fin ? 'Maintenance en cours, fin prévue à ' + new Date(pl.fin).toISOString().slice(11, 16) + ' GMT' : '');
-    const ba = $('mp-annuler'); if (ba) ba.classList.toggle('hidden', !(plan && !plan.lance));
+        if (!(p.maintPlan && p.maintPlan.debut <= now) && reste) reste.classList.add('hidden');
+    }
+    if (ee) ee.textContent = etat;
+    if (ba) ba.classList.toggle('hidden', !annulable);
 }
 setInterval(() => { try { mpTick(); } catch (e) { console.warn(e); } }, 1000);
 // Désactivation manuelle : on efface aussi le plan
@@ -3497,17 +3645,17 @@ function aaRendreHeures() { $('aa-heures').innerHTML = aaHeures.map((h, i) => `<
 function aaAjouterHeure() { const v = $('aa-heure').value; if (!v) return; if (!aaHeures.includes(v)) aaHeures.push(v); aaHeures.sort(); aaRendreHeures(); }
 async function aaCreer() {
     if (!estPrincipal()) return;
-    const t = $('aa-texte').value.trim(); if (!t) return alert('Écrivez le message.');
+    const t = $('annonce-input').value.trim(); if (!t) return alert('Écrivez le message.');
     if (!aaHeures.length) return alert('Ajoutez au moins une heure.');
     const jours = [...document.querySelectorAll('.aa-j:checked')].map(x => +x.value);
     const p = P(), av = p.annoncesAuto;
-    p.annoncesAuto = [...(av || []), { id: crypto.randomUUID(), texte: t, heures: [...aaHeures], jours, actif: true }];
+    p.annoncesAuto = [...(av || []), { id: crypto.randomUUID(), texte: t, heures: [...aaHeures], jours, actif: true, cible: $('ann-cible').value || 'tous' }];
     if (!(await sauvegarder())) { p.annoncesAuto = av; return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
-    $('aa-texte').value = ''; aaHeures = []; aaRendreHeures(); document.querySelectorAll('.aa-j').forEach(x => x.checked = false); aaListe();
+    $('annonce-input').value = ''; aaHeures = []; aaRendreHeures(); document.querySelectorAll('.aa-j').forEach(x => x.checked = false); aaListe();
 }
 function aaListe() {
     const c = $('aa-liste'); if (!c) return;
-    c.innerHTML = (P().annoncesAuto || []).map(a => `<div class="p-2.5 bg-white border rounded-lg text-sm space-y-1"><div class="break-words">${esc(a.texte)}</div><div class="text-xs text-slate-500">🕒 ${a.heures.join(', ')} GMT · ${a.jours.length ? a.jours.map(j => JOURS_FR[j]).join(', ') : 'tous les jours'} · ${a.actif ? '🟢 actif' : '⚪ en pause'}</div><div class="flex gap-1">${bt('bg-slate-200 text-slate-800', a.actif ? '⏸ Pause' : '▶ Activer', `aaBasculer('${a.id}')`)}${bt('bg-red-600 text-white', '🗑️', `aaSupprimer('${a.id}')`)}</div></div>`).join('') || "<p class='text-xs italic text-slate-500'>Aucune annonce automatique.</p>";
+    c.innerHTML = (P().annoncesAuto || []).map(a => `<div class="p-2.5 bg-white border rounded-lg text-sm space-y-1"><div class="break-words">${esc(a.texte)}</div><div class="text-xs text-slate-500">🕒 ${a.heures.join(', ')} GMT · ${a.jours.length ? a.jours.map(j => JOURS_FR[j]).join(', ') : 'tous les jours'} · ${a.actif ? '🟢 actif' : '⚪ en pause'}${typeof CIBLES !== 'undefined' ? ' · 🎯 ' + (CIBLES[a.cible] || 'Tous') : ''}</div><div class="flex gap-1">${bt('bg-slate-200 text-slate-800', a.actif ? '⏸ Pause' : '▶ Activer', `aaBasculer('${a.id}')`)}${bt('bg-red-600 text-white', '🗑️', `aaSupprimer('${a.id}')`)}</div></div>`).join('') || "<p class='text-xs italic text-slate-500'>Aucune annonce automatique.</p>";
 }
 async function aaBasculer(id) { if (!estPrincipal()) return; const a = (P().annoncesAuto || []).find(x => x.id === id); if (!a) return; a.actif = !a.actif; await sauvegarderOuAlerter(); aaListe(); }
 async function aaSupprimer(id) { if (!estPrincipal() || !confirm('Supprimer cette annonce automatique ?')) return; P().annoncesAuto = (P().annoncesAuto || []).filter(x => x.id !== id); await sauvegarderOuAlerter(); aaListe(); }
@@ -3515,7 +3663,7 @@ function aaVerifier() {
     if (!(utilisateurActif || estAdmin)) return;
     const d = new Date(), hm = d.toISOString().slice(11, 16), jour = d.getUTCDay(), date = d.toISOString().slice(0, 10);
     ((donneesSite.parametres[0] || {}).annoncesAuto || []).forEach(a => {
-        if (!a.actif || !a.heures.includes(hm) || (a.jours.length && !a.jours.includes(jour))) return;
+        if (!a.actif || !a.heures.includes(hm) || (a.jours.length && !a.jours.includes(jour)) || !annCible(a.cible)) return;
         const k = `aa:${a.id}:${date}:${hm}`;
         try { if (localStorage.getItem(k)) return; localStorage.setItem(k, '1'); } catch (e) { if (mpVus[k]) return; mpVus[k] = 1; }
         annonceAfficher(a.texte);
@@ -3636,8 +3784,930 @@ async function reglesEnregistrer() {
 ['rg-invit-actif', 'rg-invit-codes', 'rg-charte-actif', 'rg-charte-texte', 'rg-lecture', 'rg-spam', 'rg-mots'].forEach(id => { const e = $(id); if (e) e.addEventListener('input', () => { reglesSale = true; }); });
 const _rafLegerV9 = rafraichirAdminLeger;
 rafraichirAdminLeger = function () { _rafLegerV9(); try { reglesChamps(); } catch (e) { console.error('v9 :', e); } };
+surveiller('mpProgrammer', 'action', () => 'Maintenance programmée à une date précise');
 surveiller('reglesEnregistrer', 'action', () => "Règles du site modifiées (invitation, charte, lecture seule, anti-spam, mots interdits)");
 
+// =====================================================================
+//  MODULE v10 : sécurité (tentatives, inactivité, appareils, ban du site),
+//  tableau de bord, alertes, résumé 7 jours, annonces ciblées/programmées,
+//  filtres du journal
+// =====================================================================
+const SECU_DEF = { maxEssais: 5, blocageMin: 15, inactiviteMin: 30, seuilRafale: 5 };
+const secu = () => Object.assign({}, SECU_DEF, (donneesSite.parametres[0] || {}).secu || {});
+function devId() { try { let d = localStorage.getItem('dev_id'); if (!d) { d = crypto.randomUUID(); localStorage.setItem('dev_id', d); } return d; } catch (e) { return 'inconnu'; } }
+function devNom() {
+    const ua = navigator.userAgent, os = (ua.match(/Android|iPhone|iPad|Windows|Mac OS|Linux/) || ['Appareil'])[0], nav = (ua.match(/Edg|Firefox|Chrome|Safari/) || ['Navigateur'])[0];
+    return os + ' · ' + (nav === 'Edg' ? 'Edge' : nav);
+}
+const appareilBanni = () => { const id = devId(); return id !== 'inconnu' && ((donneesSite.parametres[0] || {}).appareilsBannis || []).some(b => b.id === id); };
+
+// ----- Connexion : limite de tentatives, comptes et appareils bannis -----
+$('form-auth').addEventListener('submit', e => {
+    const stop = m => { e.preventDefault(); e.stopImmediatePropagation(); alert(m); };
+    if (appareilBanni()) return stop('Cet appareil est banni définitivement du site.');
+    const id = $('auth-id').value.trim(), code = $('auth-code').value.trim();
+    if (modeAuthActif !== 'connexion') { window._newAcc = id; return; }
+    const u = userParId(id);
+    if (u && u.banSite) return stop('Ce compte est banni définitivement du site.');
+    const st = lireStockage('localStorage', 'usr_essais', { n: 0, until: 0, paliers: 0 }), sv = o => { try { localStorage.setItem('usr_essais', JSON.stringify(o)); } catch (x) { } };
+    if (st.until > Date.now()) return stop('Trop de tentatives. Réessayez dans ' + Math.ceil((st.until - Date.now()) / 60000) + ' min.');
+    if (u && u.code === code) return sv({ n: 0, until: 0, paliers: 0 });
+    const c = secu(); st.n++;
+    if (st.n >= c.maxEssais) {
+        st.paliers = (st.paliers || 0) + 1; st.until = Date.now() + c.blocageMin * 60000 * Math.pow(2, st.paliers - 1); st.n = 0; sv(st);
+        return stop('Trop d\'erreurs : connexion bloquée pendant ' + Math.ceil((st.until - Date.now()) / 60000) + ' min.');
+    }
+    sv(st);
+}, true);
+
+// ----- Session : inactivité, déconnexion partout, ban, appareils -----
+let secuDernier = Date.now(), secuSortie = false;
+['click', 'keydown', 'touchstart', 'scroll', 'mousemove'].forEach(ev => window.addEventListener(ev, () => { secuDernier = Date.now(); }, { passive: true }));
+function secuSortir(msg) { if (secuSortie) return; secuSortie = true; alert(msg); deconnexion(); }
+function secuPresence(force) {
+    if (!utilisateurActif || estAdmin) return;
+    const u = userParId(utilisateurActif.id); if (!u) return;
+    const id = devId(), now = Date.now(); u.appareils = u.appareils || [];
+    let a = u.appareils.find(x => x.id === id);
+    if (a && now - a.derniere < 300000 && !force) return;
+    if (!a) { a = { id, nom: devNom(), premiere: now }; u.appareils.push(a); }
+    a.derniere = now; u.appareils = u.appareils.sort((x, y) => y.derniere - x.derniere).slice(0, 10);
+    sauvegarder().catch(() => { });
+}
+function secuTick() {
+    if (!utilisateurActif || estAdmin) return;
+    const u = userParId(utilisateurActif.id); if (!u) return;
+    if (u.banSite || appareilBanni()) return secuSortir('Vous avez été banni définitivement du site.');
+    let lt = 0; try { lt = +sessionStorage.getItem('login_ts') || 0; if (!lt) { lt = Date.now(); sessionStorage.setItem('login_ts', String(lt)); } } catch (e) { }
+    if (u.deconnexionAvant && lt && lt < u.deconnexionAvant) return secuSortir('Session fermée : déconnexion de tous les appareils demandée.');
+    const m = secu().inactiviteMin;
+    if (m > 0 && Date.now() - secuDernier > m * 60000) return secuSortir('Session fermée après ' + m + ' minutes d\'inactivité.');
+    secuPresence(false);
+}
+setInterval(() => { try { secuTick(); } catch (e) { console.warn(e); } }, 20000);
+const _vsV10 = verifierSession;
+verifierSession = function () {
+    _vsV10.apply(this, arguments);
+    try {
+        if (utilisateurActif && !estAdmin) {
+            const u = userParId(utilisateurActif.id);
+            if (u && window._newAcc === u.id && !u.creeLe && (u.nbConnexions || 0) <= 1) u.creeLe = Date.now();
+            window._newAcc = null; secuPresence(true);
+        }
+    } catch (e) { console.warn(e); }
+};
+
+// ----- Profil : appareils, déconnexion partout, ban permanent du site -----
+const _opV10 = ouvrirProfil;
+ouvrirProfil = function (aid) {
+    _opV10.apply(this, arguments);
+    if (String(aid).startsWith('@')) return;
+    const u = userParId(aid); if (!u) return;
+    const soi = !!utilisateurActif && !estAdmin && utilisateurActif.id === u.id;
+    if (!soi && !estAdmin) return;
+    const ap = (u.appareils || []).slice().sort((a, b) => b.derniere - a.derniere), btn = 'px-3 py-1.5 rounded-lg text-xs font-bold border-none cursor-pointer text-white ';
+    const d = document.createElement('div'); d.className = 'text-xs bg-slate-50 border rounded-xl p-3 space-y-2';
+    d.innerHTML = `<div class="font-bold">📱 Appareils connectés (${ap.length})</div>` + (ap.map(a => `<div>${esc(a.nom)}${soi && a.id === devId() ? ' <b>(cet appareil)</b>' : ''} · vu ${fmt(a.derniere)}</div>`).join('') || '<div class="italic text-slate-500">Aucun appareil enregistré.</div>')
+        + `<button data-u="${esc(u.id)}" onclick="secuDeco(this.dataset.u)" class="${btn}bg-slate-700">🚪 Déconnecter partout</button>`
+        + (estAdmin ? (u.banSite
+            ? `<div class="text-red-700 font-semibold">⛔ Banni du site${u.banSite.motif ? ' : ' + esc(u.banSite.motif) : ''} (par ${esc(u.banSite.parNom || '?')})</div>` + (estPrincipal() ? `<button data-u="${esc(u.id)}" onclick="secuLeverBanSite(this.dataset.u)" class="${btn}bg-emerald-600">Lever le ban du site</button>` : '')
+            : `<button data-u="${esc(u.id)}" onclick="secuBanSite(this.dataset.u)" class="${btn}bg-red-700">⛔ Ban permanent du site (compte + appareils)</button>`) : '');
+    $('profil-contenu').appendChild(d);
+};
+async function secuDeco(id) {
+    const u = userParId(id); if (!u) return;
+    const soi = !!utilisateurActif && !estAdmin && utilisateurActif.id === id;
+    if (!soi && !estAdmin) return;
+    if (!confirm('Déconnecter ' + (soi ? 'tous vos appareils (celui-ci reste connecté)' : 'cet utilisateur de tous ses appareils') + ' ?')) return;
+    u.deconnexionAvant = Date.now();
+    if (soi) { try { sessionStorage.setItem('login_ts', String(Date.now() + 1000)); } catch (e) { } }
+    await sauvegarderOuAlerter(); alert('Déconnexion demandée sur tous les appareils.');
+}
+async function secuBanSite(id) {
+    if (!estAdmin) return; const u = userParId(id); if (!u) return;
+    const motif = prompt('Motif du ban permanent (visible des administrateurs) :', ''); if (motif === null) return;
+    if (!confirm('Bannir définitivement ' + nomComplet(u) + ' ET ses appareils connus ?')) return;
+    const p = P(); p.appareilsBannis = p.appareilsBannis || [];
+    u.banSite = { date: Date.now(), par: identAdmin(), parNom: adminNom || 'Admin', motif: motif.trim() };
+    (u.appareils || []).forEach(a => { if (a.id !== 'inconnu' && !p.appareilsBannis.some(b => b.id === a.id)) p.appareilsBannis.push({ id: a.id, nom: a.nom, userId: u.id, date: Date.now() }); });
+    await sauvegarderOuAlerter(); ouvrirProfil(id); secuRendre();
+}
+async function secuLeverBanSite(id) {
+    if (!estPrincipal()) return; const u = userParId(id); if (!u) return;
+    delete u.banSite; const p = P(); p.appareilsBannis = (p.appareilsBannis || []).filter(b => b.userId !== id);
+    await sauvegarderOuAlerter(); ouvrirProfil(id); secuRendre();
+}
+async function secuDebloquerAppareil(id) {
+    if (!estPrincipal()) return; const p = P(); p.appareilsBannis = (p.appareilsBannis || []).filter(b => b.id !== id);
+    await sauvegarderOuAlerter(); secuRendre();
+}
+
+// ----- Tableau de bord, alertes, résumé -----
+function secuStats() {
+    const now = Date.now(), U = donneesSite.utilisateurs, j0 = new Date(); j0.setHours(0, 0, 0, 0);
+    const msgs = since => donneesSite.sujets.reduce((n, s) => n + (s.messages || []).filter(m => m.date >= since).length, 0);
+    const dons = (donneesSite.dons || []).filter(d => !/attente|refus|rejet/i.test(d.statut || ''));
+    const sem = now - 7 * 86400000;
+    return {
+        inscrits: U.length, actifs: U.filter(u => (u.appareils || []).some(a => a.derniere > now - 900000)).length,
+        msgJour: msgs(j0.getTime()), sig: donneesSite.signalements.filter(x => x.statut === 'ouvert').length,
+        donsNb: dons.length, donsTot: dons.reduce((n, d) => n + (d.montant || 0), 0), donsAtt: (donneesSite.dons || []).filter(d => d.statut === 'attente').length,
+        nouveaux7: U.filter(u => u.creeLe > sem).length, msg7: msgs(sem), actions7: (donneesSite.journal || []).filter(j => j.date > sem).length,
+        dons7: dons.filter(d => d.date > sem).reduce((n, d) => n + (d.montant || 0), 0)
+    };
+}
+function secuAlertes() {
+    const now = Date.now(), U = donneesSite.utilisateurs, c = secu(), L = [];
+    const r = U.filter(u => u.creeLe > now - 600000);
+    if (r.length >= c.seuilRafale) L.push(`🚨 ${r.length} comptes créés en moins de 10 minutes : ${r.map(u => esc(u.id)).join(', ')}`);
+    const parAppareil = {};
+    U.forEach(u => (u.appareils || []).forEach(a => { if (a.id !== 'inconnu') (parAppareil[a.id] = parAppareil[a.id] || new Set()).add(u.id); }));
+    Object.entries(parAppareil).forEach(([id, set]) => { if (set.size >= 3) L.push(`⚠️ Un même appareil est utilisé par ${set.size} comptes : ${[...set].map(esc).join(', ')}`); });
+    const act = U.filter(u => u.derniereVisite > now - 300000);
+    if (act.length >= 30) L.push(`⚠️ ${act.length} connexions en 5 minutes (pic inhabituel).`);
+    return L;
+}
+let secuHtml = '';
+function secuRendre() {
+    const c = $('secu-dashboard'); if (!c || !estAdmin) return;
+    const st = secuStats(), card = (i, v, l) => `<div class="p-3 bg-slate-50 border rounded-xl text-center"><div class="text-2xl font-extrabold">${v}</div><div class="text-xs text-slate-500">${i} ${l}</div></div>`;
+    const h = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">${card('👥', st.inscrits, 'inscrits')}${card('🟢', st.actifs, 'actifs (15 min)')}${card('💬', st.msgJour, 'messages du jour')}${card('🚩', st.sig, 'signalements ouverts')}${card('💝', fmtMontant(st.donsTot), 'dons (' + st.donsNb + ')')}${card('⏳', st.donsAtt, 'dons en attente')}</div>`;
+    const al = secuAlertes(), ba = (P().appareilsBannis || []);
+    const hh = `<ul class="list-disc pl-5 space-y-1"><li><b>${st.nouveaux7}</b> nouveau(x) compte(s)</li><li><b>${st.msg7}</b> message(s) du forum</li><li><b>${st.actions7}</b> action(s) d'administration</li><li><b>${fmtMontant(st.dons7)}</b> de dons</li></ul>`;
+    const sig = h + '|' + al.join('|') + hh + JSON.stringify(ba) + (estPrincipal() ? 1 : 0);
+    if (sig === secuHtml) return; secuHtml = sig;
+    c.innerHTML = h;
+    $('secu-alertes').innerHTML = al.length ? al.map(a => `<div class="p-2 bg-red-50 border border-red-200 rounded-lg text-red-800">${a}</div>`).join('') : '<div class="text-emerald-700">✅ Aucune activité suspecte détectée.</div>';
+    $('secu-hebdo').innerHTML = hh;
+    $('secu-bannis').innerHTML = ba.map(b => `<div class="p-2 bg-white border rounded-lg flex justify-between items-center gap-2 text-xs"><span>${esc(b.nom || 'Appareil')} · compte ${esc(b.userId || '?')} · ${fmt(b.date)}</span>${estPrincipal() ? `<button data-i="${esc(b.id)}" onclick="secuDebloquerAppareil(this.dataset.i)" class="px-2 py-1 bg-emerald-600 text-white rounded border-none cursor-pointer">Débloquer</button>` : ''}</div>`).join('') || '<div class="text-xs italic text-slate-500">Aucun appareil banni.</div>';
+    $('secu-reglages').classList.toggle('hidden', !estPrincipal()); $('ann-carte').classList.toggle('hidden', !estPrincipal());
+}
+let secuSale = false;
+function secuChamps() {
+    if (!estPrincipal() || secuSale || !$('sc-max')) return;
+    const c = secu(); $('sc-max').value = c.maxEssais; $('sc-bloc').value = c.blocageMin; $('sc-inact').value = c.inactiviteMin; $('sc-rafale').value = c.seuilRafale;
+}
+['sc-max', 'sc-bloc', 'sc-inact', 'sc-rafale'].forEach(id => { const e = $(id); if (e) e.addEventListener('input', () => { secuSale = true; }); });
+async function secuEnregistrer() {
+    if (!estPrincipal()) return;
+    const p = P(), av = p.secu, n = (id, d, a, b) => Math.min(b, Math.max(a, parseInt($(id).value) || d));
+    p.secu = { maxEssais: n('sc-max', 5, 3, 20), blocageMin: n('sc-bloc', 15, 1, 1440), inactiviteMin: Math.min(1440, Math.max(0, parseInt($('sc-inact').value) || 0)), seuilRafale: n('sc-rafale', 5, 2, 100) };
+    if (!(await sauvegarder())) { p.secu = av; return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
+    secuSale = false; secuChamps(); alert('Réglages de sécurité enregistrés.');
+}
+// Alerte automatique pour les admins (une fois par 30 min et par session)
+setInterval(() => {
+    try {
+        if (!estAdmin) return; const al = secuAlertes(); if (!al.length) return;
+        const last = +sessionStorage.getItem('secu_alerte') || 0; if (Date.now() - last < 1800000) return;
+        sessionStorage.setItem('secu_alerte', String(Date.now())); annonceAfficher('🚨 Alerte sécurité : ' + al[0].replace(/<[^>]*>/g, '').slice(0, 110));
+    } catch (e) { }
+}, 30000);
+
+// ----- Annonces ciblées / programmées + historique -----
+const annCible = c => {
+    if (c === 'tous' || !c) return true; if (estAdmin) return c === 'admin';
+    const t = utilisateurActif ? tagDe(utilisateurActif.id) : ''; return c === 'prof' ? t === 'prof' : c === 'etudiant' ? t !== 'prof' : false;
+};
+const CIBLES = { tous: 'Tous', prof: 'Professeurs', etudiant: 'Étudiants', admin: 'Administrateurs' };
+async function annEcrire(L, ok) {
+    const p = P(), av = p.annoncesCib, now = Date.now();
+    p.annoncesCib = [...L.filter(a => a.date > now), ...L.filter(a => a.date <= now).sort((a, b) => b.date - a.date).slice(0, 50)];
+    if (!(await sauvegarder())) { p.annoncesCib = av; return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
+    if (ok) ok(); annListe();
+}
+async function annCreer() {
+    if (!estPrincipal()) return;
+    const t = $('annonce-input').value.trim(); if (!t) return alert('Écrivez le message.');
+    const d = $('ann-date').value, date = d ? Date.parse(d + 'Z') : NaN; if (isNaN(date)) return alert('Choisissez la date et l\'heure (GMT+0).');
+    await annEcrire([...(P().annoncesCib || []), { id: crypto.randomUUID(), texte: t, cible: $('ann-cible').value, date, par: adminNom || 'Admin' }], () => { $('annonce-input').value = ''; $('ann-date').value = ''; });
+}
+async function annReafficher(id) {
+    if (!estPrincipal()) return; const a = (P().annoncesCib || []).find(x => x.id === id); if (!a) return;
+    await annEcrire([...P().annoncesCib, { id: crypto.randomUUID(), texte: a.texte, cible: a.cible, date: Date.now(), par: adminNom || 'Admin' }]);
+}
+async function annSupprimer(id) { if (!estPrincipal() || !confirm('Supprimer cette annonce ?')) return; await annEcrire((P().annoncesCib || []).filter(x => x.id !== id)); }
+function annListe() {
+    const c = $('ann-liste'); if (!c) return; const now = Date.now();
+    c.innerHTML = [...(P().annoncesCib || [])].sort((a, b) => b.date - a.date).map(a => `<div class="p-2.5 bg-white border rounded-lg text-sm space-y-1"><div class="break-words">${esc(a.texte)}</div><div class="text-xs text-slate-500">${a.date > now ? '⏳ programmée le ' + fmtGMT(a.date) + ' GMT' : '✅ envoyée le ' + fmtGMT(a.date) + ' GMT'} · 🎯 ${CIBLES[a.cible] || 'Tous'} · ${esc(a.par || '')}</div><div class="flex gap-1">${a.date <= now ? `<button data-i="${a.id}" onclick="annReafficher(this.dataset.i)" class="px-2 py-1 bg-amber-500 text-white rounded text-xs font-bold border-none cursor-pointer">🔁 Ré-afficher</button>` : ''}<button data-i="${a.id}" onclick="annSupprimer(this.dataset.i)" class="px-2 py-1 bg-slate-200 rounded text-xs font-bold border-none cursor-pointer">🗑️</button></div></div>`).join('') || '<div class="text-xs italic text-slate-500">Aucune annonce.</div>';
+}
+function annVerifier() {
+    if (!(utilisateurActif || estAdmin)) return; const now = Date.now();
+    ((donneesSite.parametres[0] || {}).annoncesCib || []).forEach(a => {
+        if (a.date > now || now - a.date > 120000 || !annCible(a.cible)) return;
+        const k = 'ann:' + a.id; try { if (localStorage.getItem(k)) return; localStorage.setItem(k, '1'); } catch (e) { if (mpVus[k]) return; mpVus[k] = 1; }
+        annonceAfficher(a.texte);
+    });
+}
+function annMode() {
+    const m = (document.querySelector('input[name="ann-mode"]:checked') || {}).value;
+    $('ann-sec-prog').classList.toggle('hidden', m !== 'prog'); $('ann-sec-rec').classList.toggle('hidden', m !== 'rec');
+}
+function annSoumettre() {
+    const m = (document.querySelector('input[name="ann-mode"]:checked') || {}).value;
+    return m === 'prog' ? annCreer() : m === 'rec' ? aaCreer() : annonceEnvoyer();
+}
+setInterval(() => { try { annVerifier(); } catch (e) { console.warn(e); } }, 5000);
+
+// ----- Filtres de l'historique -----
+function jFiltreInit() {
+    const l = $('journal-admin-liste'); if (!l || $('jf-q')) return;
+    const d = document.createElement('div'); d.className = 'grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3';
+    d.innerHTML = `<input id="jf-q" placeholder="🔎 Admin ou action" class="p-2 border rounded bg-white text-sm col-span-2 sm:col-span-1"><select id="jf-cat" class="p-2 border rounded bg-white text-sm"><option value="">Tous types</option><option value="ajout">Ajouts</option><option value="action">Actions</option></select><input id="jf-du" type="date" class="p-2 border rounded bg-white text-sm" title="Du"><input id="jf-au" type="date" class="p-2 border rounded bg-white text-sm" title="Au">`;
+    l.parentNode.insertBefore(d, l); d.addEventListener('input', () => rafraichirJournal());
+}
+const _rjV10 = rafraichirJournal;
+rafraichirJournal = function () {
+    jFiltreInit(); const full = donneesSite.journal || [];
+    const q = norm(($('jf-q') || {}).value || ''), cat = ($('jf-cat') || {}).value || '', du = ($('jf-du') || {}).value, au = ($('jf-au') || {}).value;
+    const t0 = du ? new Date(du + 'T00:00:00').getTime() : 0, t1 = au ? new Date(au + 'T23:59:59').getTime() : Infinity;
+    donneesSite.journal = full.filter(e => (!q || norm((e.nom || '') + ' ' + (e.action || '')).includes(q)) && (!cat || e.cat === cat) && e.date >= t0 && e.date <= t1);
+    try { _rjV10.apply(this, arguments); } finally { donneesSite.journal = full; }
+};
+
+const _rafLegerV10 = rafraichirAdminLeger;
+rafraichirAdminLeger = function () { _rafLegerV10(); try { secuRendre(); secuChamps(); annListe(); } catch (e) { console.error('v10 :', e); } };
+[['secuEnregistrer', 'Réglages de sécurité modifiés'], ['annCreer', 'Annonce programmée'], ['annSupprimer', 'Annonce ciblée supprimée'], ['secuBanSite', 'Ban permanent du site'], ['secuLeverBanSite', 'Ban du site levé'], ['secuDeco', 'Déconnexion de tous les appareils d\'un utilisateur']].forEach(([n, l]) => surveiller(n, 'action', () => l));
+
+// =====================================================================
+//  MODULE v11 : réactions, meilleure réponse, sondages, masquer un
+//  utilisateur, notifications 🔔, messages privés ✉️ (signalables,
+//  visibles des administrateurs)
+// =====================================================================
+const REACTS = ['👍', '❤️', '✅'];
+const monId = () => { const m = moi(); return m ? m.id : null; };
+const ls = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { } return null; };
+
+// ----- Réactions, meilleure réponse, sondage -----
+const peutChoisirMeilleure = sj => { const m = moi(); return !!m && (peutModerer() || m.id === sj.auteurId); };
+function reactHtml(sj, p) {
+    if (p.supprime) return '';
+    const t = p.id === '_main' ? sj : p, r = t.reactions || {}, m = moi();
+    let h = '<div class="flex flex-wrap items-center gap-1.5 pt-1">';
+    REACTS.forEach(e => { const L = r[e] || [], on = m && L.includes(m.id); h += `<button data-s="${sj._id}" data-m="${p.id}" data-e="${e}" onclick="forumReagir(this.dataset.s,this.dataset.m,this.dataset.e)" class="px-2 py-0.5 rounded-full text-xs border cursor-pointer ${on ? 'bg-blue-100 border-blue-400' : 'bg-white'}">${e}${L.length ? ' ' + L.length : ''}</button>`; });
+    if (p.id !== '_main') {
+        if (sj.meilleure === p.id) h += '<span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">🏆 Meilleure réponse</span>';
+        if (peutChoisirMeilleure(sj)) h += `<button data-s="${sj._id}" data-m="${p.id}" onclick="forumMeilleure(this.dataset.s,this.dataset.m)" class="px-2 py-0.5 rounded-full text-xs bg-emerald-50 border border-emerald-300 text-emerald-800 cursor-pointer">${sj.meilleure === p.id ? 'Retirer' : '🏆 Meilleure réponse'}</button>`;
+    }
+    h += '</div>';
+    if (p.id === '_main' && sj.sondage) h += sondageHtml(sj);
+    return h;
+}
+function sondageHtml(sj) {
+    const o = sj.sondage.options, tot = o.reduce((n, x) => n + x.v.length, 0), m = moi(), mon = m ? o.findIndex(x => x.v.includes(m.id)) : -1;
+    return `<div class="mt-2 p-3 bg-indigo-50 border border-indigo-200 rounded-xl space-y-2"><div class="text-xs font-bold text-indigo-800">📊 Sondage · ${tot} vote(s)</div>` + o.map((x, i) => {
+        const pc = tot ? Math.round(x.v.length * 100 / tot) : 0;
+        return `<button data-s="${sj._id}" data-i="${i}" onclick="forumVoter(this.dataset.s,+this.dataset.i)" class="relative w-full text-left p-2 rounded-lg border text-sm cursor-pointer overflow-hidden bg-white ${i === mon ? 'border-indigo-500' : 'border-slate-200'}"><span class="absolute inset-y-0 left-0 bg-indigo-200/60" style="width:${pc}%"></span><span class="relative">${esc(x.t)} — ${pc}% (${x.v.length})${i === mon ? ' ✔' : ''}</span></button>`;
+    }).join('') + '</div>';
+}
+async function forumReagir(sid, mid, e) {
+    forumOuvert = sid;
+    await ecritureForum(() => {
+        const sj = donneesSite.sujets.find(x => x._id === sid); if (!sj) return;
+        const t = mid === '_main' ? sj : sj.messages.find(x => x.id === mid); if (!t) return;
+        const m = moi(); t.reactions = t.reactions || {}; const L = t.reactions[e] = t.reactions[e] || [], i = L.indexOf(m.id);
+        if (i >= 0) L.splice(i, 1); else L.push(m.id);
+    });
+}
+async function forumMeilleure(sid, mid) {
+    forumOuvert = sid;
+    await ecritureForum(() => {
+        const sj = donneesSite.sujets.find(x => x._id === sid); if (!sj || !peutChoisirMeilleure(sj)) return;
+        if (sj.meilleure === mid) { delete sj.meilleure; delete sj.meilleureDate; } else { sj.meilleure = mid; sj.meilleureDate = Date.now(); }
+    });
+}
+async function forumVoter(sid, i) {
+    forumOuvert = sid;
+    await ecritureForum(() => {
+        const sj = donneesSite.sujets.find(x => x._id === sid); if (!sj || !sj.sondage || !sj.sondage.options[i]) return;
+        const id = monId(), deja = sj.sondage.options[i].v.includes(id);
+        sj.sondage.options.forEach(o => { o.v = o.v.filter(x => x !== id); });
+        if (!deja) sj.sondage.options[i].v.push(id);
+    });
+}
+const _fcV11 = forumCreer;
+forumCreer = async function () {
+    const L = (($('fn-sondage') || {}).value || '').split('\n').map(x => x.trim()).filter(Boolean).slice(0, 6);
+    if (L.length === 1) return alert('Un sondage demande au moins 2 options (une par ligne), ou laissez le champ vide.');
+    const avant = donneesSite.sujets.length;
+    await _fcV11.apply(this, arguments);
+    if (L.length >= 2 && donneesSite.sujets.length > avant) {
+        const sj = donneesSite.sujets.find(x => x._id === forumOuvert);
+        if (sj && !sj.sondage) { sj.sondage = { options: L.map(t => ({ t: t.slice(0, 80), v: [] })) }; $('fn-sondage').value = ''; await sauvegarderOuAlerter(); rafraichirForum(); }
+    }
+};
+
+// ----- Masquer un utilisateur -----
+const mesBloques = () => { const u = utilisateurActif && !estAdmin ? userParId(utilisateurActif.id) : null; return (u && u.bloques) || []; };
+const estBloque = aid => mesBloques().includes(aid);
+async function bloquerBasculer(id) {
+    const u = utilisateurActif && !estAdmin ? userParId(utilisateurActif.id) : null; if (!u || id === u.id || String(id).startsWith('@')) return;
+    u.bloques = u.bloques || []; const i = u.bloques.indexOf(id);
+    if (i >= 0) u.bloques.splice(i, 1); else { if (!confirm('Masquer tous les messages de cet utilisateur ?')) return; u.bloques.push(id); }
+    await sauvegarderOuAlerter(); rafraichirForum(); blocsMaj();
+}
+function blocsMaj() {
+    let c = $('forum-bloques');
+    if (!c) { const l = $('forum-liste'); if (!l) return; c = document.createElement('div'); c.id = 'forum-bloques'; c.className = 'text-xs'; l.parentNode.insertBefore(c, l); }
+    c.innerHTML = mesBloques().length ? '<div class="p-2 bg-slate-50 border rounded-lg flex flex-wrap gap-2 items-center">🙈 Masqués : ' + mesBloques().map(id => { const u = userParId(id); return `<button data-u="${esc(id)}" onclick="bloquerBasculer(this.dataset.u)" class="px-2 py-0.5 rounded-full bg-white border cursor-pointer">${esc(u ? nomComplet(u) : id)} ✕ afficher</button>`; }).join('') + '</div>' : '';
+}
+const _rfV11 = rafraichirForum;
+rafraichirForum = function () { _rfV11.apply(this, arguments); try { blocsMaj(); } catch (e) { } };
+const _opV11 = ouvrirProfil;
+ouvrirProfil = function (aid) {
+    _opV11.apply(this, arguments);
+    if (estAdmin || !utilisateurActif || String(aid).startsWith('@') || aid === utilisateurActif.id || !userParId(aid)) return;
+    const d = document.createElement('div'), btn = 'px-3 py-1.5 rounded-lg text-xs font-bold border-none cursor-pointer text-white ';
+    d.className = 'flex gap-2 flex-wrap';
+    d.innerHTML = `<button data-u="${esc(aid)}" onclick="bloquerBasculer(this.dataset.u)" class="${btn}bg-slate-700">${estBloque(aid) ? '👁️ Afficher ses messages' : '🙈 Masquer ses messages'}</button><button data-u="${esc(aid)}" onclick="mpOuvrirAvec(this.dataset.u)" class="${btn}bg-indigo-600">✉️ Message privé</button>`;
+    $('profil-contenu').appendChild(d);
+};
+
+// ----- Barre flottante : messages privés et notifications -----
+let v11Vue = null, v11Conv = null, mpSig = '';
+function v11Init() {
+    if ($('v11-barre')) return;
+    const b = document.createElement('div'); b.id = 'v11-barre'; b.className = 'hidden fixed bottom-4 left-3 z-[60] flex gap-2';
+    const bt1 = (id, ic, v) => `<button id="v11-b-${id}" onclick="v11Ouvrir('${v}')" class="relative w-12 h-12 rounded-full bg-indigo-600 text-white text-xl shadow-lg border-none cursor-pointer" aria-label="${v}">${ic}<span id="v11-n-${id}" class="hidden absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-red-600 text-white text-xs font-bold leading-5"></span></button>`;
+    b.innerHTML = bt1('mp', '✉️', 'mp') + bt1('no', '🔔', 'no'); document.body.appendChild(b);
+    const p = document.createElement('div'); p.id = 'v11-panel'; p.className = 'hidden fixed bottom-20 left-2 right-2 sm:right-auto sm:w-96 max-h-[70vh] overflow-auto bg-white border rounded-2xl shadow-2xl z-[60] p-3 text-sm'; document.body.appendChild(p);
+}
+function v11Ouvrir(v) { const p = $('v11-panel'); v11Vue = (v11Vue === v && !p.classList.contains('hidden')) ? null : v; v11Conv = null; v11Rendre(true); }
+const vuNotif = () => { let v = +ls('notifvu:' + monId()); if (!v) { v = Date.now(); ls('notifvu:' + monId(), String(v)); } return v; };
+const vuMp = o => +ls('mpvu:' + monId() + ':' + o) || 0;
+let v11Actions = [];
+function v11Notifs() {
+    const m = moi(); if (!m) return [];
+    if (estAdmin) { const n = donneesSite.signalements.filter(x => x.statut === 'ouvert').length; return n ? [{ t: `🚩 ${n} signalement(s) ouvert(s)`, d: Date.now(), go: () => { changerEcran('admin-panel'); adminTab('moderation'); } }] : []; }
+    const vu = vuNotif(), L = [];
+    donneesSite.sujets.forEach(sj => {
+        if (!(sj.auteurId === m.id || sj.messages.some(x => x.aid === m.id))) return;
+        const go = () => { forumOuvert = sj._id; changerEcran('forum'); rafraichirForum(); };
+        const nv = sj.messages.filter(x => x.aid !== m.id && !x.supprime && x.date > vu && !estBloque(x.aid));
+        if (nv.length) L.push({ t: `💬 ${nv.length} nouvelle(s) réponse(s) dans « ${sj.titre} »`, d: Math.max(...nv.map(x => x.date)), go });
+        const b = sj.meilleure && sj.messages.find(x => x.id === sj.meilleure);
+        if (b && b.aid === m.id && sj.meilleureDate > vu) L.push({ t: `🏆 Votre message est la meilleure réponse dans « ${sj.titre} »`, d: sj.meilleureDate, go });
+    });
+    return L.sort((a, b) => b.d - a.d);
+}
+function mpConvs() {
+    const m = moi(), map = {}; if (!m) return [];
+    (donneesSite.messagesPrives || []).forEach(x => {
+        if (x.de !== m.id && x.a !== m.id) return; const o = x.de === m.id ? x.a : x.de;
+        if (x.de !== m.id && estBloque(o)) return;
+        const c = map[o] = map[o] || { id: o, nom: x.de === m.id ? x.aNom : x.deNom, msgs: [] }; c.msgs.push(x);
+    });
+    return Object.values(map).map(c => ({ ...c, last: Math.max(...c.msgs.map(x => x.date)), non: c.msgs.filter(x => x.a === m.id && !x.supprime && x.date > vuMp(c.id)).length })).sort((a, b) => b.last - a.last);
+}
+function v11Badges() {
+    const barre = $('v11-barre'); if (!barre) return;
+    const ok = !!moi() && ($('ecran-maintenance').classList.contains('hidden') || estAdmin);
+    barre.classList.toggle('hidden', !ok); if (!ok) return;
+    const set = (id, n) => { const e = $('v11-n-' + id); e.textContent = n > 9 ? '9+' : n; e.classList.toggle('hidden', !n); };
+    set('mp', mpConvs().reduce((n, c) => n + c.non, 0)); set('no', v11Notifs().length);
+}
+function v11Rendre(force) {
+    const p = $('v11-panel'); if (!p) return;
+    if (!v11Vue) { p.classList.add('hidden'); return; }
+    p.classList.remove('hidden');
+    const ta = $('mp-saisie'), saved = ta ? ta.value : '', actif = ta && document.activeElement === ta;
+    let h = `<div class="flex justify-between items-center mb-2"><b>${v11Vue === 'no' ? '🔔 Notifications' : (v11Conv ? '✉️ ' + esc((mpConvs().find(c => c.id === v11Conv) || { nom: 'Nouveau message' }).nom) : '✉️ Messages privés')}</b><span class="flex gap-1">${v11Vue === 'mp' && v11Conv ? '<button onclick="v11Conv=null;v11Rendre(true)" class="px-2 py-1 rounded bg-slate-100 border-none cursor-pointer text-xs">← Retour</button>' : ''}<button onclick="v11Vue=null;v11Rendre()" class="px-2 py-1 rounded bg-slate-100 border-none cursor-pointer text-xs">✕</button></span></div>`;
+    if (v11Vue === 'no') {
+        const L = v11Notifs(); v11Actions = L.map(x => x.go);
+        h += L.map((x, i) => `<button onclick="v11Actions[${i}]();v11Vue=null;v11Rendre()" class="block w-full text-left p-2 mb-1 rounded-lg bg-slate-50 border cursor-pointer text-sm">${esc(x.t)}</button>`).join('') || '<div class="text-slate-500 italic">Rien de nouveau.</div>';
+        if (L.length && !estAdmin) h += '<button onclick="ls(\'notifvu:\'+monId(),String(Date.now()));v11Badges();v11Rendre(true)" class="mt-2 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold border-none cursor-pointer">✔ Tout marquer comme lu</button>';
+    } else if (v11Conv === '_nouveau') {
+        const q = norm(($('mp-q') || {}).value || '');
+        h += `<input id="mp-q" oninput="v11Rendre(true)" value="${esc(($('mp-q') || {}).value || '')}" placeholder="Rechercher un nom ou identifiant" class="w-full p-2 border rounded text-sm mb-2">`;
+        const U = donneesSite.utilisateurs.filter(u => u.id !== monId() && !u.banSite && (!q || norm(u.id + ' ' + u.nom + ' ' + u.prenoms).includes(q))).slice(0, 8);
+        h += U.map(u => `<button data-u="${esc(u.id)}" onclick="mpOuvrirAvec(this.dataset.u)" class="block w-full text-left p-2 mb-1 rounded-lg bg-slate-50 border cursor-pointer text-sm">${esc(nomComplet(u))} <span class="text-xs text-slate-400">@${esc(u.id)}</span></button>`).join('') || '<div class="text-slate-500 italic">Aucun résultat.</div>';
+    } else if (v11Conv) {
+        const c = mpConvs().find(x => x.id === v11Conv), m = moi(); ls('mpvu:' + monId() + ':' + v11Conv, String(Date.now()));
+        h += '<div class="space-y-1.5 mb-2">' + ((c ? c.msgs : []).sort((a, b) => a.date - b.date).slice(-60).map(x => { const moi_ = x.de === m.id; return `<div class="${moi_ ? 'ml-6 bg-indigo-50' : 'mr-6 bg-slate-50'} p-2 rounded-lg border"><div class="text-xs text-slate-400">${moi_ ? 'Moi' : esc(x.deNom)} · ${fmt(x.date)}</div><div class="whitespace-pre-wrap break-words">${x.supprime ? '<i class="text-slate-400">Message supprimé</i>' : esc(x.texte)}</div>${!moi_ && !x.supprime ? `<button data-i="${x._id}" onclick="mpSignaler(this.dataset.i)" class="mt-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs border-none cursor-pointer">🚩 Signaler</button>` : ''}</div>`; }).join('') || '<div class="text-slate-500 italic">Aucun message. Écrivez le premier !</div>') + '</div>';
+        h += '<div class="text-xs text-slate-500 mb-1">🔎 Les messages privés restent visibles des administrateurs.</div><textarea id="mp-saisie" rows="2" maxlength="500" placeholder="Votre message…" class="w-full p-2 border rounded text-sm"></textarea><button onclick="mpEnvoyer()" class="mt-1 px-4 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-bold border-none cursor-pointer">Envoyer</button>';
+    } else {
+        const C = mpConvs();
+        h += '<button onclick="v11Conv=\'_nouveau\';v11Rendre(true)" class="w-full mb-2 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-bold border-none cursor-pointer">➕ Nouveau message</button>';
+        h += C.map(c => `<button data-u="${esc(c.id)}" onclick="mpOuvrirAvec(this.dataset.u)" class="block w-full text-left p-2 mb-1 rounded-lg bg-slate-50 border cursor-pointer text-sm"><b>${esc(c.nom)}</b>${c.non ? ` <span class="bg-red-600 text-white text-xs rounded-full px-1.5">${c.non}</span>` : ''}<div class="text-xs text-slate-500 truncate">${esc((c.msgs.sort((a, b) => b.date - a.date)[0] || {}).supprime ? 'Message supprimé' : (c.msgs[0] || {}).texte || '')}</div></button>`).join('') || '<div class="text-slate-500 italic">Aucune conversation.</div>';
+    }
+    const sig = h; if (!force && p.dataset.h === sig) return; p.dataset.h = sig; p.innerHTML = h;
+    const t2 = $('mp-saisie'); if (t2 && saved) { t2.value = saved; if (actif) t2.focus(); }
+    v11Badges();
+}
+function mpOuvrirAvec(id) { v11Init(); v11Vue = 'mp'; v11Conv = id; v11Rendre(true); }
+async function mpEnvoyer() {
+    const m = moi(), t = ($('mp-saisie') || {}).value.trim(); if (!m || !t || !v11Conv || v11Conv === '_nouveau') return;
+    if (ecritureBloquee() || !texteAutorise(t)) return;
+    const dest = userParId(v11Conv), nomDest = dest ? nomComplet(dest) : (((mpConvs().find(c => c.id === v11Conv)) || {}).nom || v11Conv);
+    if (dest && dest.banSite) return alert('Cet utilisateur n\'est plus disponible.');
+    $('mp-saisie').value = '';
+    try { await chargerDonnees(true); } catch (e) { }
+    (donneesSite.messagesPrives = donneesSite.messagesPrives || []).push({ _id: crypto.randomUUID(), de: m.id, deNom: m.nom, a: v11Conv, aNom: nomDest, texte: t.slice(0, 500), date: Date.now() });
+    await sauvegarderOuAlerter(); v11Rendre(true);
+}
+async function mpSignaler(id) {
+    const m = moi(), x = (donneesSite.messagesPrives || []).find(y => y._id === id); if (!m || !x) return;
+    const motif = prompt('Motif du signalement :'); if (motif === null) return;
+    donneesSite.signalements.push({ sujetId: 'mp:' + id, sujetTitre: 'Message privé', msgId: id, auteurId: x.de, auteurNom: x.deNom, extrait: (x.texte || '').slice(0, 200), par: m.nom, motif: motif.trim() || '—', date: Date.now(), statut: 'ouvert' });
+    await sauvegarderOuAlerter(); alert('Merci, le signalement a été transmis aux administrateurs.');
+}
+const _ssV11 = sigSupprimer;
+sigSupprimer = async function (id) {
+    const r = donneesSite.signalements.find(x => x._id === id);
+    if (r && String(r.sujetId).startsWith('mp:') && peutModerer()) {
+        const d = (donneesSite.messagesPrives || []).find(x => x._id === r.msgId); if (d) { d.supprime = true; d.texte = ''; }
+        r.statut = 'traité'; await sauvegarderOuAlerter(); rafraichirSignalements(); return;
+    }
+    return _ssV11.apply(this, arguments);
+};
+// Mise à jour des badges ; lecture régulière seulement quand le panneau des messages est ouvert
+setInterval(() => { try { v11Init(); v11Badges(); } catch (e) { console.warn(e); } }, 5000);
+setInterval(async () => {
+    try {
+        if (v11Vue !== 'mp' || document.hidden || synchroEnCours > 0) return;
+        const av = JSON.stringify(donneesSite.messagesPrives || []); if (!(await chargerDonnees(false))) return;
+        if (JSON.stringify(donneesSite.messagesPrives || []) !== av) v11Rendre(false);
+    } catch (e) { }
+}, 12000);
+
+// ----- Supervision admin des messages privés -----
+function mpAdminInit() {
+    const z = $('atab-securite'); if (!z || $('mp-admin')) return;
+    const d = document.createElement('div'); d.id = 'mp-admin'; d.className = 'p-4 border rounded-xl space-y-2';
+    d.innerHTML = '<h4 class="font-bold text-lg">✉️ Messages privés <span class="text-xs font-normal text-slate-500">(visibles des administrateurs)</span></h4><input id="mp-admin-q" oninput="mpAdminRendre()" placeholder="🔎 Nom, identifiant ou mot" class="w-full p-2 border rounded bg-white text-sm"><div id="mp-admin-liste" class="space-y-1.5 text-sm"></div>';
+    z.appendChild(d);
+}
+function mpAdminRendre() {
+    if (!estAdmin) return; mpAdminInit(); const q = norm(($('mp-admin-q') || {}).value || '');
+    const L = [...(donneesSite.messagesPrives || [])].filter(x => !q || norm([x.de, x.deNom, x.a, x.aNom, x.texte].join(' ')).includes(q)).sort((a, b) => b.date - a.date).slice(0, 100);
+    const h = L.map(x => `<div class="p-2 bg-white border rounded-lg"><div class="text-xs text-slate-500">${esc(x.deNom)} → ${esc(x.aNom)} · ${fmt(x.date)}</div><div class="break-words whitespace-pre-wrap">${x.supprime ? '<i class="text-slate-400">supprimé</i>' : esc(x.texte)}</div></div>`).join('') || '<div class="text-xs italic text-slate-500">Aucun message privé.</div>';
+    const c = $('mp-admin-liste'); if (c && c.dataset.h !== h) { c.dataset.h = h; c.innerHTML = h; }
+}
+const _rafLegerV11 = rafraichirAdminLeger;
+rafraichirAdminLeger = function () { _rafLegerV11(); try { mpAdminRendre(); } catch (e) { console.error('v11 :', e); } };
+
+// =====================================================================
+//  MODULE v12 : espace élève (favoris, carnet, progression, échéances,
+//  glossaire, réglages, archives) + outils professeurs (brouillon /
+//  programmé / archivé, classes, étiquettes, dupliquer, correction rapide,
+//  statistiques, export Excel)
+// =====================================================================
+const LISTES12 = { pdfs: ['📚', 'Révision'], cours: ['📖', 'Cours'], evaluations: ['📝', 'Évaluation'] };
+const meUser = () => (utilisateurActif && !estAdmin) ? userParId(utilisateurActif.id) : null;
+const staff12 = () => estAdmin || estProf();
+
+// ----- Visibilité : brouillon, programmé, archivé, classes -----
+function visibleV12(it) {
+    if (!it) return true; if (estAdmin || peutGerer(it)) return true;
+    if (it.statutPub === 'brouillon' || it.statutPub === 'archive') return false;
+    if (it.publieLe && it.publieLe > Date.now()) return false;
+    if (it.classes && it.classes.length) { const u = meUser(); const c = u && u.classe ? norm(u.classe) : ''; if (!c || !it.classes.some(x => norm(x) === c)) return false; }
+    return true;
+}
+function badgesPub(it) {
+    const b = (t, c) => `<span class="text-xs px-1.5 py-0.5 rounded-full ${c}">${t}</span>`; let h = '';
+    if (it.statutPub === 'brouillon') h += b('📝 brouillon', 'bg-slate-200');
+    if (it.statutPub === 'archive') h += b('🗄️ archivé', 'bg-slate-200');
+    if (it.publieLe && it.publieLe > Date.now()) h += b('⏳ publié le ' + fmtGMT(it.publieLe) + ' GMT', 'bg-amber-100');
+    if (it.classes && it.classes.length) h += b('🎓 ' + it.classes.map(esc).join(', '), 'bg-indigo-100');
+    return h;
+}
+function outilsV12(l, idx, it) {
+    let h = ''; const u = meUser();
+    (it.etiquettes || []).forEach(t => { h += `<span class="text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">#${esc(t)}</span>`; });
+    if (u && it._id) { const on = (u.favoris || []).some(f => f.l === l && f.id === it._id); h += `<button data-l="${l}" data-i="${it._id}" onclick="favBasculer(this.dataset.l,this.dataset.i)" title="Favori" class="px-2 py-1 rounded-lg text-sm cursor-pointer border ${on ? 'bg-yellow-200 border-yellow-400' : 'bg-white'}">${on ? '⭐' : '☆'}</button>`; }
+    if (peutGerer(it) && it._id) {
+        h += badgesPub(it) + `<button data-l="${l}" data-i="${it._id}" onclick="pubOuvrir(this.dataset.l,this.dataset.i)" title="Publication, classes, étiquettes" class="px-2 py-1 rounded-lg text-sm bg-amber-500 text-white border-none cursor-pointer">🗓️</button>`;
+        if (l === 'evaluations') h += `<button data-i="${it._id}" onclick="dupliquerEval(this.dataset.i)" title="Dupliquer" class="px-2 py-1 rounded-lg text-sm bg-teal-600 text-white border-none cursor-pointer">⎘</button>`;
+    }
+    return h;
+}
+async function favBasculer(l, id) {
+    const u = meUser(); if (!u) return; u.favoris = u.favoris || [];
+    const i = u.favoris.findIndex(f => f.l === l && f.id === id); if (i >= 0) u.favoris.splice(i, 1); else u.favoris.push({ l, id });
+    await sauvegarderOuAlerter(); rafraichirAffichagePublic();
+}
+async function dupliquerEval(id) {
+    const ev = donneesSite.evaluations.find(e => e._id === id); if (!ev || !peutGerer(ev)) return;
+    const c = JSON.parse(JSON.stringify(ev)); delete c._id; c.titre = ev.titre + ' (copie)'; c.statutPub = 'brouillon'; delete c.publieLe;
+    donneesSite.evaluations.push(c); await sauvegarderOuAlerter(); rafraichirAffichagePublic(); alert('Copie créée en brouillon : ouvrez 🗓️ pour la publier.');
+}
+
+// ----- Fenêtre générique -----
+function v12Ov(html) {
+    let o = $('v12-ov');
+    if (!o) { o = document.createElement('div'); o.id = 'v12-ov'; o.className = 'hidden fixed inset-0 z-[75] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4'; o.innerHTML = '<div id="v12-box" class="bg-white w-full sm:max-w-lg max-h-[90vh] overflow-auto rounded-t-2xl sm:rounded-2xl p-4 text-sm"></div>'; o.addEventListener('click', e => { if (e.target === o) v12Fermer(); }); document.body.appendChild(o); }
+    $('v12-box').innerHTML = html; o.classList.remove('hidden');
+}
+const v12Fermer = () => { const o = $('v12-ov'); if (o) o.classList.add('hidden'); v12Tab = null; };
+const v12Titre = (t) => `<div class="flex justify-between items-center mb-3"><b class="text-base">${t}</b><button onclick="v12Fermer()" class="px-2 py-1 rounded bg-slate-100 border-none cursor-pointer text-xs">✕</button></div>`;
+const inp12 = 'w-full p-2 border rounded bg-white text-sm', btn12 = (c) => `px-3 py-2 rounded-lg text-sm font-bold border-none cursor-pointer text-white ${c}`;
+
+// ----- Publication, classes, étiquettes -----
+let v12Cible = null;
+function pubOuvrir(l, id) {
+    const it = (donneesSite[l] || []).find(x => x._id === id); if (!it || !peutGerer(it)) return; v12Cible = { l, id };
+    const st = it.statutPub || (it.publieLe && it.publieLe > Date.now() ? 'programme' : 'publie');
+    const opt = (v, t) => `<option value="${v}" ${st === v ? 'selected' : ''}>${t}</option>`;
+    v12Ov(v12Titre('🗓️ Publication de « ' + esc(it.titre) + ' »') + `<div class="space-y-3">
+        <div><label class="block text-xs font-medium mb-1">État</label><select id="pb12-st" class="${inp12}">${opt('publie', '✅ Publié')}${opt('brouillon', '📝 Brouillon (invisible des étudiants)')}${opt('programme', '⏳ Publication programmée')}${opt('archive', '🗄️ Archivé')}</select></div>
+        <div><label class="block text-xs font-medium mb-1">Date de publication (GMT+0, si programmée)</label><input id="pb12-date" type="datetime-local" value="${it.publieLe ? new Date(it.publieLe).toISOString().slice(0, 16) : ''}" class="${inp12}"></div>
+        <div><label class="block text-xs font-medium mb-1">Classes / groupes autorisés (séparés par des virgules, vide = tous)</label><input id="pb12-cl" value="${esc((it.classes || []).join(', '))}" class="${inp12}"></div>
+        <div><label class="block text-xs font-medium mb-1">Étiquettes (séparées par des virgules)</label><input id="pb12-et" value="${esc((it.etiquettes || []).join(', '))}" class="${inp12}"></div>
+        <button onclick="pubEnregistrer()" class="${btn12('bg-blue-600')}">💾 Enregistrer</button></div>`);
+}
+async function pubEnregistrer() {
+    if (!v12Cible) return; const it = (donneesSite[v12Cible.l] || []).find(x => x._id === v12Cible.id); if (!it || !peutGerer(it)) return;
+    const st = $('pb12-st').value, d = $('pb12-date').value, liste = id => $(id).value.split(/[,;]+/).map(x => x.trim()).filter(Boolean);
+    if (st === 'programme') { const t = d ? Date.parse(d + 'Z') : NaN; if (isNaN(t) || t <= Date.now()) return alert('Choisissez une date de publication future (GMT+0).'); it.publieLe = t; delete it.statutPub; }
+    else { delete it.publieLe; if (st === 'publie') delete it.statutPub; else it.statutPub = st; }
+    it.classes = liste('pb12-cl'); it.etiquettes = liste('pb12-et');
+    if (!it.classes.length) delete it.classes; if (!it.etiquettes.length) delete it.etiquettes;
+    await sauvegarderOuAlerter(); v12Fermer(); rafraichirAffichagePublic();
+}
+// Classe d'un utilisateur (réglée par un administrateur depuis son profil)
+const _opV12 = ouvrirProfil;
+ouvrirProfil = function (aid) {
+    _opV12.apply(this, arguments);
+    if (!estAdmin || String(aid).startsWith('@')) return; const u = userParId(aid); if (!u) return;
+    const d = document.createElement('div'); d.className = 'flex gap-2 items-center text-xs';
+    d.innerHTML = `<label class="font-bold">🎓 Classe :</label><input id="pf-classe" value="${esc(u.classe || '')}" placeholder="ex : 3A" class="p-1.5 border rounded bg-white text-xs w-24"><button data-u="${esc(u.id)}" onclick="classeEnregistrer(this.dataset.u)" class="px-2 py-1.5 rounded bg-blue-600 text-white border-none cursor-pointer text-xs font-bold">OK</button>`;
+    $('profil-contenu').appendChild(d);
+};
+async function classeEnregistrer(id) { const u = userParId(id); if (!u || !estAdmin) return; u.classe = $('pf-classe').value.trim(); if (!u.classe) delete u.classe; await sauvegarderOuAlerter(); alert('Classe enregistrée.'); }
+
+// ----- Correction rapide, stats, export -----
+const noteTxt = r => r.note != null ? `${r.note}/${r.sur || 20}` : '';
+function correctionHtml(r) {
+    return `<div class="pt-1 flex flex-wrap items-center gap-2">${r.note != null ? `<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">📝 ${noteTxt(r)}</span>${r.commentaire ? `<span class="text-xs text-slate-600 break-words">${esc(r.commentaire)}</span>` : ''}` : ''}${peutVoirCopie(r) ? `<button data-r="${r._id}" onclick="corrOuvrir(this.dataset.r)" class="px-2 py-1 rounded-lg text-xs bg-emerald-600 text-white border-none cursor-pointer">✍️ ${r.note != null ? 'Modifier la note' : 'Noter'}</button>` : ''}</div>`;
+}
+function statsHtml(L) {
+    const N = L.filter(r => r.note != null); if (!L.length) return '';
+    const moy = N.length ? (N.reduce((n, r) => n + r.note / (r.sur || 20) * 20, 0) / N.length).toFixed(1) : '—', ok = N.length ? Math.round(N.filter(r => r.note / (r.sur || 20) >= 0.5).length * 100 / N.length) : null;
+    return `<div class="text-xs mt-1 text-slate-600">📊 ${N.length}/${L.length} corrigée(s) · moyenne ${moy}/20${ok != null ? ' · réussite ' + ok + ' %' : ''}</div>`;
+}
+let corrId = null;
+function corrOuvrir(rid) {
+    const r = donneesSite.rendus.find(x => x._id === rid); if (!r || !peutVoirCopie(r)) return; corrId = rid;
+    v12Ov(v12Titre('✍️ Correction — ' + esc(r.auteurNom)) + `<div class="space-y-3"><div class="grid grid-cols-2 gap-2"><div><label class="block text-xs font-medium mb-1">Note</label><input id="c12-note" type="number" step="0.25" min="0" value="${r.note != null ? r.note : ''}" class="${inp12}"></div><div><label class="block text-xs font-medium mb-1">Sur</label><input id="c12-sur" type="number" min="1" value="${r.sur || 20}" class="${inp12}"></div></div>
+        <div><label class="block text-xs font-medium mb-1">Commentaire</label><textarea id="c12-com" rows="4" maxlength="800" class="${inp12}">${esc(r.commentaire || '')}</textarea></div>
+        <button onclick="corrEnregistrer()" class="${btn12('bg-emerald-600')}">✅ Enregistrer et notifier l'étudiant</button></div>`);
+}
+async function corrEnregistrer() {
+    const r = donneesSite.rendus.find(x => x._id === corrId); if (!r || !peutVoirCopie(r)) return;
+    const note = parseFloat($('c12-note').value), sur = parseFloat($('c12-sur').value) || 20;
+    if (isNaN(note) || note < 0 || note > sur) return alert('Note invalide.');
+    Object.assign(r, { note, sur, commentaire: $('c12-com').value.trim(), corrigeLe: Date.now(), corrigePar: (moi() || {}).nom || '' });
+    await sauvegarderOuAlerter(); v12Fermer(); try { rafraichirAdminLeger(); rafraichirEspaceProf(); } catch (e) { }
+}
+function exportBtn(evId) { return `<button data-e="${evId}" onclick="exporterCopies(this.dataset.e)" class="px-2 py-1 rounded-lg text-xs bg-slate-700 text-white border-none cursor-pointer">⬇️ Excel</button>`; }
+function exporterCopies(evId) {
+    const ev = donneesSite.evaluations.find(e => e._id === evId), L = donneesSite.rendus.filter(r => r.evalId === evId && peutVoirCopie(r)); if (!L.length) return alert('Aucune copie à exporter.');
+    const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const rows = [['Nom', 'Identifiant', 'Rendu le', 'Note', 'Sur', 'Commentaire'], ...L.map(r => [r.auteurNom, r.auteurId, fmt(r.date), r.note != null ? r.note : '', r.note != null ? (r.sur || 20) : '', r.commentaire || ''])];
+    const blob = new Blob(['\ufeff' + rows.map(x => x.map(q).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' }), a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'resultats-' + (ev ? ev.titre : 'evaluation').replace(/[^\w-]+/g, '_') + '.csv'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+const _edmV12 = evalDetailMaj;
+evalDetailMaj = function (force) {
+    _edmV12.apply(this, arguments);
+    try {
+        if (force !== true && !$('eval-detail').classList.contains('active-screen')) return;
+        const ev = donneesSite.evaluations.find(e => e._id === evalDetailId), ex = ev && renduDe(ev._id);
+        if (ex && ex.note != null) $('ed-delai').innerHTML += `<div class="mt-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm">📝 <b>Ma note : ${noteTxt(ex)}</b>${ex.commentaire ? '<br>' + esc(ex.commentaire) : ''}</div>`;
+    } catch (e) { }
+};
+
+// ----- Espace « Mon espace » -----
+let v12Tab = null;
+const ONGLETS12 = [['favoris', '⭐ Favoris'], ['carnet', '📒 Carnet'], ['progression', '📈 Progression'], ['echeances', '📅 Échéances'], ['glossaire', '📖 Glossaire'], ['archives', '🗄️ Archives'], ['reglages', '⚙️ Réglages']];
+function v12Ouvrir(t) { v12Tab = t || 'favoris'; v12Rendre(); }
+function v12Rendre() {
+    if (!v12Tab) return;
+    const tabs = '<div class="flex gap-1 overflow-x-auto pb-2 mb-3 border-b">' + ONGLETS12.map(([k, l]) => `<button onclick="v12Ouvrir('${k}')" class="px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border-none cursor-pointer ${k === v12Tab ? 'bg-indigo-600 text-white' : 'bg-slate-100'}">${l}</button>`).join('') + '</div>';
+    const f = { favoris: tFavoris, carnet: tCarnet, progression: tProgression, echeances: tEcheances, glossaire: tGlossaire, archives: tArchives, reglages: tReglages }[v12Tab];
+    v12Ov(v12Titre('📚 Mon espace') + tabs + f());
+}
+function ouvrirItem(l, id) {
+    const idx = (donneesSite[l] || []).findIndex(x => x._id === id); if (idx < 0) return; v12Fermer();
+    if (l === 'evaluations') { const ev = donneesSite.evaluations[idx]; return evalInline(ev) ? ouvrirEvalDetail(idx) : ouvrirEvaluation(idx); }
+    changerEcran(l === 'pdfs' ? 'revisions' : 'cours'); ouvrirDoc(l, idx, 'fileUrl', '');
+}
+const ligne12 = (l, it, extra) => `<div class="p-2 mb-1.5 bg-slate-50 border rounded-lg flex items-center justify-between gap-2"><span class="min-w-0 break-words">${LISTES12[l][0]} ${esc(it.titre)}</span><span class="flex gap-1 shrink-0"><button data-l="${l}" data-i="${it._id}" onclick="ouvrirItem(this.dataset.l,this.dataset.i)" class="px-2 py-1 rounded bg-blue-600 text-white text-xs border-none cursor-pointer">Ouvrir</button>${extra || ''}</span></div>`;
+function tFavoris() {
+    const u = meUser(); if (!u) return '<p class="text-slate-500 italic">Les favoris sont réservés aux comptes étudiants/professeurs.</p>';
+    const L = (u.favoris || []).map(f => ({ f, it: (donneesSite[f.l] || []).find(x => x._id === f.id) })).filter(x => x.it && visibleV12(x.it));
+    return L.map(({ f, it }) => ligne12(f.l, it, `<button data-l="${f.l}" data-i="${f.id}" onclick="favBasculer(this.dataset.l,this.dataset.i).then(v12Rendre)" class="px-2 py-1 rounded bg-yellow-200 text-xs border-none cursor-pointer">⭐ ✕</button>`)).join('') || '<p class="text-slate-500 italic">Aucun favori. Touchez ☆ sur un cours, une révision ou une évaluation.</p>';
+}
+function copiesNotees() { const m = monId(); return donneesSite.rendus.filter(r => r.auteurId === m && r.note != null); }
+function tCarnet() {
+    const u = meUser(); if (!u) return '<p class="text-slate-500 italic">Le carnet est réservé aux comptes étudiants/professeurs.</p>';
+    const M = (u.carnet || []).map(x => ({ ...x, src: 'perso' })), A = copiesNotees().map(r => ({ id: r._id, titre: r.evalTitre, matiere: 'Copie corrigée', note: r.note, sur: r.sur || 20, coef: 1, src: 'copie', date: r.corrigeLe }));
+    const T = [...A, ...M], cf = x => (+x.coef > 0 ? +x.coef : 1), tot = T.reduce((n, x) => n + cf(x), 0), moy = tot ? (T.reduce((n, x) => n + x.note / x.sur * 20 * cf(x), 0) / tot).toFixed(2) : '—';
+    return `<div class="p-3 mb-3 bg-indigo-50 border border-indigo-200 rounded-xl text-center"><div class="text-3xl font-extrabold text-indigo-800">${moy}<span class="text-base">/20</span></div><div class="text-xs text-slate-600">Moyenne générale (${T.length} note(s), copies corrigées incluses)</div></div>`
+        + T.sort((a, b) => (b.date || 0) - (a.date || 0)).map(x => `<div class="p-2 mb-1 bg-white border rounded-lg flex justify-between items-center gap-2"><span class="min-w-0 break-words">${esc(x.titre)} <span class="text-xs text-slate-400">${esc(x.matiere || '')}${cf(x) !== 1 ? ' · coef ' + cf(x) : ''}</span></span><span class="flex items-center gap-2"><b>${x.note}/${x.sur}</b>${x.src === 'perso' ? `<button data-i="${x.id}" onclick="carnetSupprimer(this.dataset.i)" class="px-1.5 py-0.5 rounded bg-slate-200 text-xs border-none cursor-pointer">🗑️</button>` : '<span title="Corrigée par un professeur">✅</span>'}</span></div>`).join('')
+        + `<div class="mt-3 pt-3 border-t space-y-2"><b class="text-xs uppercase text-slate-500">Ajouter une note</b><input id="cn-titre" placeholder="Intitulé (devoir, examen…)" class="${inp12}"><div class="grid grid-cols-4 gap-2"><input id="cn-mat" placeholder="Matière" class="${inp12} col-span-2"><input id="cn-note" type="number" step="0.25" min="0" placeholder="Note" class="${inp12}"><input id="cn-sur" type="number" min="1" value="20" class="${inp12}"></div><div class="flex gap-2 items-center"><label class="text-xs">Coef</label><input id="cn-coef" type="number" min="0.5" step="0.5" value="1" class="${inp12} w-20"><button onclick="carnetAjouter()" class="${btn12('bg-indigo-600')}">➕ Ajouter</button></div></div>`;
+}
+async function carnetAjouter() {
+    const u = meUser(); if (!u) return; const titre = $('cn-titre').value.trim(), note = parseFloat($('cn-note').value), sur = parseFloat($('cn-sur').value) || 20, coef = parseFloat($('cn-coef').value) || 1;
+    if (!titre || isNaN(note) || note < 0 || note > sur) return alert('Renseignez un intitulé et une note valide.');
+    (u.carnet = u.carnet || []).push({ id: crypto.randomUUID(), titre, matiere: $('cn-mat').value.trim(), note, sur, coef, date: Date.now() });
+    await sauvegarderOuAlerter(); v12Rendre();
+}
+async function carnetSupprimer(id) { const u = meUser(); if (!u) return; u.carnet = (u.carnet || []).filter(x => x.id !== id); await sauvegarderOuAlerter(); v12Rendre(); }
+const echeancesEleve = () => donneesSite.evaluations.filter(e => aRendreEv(e) && e.delai && visibleV12(e)).sort((a, b) => a.delai - b.delai);
+function tProgression() {
+    const u = meUser(); if (!u) return '<p class="text-slate-500 italic">Réservé aux comptes étudiants/professeurs.</p>';
+    const E = donneesSite.evaluations.filter(e => aRendreEv(e) && visibleV12(e)), faits = E.filter(e => renduDe(e._id)).length, retard = E.filter(e => delaiDepasse(e) && !renduDe(e._id)).length, N = copiesNotees();
+    const pc = E.length ? Math.round(faits * 100 / E.length) : 0, m = monId(), msgs = donneesSite.sujets.reduce((n, s) => n + (s.auteurId === m ? 1 : 0) + s.messages.filter(x => x.aid === m).length, 0);
+    const moy = N.length ? (N.reduce((n, r) => n + r.note / (r.sur || 20) * 20, 0) / N.length).toFixed(1) : '—';
+    const c = (v, l) => `<div class="p-3 bg-slate-50 border rounded-xl text-center"><div class="text-xl font-extrabold">${v}</div><div class="text-xs text-slate-500">${l}</div></div>`;
+    return `<div class="mb-3"><div class="flex justify-between text-xs mb-1"><span>Devoirs rendus</span><b>${faits}/${E.length} (${pc} %)</b></div><div class="h-3 bg-slate-200 rounded-full overflow-hidden"><div class="h-3 bg-emerald-500" style="width:${pc}%"></div></div></div><div class="grid grid-cols-2 gap-2">${c(moy + '/20', 'moyenne des copies corrigées')}${c(N.length, 'copies corrigées')}${c(retard, 'devoir(s) non rendu(s) hors délai')}${c((u.favoris || []).length, 'favoris')}${c(msgs, 'messages au forum')}${c(u.nbConnexions || 0, 'connexions')}</div>`;
+}
+function tEcheances() {
+    const E = echeancesEleve(), now = Date.now(); if (!E.length) return '<p class="text-slate-500 italic">Aucun devoir « à rendre » avec date limite.</p>';
+    return E.map(e => { const r = meUser() && renduDe(e._id), reste = e.delai - now; return `<div class="p-2.5 mb-1.5 border rounded-lg ${r ? 'bg-emerald-50' : reste < 0 ? 'bg-red-50' : reste < 86400000 ? 'bg-orange-50' : 'bg-white'}"><div class="font-medium break-words">${esc(e.titre)}</div><div class="text-xs text-slate-600">${fmt(e.delai)} · ${r ? '✅ rendu' : reste < 0 ? '⛔ délai dépassé' : '⏳ reste ' + texteReste(reste)}</div></div>`; }).join('');
+}
+function tGlossaire() {
+    const adm = estAdmin; return `<input id="gl-q" oninput="gloListe()" placeholder="🔎 Rechercher un terme" class="${inp12} mb-2"><div id="glo-liste"></div>` + (adm ? `<div class="mt-3 pt-3 border-t space-y-2"><b class="text-xs uppercase text-slate-500">Ajouter un terme</b><input id="gl-terme" placeholder="Terme" class="${inp12}"><textarea id="gl-def" rows="2" placeholder="Définition" class="${inp12}"></textarea><button onclick="gloAjouter()" class="${btn12('bg-indigo-600')}">➕ Ajouter</button></div>` : '');
+}
+function gloListe() {
+    const c = $('glo-liste'); if (!c) return; const q = norm(($('gl-q') || {}).value || '');
+    c.innerHTML = [...((donneesSite.parametres[0] || {}).glossaire || [])].filter(g => !q || norm(g.terme + ' ' + g.def).includes(q)).sort((a, b) => a.terme.localeCompare(b.terme, 'fr')).map(g => `<div class="p-2 mb-1.5 bg-slate-50 border rounded-lg"><div class="flex justify-between gap-2"><b>${esc(g.terme)}</b>${estAdmin ? `<button data-i="${g.id}" onclick="gloSupprimer(this.dataset.i)" class="px-1.5 rounded bg-slate-200 text-xs border-none cursor-pointer">🗑️</button>` : ''}</div><div class="text-slate-700 break-words">${esc(g.def)}</div></div>`).join('') || '<p class="text-slate-500 italic">Aucun terme.</p>';
+}
+async function gloAjouter() {
+    if (!estAdmin) return; const t = $('gl-terme').value.trim(), d = $('gl-def').value.trim(); if (!t || !d) return alert('Terme et définition obligatoires.');
+    const p = P(); (p.glossaire = p.glossaire || []).push({ id: crypto.randomUUID(), terme: t, def: d }); await sauvegarderOuAlerter(); v12Rendre(); gloListe();
+}
+async function gloSupprimer(id) { if (!estAdmin || !confirm('Supprimer ce terme ?')) return; const p = P(); p.glossaire = (p.glossaire || []).filter(g => g.id !== id); await sauvegarderOuAlerter(); v12Rendre(); gloListe(); }
+function tArchives() {
+    let h = ''; Object.keys(LISTES12).forEach(l => (donneesSite[l] || []).filter(it => it.statutPub === 'archive' && (!it.classes || !it.classes.length || estAdmin || peutGerer(it) || visibleV12({ ...it, statutPub: undefined }))).forEach(it => { h += ligne12(l, it); }));
+    return h || '<p class="text-slate-500 italic">Aucun contenu archivé.</p>';
+}
+// Réglages d'affichage (appareil)
+function appliquerAffichage() {
+    const sombre = ls('v12_sombre') === '1', t = +ls('v12_taille') || 100;
+    document.documentElement.classList.toggle('v12-sombre', sombre); document.documentElement.style.fontSize = t + '%';
+}
+function tReglages() {
+    const t = +ls('v12_taille') || 100;
+    return `<label class="flex items-center gap-2 mb-4"><input type="checkbox" ${ls('v12_sombre') === '1' ? 'checked' : ''} onchange="ls('v12_sombre',this.checked?'1':'0');appliquerAffichage()" class="w-5 h-5"> 🌙 Mode sombre</label><label class="block text-xs font-medium mb-1">Taille du texte : <b id="v12-t">${t} %</b></label><input type="range" min="85" max="140" step="5" value="${t}" oninput="ls('v12_taille',this.value);appliquerAffichage();$('v12-t').textContent=this.value+' %'" class="w-full"><p class="text-xs text-slate-500 mt-3">Ces réglages sont mémorisés sur cet appareil.</p>`;
+}
+const st12 = document.createElement('style');
+st12.textContent = 'html.v12-sombre{filter:invert(1) hue-rotate(180deg);background:#fff}html.v12-sombre img,html.v12-sombre video,html.v12-sombre iframe,html.v12-sombre canvas{filter:invert(1) hue-rotate(180deg)}';
+document.head.appendChild(st12); appliquerAffichage();
+
+// ----- Bouton flottant, notifications et rappels -----
+setInterval(() => {
+    try {
+        const b = $('v11-barre'); if (!b || $('v12-b')) return;
+        const x = document.createElement('button'); x.id = 'v12-b'; x.setAttribute('aria-label', 'Mon espace'); x.className = 'w-12 h-12 rounded-full bg-indigo-600 text-white text-xl shadow-lg border-none cursor-pointer'; x.textContent = '📚'; x.onclick = () => v12Ouvrir('favoris'); b.appendChild(x);
+    } catch (e) { }
+}, 3000);
+const _vnV12 = v11Notifs;
+v11Notifs = function () {
+    const L = _vnV12();
+    try {
+        if (meUser()) {
+            const vu = vuNotif();
+            donneesSite.rendus.filter(r => r.auteurId === monId() && r.corrigeLe > vu).forEach(r => L.push({ t: `📝 Copie corrigée : « ${r.evalTitre} » — ${noteTxt(r)}`, d: r.corrigeLe, go: () => v12Ouvrir('carnet') }));
+            echeancesEleve().filter(e => !renduDe(e._id) && e.delai > Date.now() && e.delai - Date.now() < 86400000).forEach(e => L.push({ t: `⏰ « ${e.titre} » à rendre dans ${texteReste(e.delai - Date.now())}`, d: Date.now(), go: () => v12Ouvrir('echeances') }));
+        }
+    } catch (e) { }
+    return L.sort((a, b) => b.d - a.d);
+};
+setInterval(() => {
+    try {
+        if (!meUser()) return; const now = Date.now();
+        echeancesEleve().forEach(e => {
+            if (e.delai < now || renduDe(e._id)) return; const reste = e.delai - now, pal = reste < 3600000 ? 'h1' : reste < 86400000 ? 'j1' : null; if (!pal) return;
+            const k = 'rappel:' + e._id + ':' + pal + ':' + e.delai; if (ls(k)) return; ls(k, '1'); annonceAfficher('⏰ Rappel : « ' + e.titre + ' » à rendre dans ' + texteReste(reste) + '.');
+        });
+    } catch (e) { }
+}, 60000);
+setInterval(() => { if (v12Tab === 'echeances') { try { v12Rendre(); } catch (e) { } } }, 60000);
+// Le glossaire se remplit après l'affichage de l'onglet
+const _v12R = v12Rendre; v12Rendre = function () { _v12R(); if (v12Tab === 'glossaire') gloListe(); };
+
+[['pubEnregistrer', 'Publication / classes / étiquettes d\'un contenu modifiées'], ['corrEnregistrer', 'Copie corrigée (note et commentaire)'], ['gloAjouter', 'Terme ajouté au glossaire'], ['gloSupprimer', 'Terme supprimé du glossaire'], ['dupliquerEval', 'Évaluation dupliquée'], ['classeEnregistrer', 'Classe d\'un utilisateur modifiée']].forEach(([n, l]) => surveiller(n, 'action', () => l));
+
+</script>
+
+<script>
+// =====================================================================
+//  MODULE v13 : actions groupées (dons, signalements, propositions,
+//  historique) et historique des modifications de messages
+//  (administrateurs uniquement, avec bouton « Annuler »)
+// =====================================================================
+
+// ---------- 1. Actions groupées : cases à cocher + barre d'actions ----------
+const LOT = { sets: {}, cfg: {}, busy: false };
+const lotSet = n => (LOT.sets[n] = LOT.sets[n] || new Set());
+const lotDom = n => [...new Set([...document.querySelectorAll(`.lot-cb[data-lot="${n}"]`)].map(c => c.dataset.id))];
+window.lotCheck = (n, id) => `<input type="checkbox" class="lot-cb w-4 h-4 shrink-0 cursor-pointer" data-lot="${n}" data-id="${esc(id)}" ${lotSet(n).has(String(id)) ? 'checked' : ''} onchange="lotCoche(this)" aria-label="Sélectionner cet élément">`;
+// Les éléments sélectionnés qui ne sont plus affichés (filtre, suppression…) sont retirés de la sélection
+function lotIds(n) { const ids = lotDom(n), s = lotSet(n); [...s].forEach(i => { if (!ids.includes(i)) s.delete(i); }); return ids; }
+function lotBarre(n) {
+    const c = LOT.cfg[n]; if (!c) return;
+    const ids = lotIds(n), s = lotSet(n), k = s.size, acts = c.actions();
+    document.querySelectorAll(`.lot-cb[data-lot="${n}"]`).forEach(cb => { cb.checked = s.has(cb.dataset.id); });
+    document.querySelectorAll(`[data-lotbar="${n}"]`).forEach(box => {
+        const vide = !ids.length || !acts.length;
+        box.classList.toggle('hidden', vide);
+        box.innerHTML = vide ? '' : `<div class="flex items-center gap-2 flex-wrap p-2 bg-slate-100 border rounded-lg text-xs">
+            <label class="flex items-center gap-1.5 font-semibold cursor-pointer"><input type="checkbox" class="w-4 h-4" ${k && k === ids.length ? 'checked' : ''} onchange="lotTout('${n}',this.checked)">Tout sélectionner</label>
+            <span class="text-slate-600">${k} sur ${ids.length} sélectionné(s)</span>
+            <span class="flex gap-1 flex-wrap sm:ml-auto">${acts.map(a => `<button ${k ? '' : 'disabled'} onclick="lotAgir('${n}','${a.cle}')" class="${a.cls} px-2.5 py-1 rounded-lg text-xs font-semibold border-none ${k ? 'cursor-pointer' : 'opacity-40 cursor-not-allowed'}">${a.label}</button>`).join('')}</span></div>`;
+    });
+}
+function lotCoche(cb) { const s = lotSet(cb.dataset.lot); if (cb.checked) s.add(cb.dataset.id); else s.delete(cb.dataset.id); lotBarre(cb.dataset.lot); }
+function lotTout(n, on) { const s = lotSet(n); lotIds(n).forEach(i => on ? s.add(i) : s.delete(i)); lotBarre(n); }
+async function lotAgir(n, cle) {
+    const c = LOT.cfg[n]; if (!c || LOT.busy) return;
+    const a = c.actions().find(x => x.cle === cle); if (!a) return;
+    const ids = lotIds(n).filter(i => lotSet(n).has(i)); if (!ids.length) return;
+    if (a.confirmer && !confirm(a.confirmer(ids))) return;
+    LOT.busy = true;
+    try { if ((await a.run(ids)) !== false) lotSet(n).clear(); }
+    catch (e) { console.error('Action groupée :', e); alert('Action groupée impossible : ' + ((e && e.message) || e)); }
+    finally { LOT.busy = false; lotBarre(n); }
+}
+
+// Dons : Reçu / Pas reçu (administrateurs) · Supprimer (administrateur principal)
+LOT.cfg.dons = {
+    actions: () => !estAdmin ? [] : [
+        { cle: 'recu', label: '✅ Reçu', cls: 'bg-emerald-600 text-white', confirmer: ids => `Marquer ${ids.length} don(s) comme REÇU(S) ?\n\nVérifiez d'abord dans Wave Business : ces montants seront comptés dans la jauge.`, run: ids => donsStatutLot(ids, 'recu') },
+        { cle: 'non_recu', label: '❌ Pas reçu', cls: 'bg-red-600 text-white', confirmer: ids => `Marquer ${ids.length} don(s) comme PAS REÇU(S) ?`, run: ids => donsStatutLot(ids, 'non_recu') },
+        ...(estPrincipal() ? [{ cle: 'suppr', label: '🗑️ Supprimer', cls: 'bg-slate-700 text-white', confirmer: ids => `Supprimer définitivement ${ids.length} déclaration(s) de don ?`, run: ids => donsSupprimerLot(ids) }] : [])
+    ]
+};
+// Signalements : Classer / Supprimer les messages (administrateurs, modérateurs, professeurs habilités)
+LOT.cfg.sig = {
+    actions: () => !peutModerer() ? [] : [
+        { cle: 'classer', label: 'Classer sans suite', cls: 'bg-slate-700 text-white', confirmer: ids => `Classer ${ids.length} signalement(s) sans suite ?`, run: ids => sigLot(ids, 'classer') },
+        { cle: 'suppr', label: '🗑️ Supprimer les messages', cls: 'bg-red-600 text-white', confirmer: ids => {
+            const m = ids.filter(id => { const r = donneesSite.signalements.find(x => x._id === id); return r && r.msgId === '_main'; }).length;
+            return `Supprimer les messages visés par ${ids.length} signalement(s) ?` + (m ? `\n\n⚠️ ${m} d'entre eux sont le début d'un sujet : le sujet entier sera supprimé.` : '');
+        }, run: ids => sigLot(ids, 'supprimer') }
+    ]
+};
+// Propositions en attente : Valider / Rejeter (administrateurs)
+LOT.cfg.prop = {
+    actions: () => !estAdmin ? [] : [
+        { cle: 'valider', label: '✅ Valider', cls: 'bg-green-600 text-white', confirmer: ids => `Valider et publier ${ids.length} proposition(s) ?`, run: ids => propLot(ids, 'valider') },
+        { cle: 'rejeter', label: '❌ Rejeter', cls: 'bg-red-600 text-white', confirmer: ids => `Rejeter ${ids.length} proposition(s) ?`, run: ids => propLot(ids, 'rejeter') }
+    ]
+};
+// Historique des actions : Supprimer la sélection (administrateur principal)
+LOT.cfg.journal = {
+    actions: () => !estPrincipal() ? [] : [
+        { cle: 'suppr', label: '🗑️ Supprimer la sélection', cls: 'bg-red-600 text-white', confirmer: ids => `Supprimer ${ids.length} entrée(s) de l'historique ? Cette action est définitive.`, run: ids => journalSupprimerLot(ids) }
+    ]
+};
+
+async function donsStatutLot(ids, statut) {
+    if (!estAdmin) return false;
+    const L = donneesSite.dons.filter(d => ids.includes(d._id)); if (!L.length) return false;
+    const snap = L.map(d => [d, d.statut, d.parAdmin, d.dateTraitement]), nom = adminNom || 'Admin', t = Date.now();
+    L.forEach(d => { d.statut = statut; d.parAdmin = nom; d.dateTraitement = t; });
+    if (!(await sauvegarder())) {
+        snap.forEach(([d, st, pa, dt]) => { d.statut = st; d.parAdmin = pa; d.dateTraitement = dt; });
+        alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); return false;
+    }
+    rafraichirDonsAdmin(); rafraichirDons(); return true;
+}
+async function donsSupprimerLot(ids) {
+    if (!estPrincipal()) return false;
+    const avant = donneesSite.dons;
+    donneesSite.dons = avant.filter(d => !ids.includes(d._id));
+    if (!(await sauvegarder())) { donneesSite.dons = avant; alert("Suppression impossible.\n\nDétail : " + derniereErreur); return false; }
+    rafraichirDonsAdmin(); rafraichirDons(); return true;
+}
+async function sigLot(ids, mode) {
+    if (!peutModerer()) return false;
+    const R = donneesSite.signalements.filter(r => ids.includes(r._id) && r.statut === 'ouvert'); if (!R.length) return false;
+    const sujets0 = donneesSite.sujets, msgs0 = new Map(), st0 = R.map(r => [r, r.statut]);
+    if (mode === 'supprimer') R.forEach(r => {
+        const s = donneesSite.sujets.find(x => x._id === r.sujetId); if (!s) return;
+        if (r.msgId === '_main') donneesSite.sujets = donneesSite.sujets.filter(x => x._id !== s._id);
+        else { if (!msgs0.has(s)) msgs0.set(s, s.messages); s.messages = s.messages.filter(x => x.id !== r.msgId); }
+    });
+    R.forEach(r => { r.statut = 'traité'; });
+    if (!(await sauvegarder())) {
+        donneesSite.sujets = sujets0; msgs0.forEach((m, s) => { s.messages = m; }); st0.forEach(([r, st]) => { r.statut = st; });
+        alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); return false;
+    }
+    rafraichirSignalements(); rafraichirForum(); return true;
+}
+// Même logique que adminValiderExo / adminRejeterExo, appliquée à plusieurs propositions
+async function propLot(ids, mode) {
+    if (!estAdmin) return false;
+    const D = donneesSite, att = D.exercicesEnAttente, S = att.filter(p => ids.includes(String(p._id || p.id))); if (!S.length) return false;
+    const snap = { exercicesEnAttente: att.slice(), pdfs: D.pdfs.slice(), photos: D.photos.slice(), exercicesValides: D.exercicesValides.slice(), exercicesRejetes: (D.exercicesRejetes || []).slice(), propositionsArchivees: D.propositionsArchivees.slice() };
+    const clones = S.map(p => [p, { ...p }]);
+    D.exercicesEnAttente = att.filter(p => !S.includes(p));
+    S.forEach(p => {
+        if (mode === 'valider') {
+            if (p.type === 'revision') {
+                D.pdfs.push({ titre: p.titre, fileUrl: p.fileUrl, fileName: p.fileName, sousCat: p.sousCat || '' });
+                D.propositionsArchivees.push({ id: p.id, type: 'revision', titre: p.titre, auteurId: p.auteurId, statut: 'Validé' });
+            } else if (p.type === 'photo') {
+                D.photos.push({ titre: p.titre, description: p.description || p.titre, fileUrl: p.fileUrl, auteurId: p.auteurId });
+                D.propositionsArchivees.push({ id: p.id, type: 'photo', titre: p.titre, auteurId: p.auteurId, statut: 'Validé' });
+            } else { p.statut = 'Validé'; D.exercicesValides.push(p); }
+        } else {
+            p.statut = 'Rejeté'; delete p.enonceUrl; delete p.corrigeUrl; delete p.fileUrl;
+            (D.exercicesRejetes = D.exercicesRejetes || []).push(p);
+        }
+    });
+    if (!(await sauvegarder())) {
+        Object.assign(D, snap);
+        clones.forEach(([p, c]) => { Object.keys(p).forEach(k => delete p[k]); Object.assign(p, c); });
+        alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); rafraichirAdmin(); return false;
+    }
+    rafraichirAdmin(); rafraichirAffichagePublic();
+    alert(mode === 'valider' ? `${pluriel(S.length, 'proposition validée', 'propositions validées')} et publiée(s).` : `${pluriel(S.length, 'proposition rejetée', 'propositions rejetées')}.`);
+    return true;
+}
+async function journalSupprimerLot(ids) {
+    if (!estPrincipal()) return false;
+    const avant = donneesSite.journal, set = new Set(ids);
+    donneesSite.journal = avant.filter(e => !set.has(e._id));
+    if (!(await sauvegarder())) { donneesSite.journal = avant; alert("Suppression impossible.\n\nDétail : " + derniereErreur); rafraichirJournal(); return false; }
+    rafraichirJournal(); return true;
+}
+// La barre d'actions de l'historique se place entre les filtres et la liste
+const _jfiV13 = jFiltreInit;
+jFiltreInit = function () {
+    _jfiV13.apply(this, arguments);
+    const l = $('journal-admin-liste');
+    if (l && !document.querySelector('[data-lotbar="journal"]')) { const b = document.createElement('div'); b.dataset.lotbar = 'journal'; b.className = 'hidden'; l.parentNode.insertBefore(b, l); }
+};
+
+// ---------- 2. Historique des modifications de messages (administrateurs) ----------
+function histMsgItems() {
+    const out = [], add = (type, sid, mid, lieu, ref, nom) => { if (ref && Array.isArray(ref.hist) && ref.hist.length) out.push({ type, sid, mid, lieu, ref, nom }); };
+    (donneesSite.sujets || []).forEach(s => {
+        const lieu = 'Forum › ' + (s.titre || 'sujet');
+        add('forum', s._id, '_main', lieu, s, s.auteurNom);
+        (s.messages || []).forEach(p => add('forum', s._id, p.id, lieu, p, p.nom));
+    });
+    (donneesSite.chatAdmin || []).forEach(x => add('chatAdmin', x._id, '', 'Chat des administrateurs', x, x.nom));
+    (donneesSite.chatProf || []).forEach(x => add('chatProf', x._id, '', 'Discussion profs / sponsors', x, x.nom));
+    return out;
+}
+const histDernierActif = H => { for (let i = H.length - 1; i >= 0; i--) if (!H[i].annule) return i; return -1; };
+function rafraichirHistMsgs() {
+    const box = $('hm-liste'); if (!box) return;
+    if (!estAdmin) { box.innerHTML = ''; return; }
+    const q = norm(($('hm-q') || {}).value || ''), etat = ($('hm-etat') || {}).value || '', E = [];
+    histMsgItems().forEach(it => { const dern = histDernierActif(it.ref.hist); it.ref.hist.forEach((h, k) => E.push({ it, h, k, dern })); });
+    const F = E.filter(e => (!etat || (etat === 'annulee') === !!e.h.annule) && (!q || norm([e.it.lieu, e.it.nom, e.h.parNom, e.h.ancien, e.h.nouveau].join(' ')).includes(q))).sort((a, b) => b.h.date - a.h.date);
+    const badge = (c, t) => `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${c}">${t}</span>`;
+    const html = F.slice(0, 100).map(({ it, h, k, dern }) => {
+        const annule = !!h.annule, supprime = !!it.ref.supprime, peut = !annule && k === dern && !supprime;
+        const etatB = annule ? badge('bg-slate-200 text-slate-700', `↩️ Annulée${h.annule.parNom ? ' par ' + esc(h.annule.parNom) : ''} · ${fmt(h.annule.date)}`)
+            : k === dern ? badge('bg-emerald-100 text-emerald-700', 'Version actuelle') : badge('bg-slate-100 text-slate-600', 'Remplacée');
+        const pied = peut ? `<button data-t="${esc(it.type)}" data-s="${esc(it.sid)}" data-m="${esc(it.mid)}" data-h="${esc(h.id)}" onclick="annulerModifMsg(this.dataset.t,this.dataset.s,this.dataset.m,this.dataset.h)" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-lg text-xs font-bold border-none cursor-pointer">↩️ Annuler cette modification</button>`
+            : annule ? '' : supprime ? '<p class="text-xs italic text-slate-500">Message supprimé : annulation impossible.</p>' : '<p class="text-xs italic text-slate-500">Annulez d\'abord les modifications plus récentes de ce message.</p>';
+        return `<div class="p-3 bg-white border rounded-xl text-sm space-y-2 ${annule ? 'opacity-70' : ''}">
+            <div class="flex justify-between gap-2 flex-wrap items-start"><div class="min-w-0"><div class="text-xs text-slate-500 break-words">${esc(it.lieu)}</div><div class="font-semibold break-words">${esc(it.nom || '')} <span class="text-xs font-normal text-slate-400">· modifié le ${fmt(h.date)}</span></div></div>${etatB}</div>
+            <div class="grid gap-2 sm:grid-cols-2"><div class="p-2 rounded-lg bg-red-50 border border-red-100"><div class="text-xs font-bold uppercase text-red-700 mb-0.5">Avant</div><p class="whitespace-pre-wrap break-words">${esc(h.ancien)}</p></div><div class="p-2 rounded-lg bg-emerald-50 border border-emerald-100"><div class="text-xs font-bold uppercase text-emerald-700 mb-0.5">Après</div><p class="whitespace-pre-wrap break-words">${esc(h.nouveau)}</p></div></div>
+            ${pied}</div>`;
+    }).join('') || "<p class='text-sm italic text-slate-500'>Aucune modification de message enregistrée.</p>";
+    if (box.dataset.h !== html) { box.dataset.h = html; box.innerHTML = html; }
+    const cp = $('hm-compte'); if (cp) cp.textContent = F.length + ' modification(s)' + (F.length > 100 ? ' — les 100 plus récentes sont affichées' : '');
+}
+// Annule la dernière modification non annulée d'un message : le texte précédent est restauré
+async function annulerModifMsg(type, sid, mid, hid) {
+    if (!estAdmin) return false;
+    const o = trouverMsg(type, sid, mid);
+    if (!o || o.ref.supprime) { alert('Ce message est introuvable ou a été supprimé.'); return false; }
+    const H = o.ref.hist || [], k = H.findIndex(x => x.id === hid), h = H[k];
+    if (!h || h.annule) return false;
+    if (k !== histDernierActif(H)) { alert("Annulez d'abord les modifications plus récentes de ce message."); return false; }
+    const ap = (h.ancien || '').length > 200 ? h.ancien.slice(0, 200) + '…' : (h.ancien || '');
+    if (!confirm('Annuler cette modification ?\n\nLe message reprendra son texte précédent :\n« ' + ap + ' »')) return false;
+    const m = moi(), avant = { texte: o.ref.texte, modifie: o.ref.modifie };
+    o.ref.texte = h.ancien; h.annule = { date: Date.now(), par: m ? m.id : '', parNom: m ? m.nom : 'Administrateur' };
+    const j = histDernierActif(H); if (j >= 0) o.ref.modifie = H[j].date; else delete o.ref.modifie;
+    if (!(await sauvegarder())) {
+        o.ref.texte = avant.texte; delete h.annule;
+        if (avant.modifie === undefined) delete o.ref.modifie; else o.ref.modifie = avant.modifie;
+        alert("Annulation impossible : échec de l'enregistrement.\n\nDétail : " + derniereErreur); return false;
+    }
+    majApresEdition(); rafraichirHistMsgs(); return true;
+}
+const _rafLegerV13 = rafraichirAdminLeger;
+rafraichirAdminLeger = function () { _rafLegerV13(); try { rafraichirHistMsgs(); } catch (e) { console.error('Historique des modifications :', e); } };
+
+// ---------- 3. Traçabilité dans l'historique des actions ----------
+surveiller('donsEnregistrerObjectif', 'action', () => `Objectif de collecte modifié : ${$('dons-edit-objectif').value.trim() || 0} FCFA`);
+surveiller('donsStatutLot', 'action', (ids, st) => `Action groupée : ${ids.length} don(s) marqué(s) « ${st === 'recu' ? 'reçu' : 'pas reçu'} »`);
+surveiller('donsSupprimerLot', 'action', ids => `Action groupée : ${ids.length} déclaration(s) de don supprimée(s)`);
+surveiller('sigLot', 'action', (ids, mode) => `Action groupée : ${ids.length} signalement(s) ${mode === 'supprimer' ? 'traité(s), messages supprimés' : 'classé(s) sans suite'}`);
+surveiller('propLot', 'action', (ids, mode) => `Action groupée : ${ids.length} proposition(s) ${mode === 'valider' ? 'validée(s)' : 'rejetée(s)'}`);
+surveiller('annulerModifMsg', 'action', (t, s, m, h) => { const o = trouverMsg(t, s, m), r = o && o.ref, e = r && (r.hist || []).find(x => x.id === h); return `Modification de message annulée (${(r && (r.nom || r.auteurNom)) || '?'}) : « ${_t(e, 'nouveau').slice(0, 60)} »`; });
 </script>
 
 </body>
