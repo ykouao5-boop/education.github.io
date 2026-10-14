@@ -29,6 +29,7 @@
         .tag-principal{background:linear-gradient(135deg,#fbbf24,#f97316);color:#451a03}
         .tag-secondaire{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff}
         .tag-prof{background:linear-gradient(135deg,#10b981,#0d9488);color:#fff}
+        .tag-moderateur{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff}
         .tag-etudiant{background:linear-gradient(135deg,#38bdf8,#3b82f6);color:#fff}
         .tag-sponsor{background:linear-gradient(135deg,#ec4899,#db2777);color:#fff}
         .tag-rendre{background:linear-gradient(135deg,#ef4444,#f97316);color:#fff}
@@ -130,6 +131,7 @@
                 <button onclick="changerEcran('profil')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">👤 Mon profil</button>
                 <button onclick="changerEcran('faq')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">❓ FAQ</button>
                 <button id="nav-btn-maint" onclick="basculerMaintenance()" class="hidden text-left w-full px-3 py-3 text-white bg-red-700 border-none cursor-pointer hover:bg-red-800 rounded-lg font-bold text-base mt-1"></button>
+                <button id="nav-btn-modo" onclick="changerEcran('modo-panel')" class="hidden text-left w-full px-3 py-3 text-white bg-amber-600 border-none cursor-pointer hover:bg-amber-700 rounded-lg font-bold text-base mt-1">🔨 Modération forum</button>
                 <button id="nav-btn-admin" onclick="changerEcran('admin-panel')" class="hidden text-left w-full px-3 py-3 text-white bg-indigo-800 border-none cursor-pointer hover:bg-indigo-900 rounded-lg font-bold text-base mt-1">🛡️ Admin</button>
                 <button onclick="deconnexion()" class="text-left w-full px-3 py-3 text-white bg-red-600 border-none cursor-pointer hover:bg-red-700 rounded-lg font-medium text-base mt-1 mb-2">🚪 Déconnexion</button>
             </div>
@@ -408,6 +410,19 @@
             </div>
         </div>
 
+        <div id="modo-panel" class="screen">
+            <div class="bg-white p-5 sm:p-8 rounded-2xl shadow-md border border-slate-100 space-y-6">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-2xl font-bold text-amber-700">🔨 Panel modérateur</h3>
+                    <button onclick="changerEcran('accueil')" class="bg-slate-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-slate-700 font-medium border-none cursor-pointer">Fermer</button>
+                </div>
+                <p class="text-xs text-slate-500">Les modérateurs peuvent traiter les signalements, supprimer des messages du forum et bannir temporairement (72 h maximum). Toutes ces actions sont visibles dans l'historique des administrateurs.</p>
+                <div><h4 class="font-bold mb-2">🚩 Signalements ouverts</h4><div id="modo-liste-signalements" class="space-y-3"></div></div>
+                <div><h4 class="font-bold mb-2">⏳ Bans temporaires en cours</h4><div id="modo-liste-bans" class="space-y-2"></div></div>
+                <div><h4 class="font-bold mb-2">💬 Derniers sujets du forum</h4><div id="modo-liste-sujets" class="space-y-2"></div></div>
+            </div>
+        </div>
+
         <div id="admin-panel" class="screen">
             <div class="bg-white p-5 sm:p-8 rounded-2xl shadow-md border border-slate-100">
                 <div class="flex justify-between items-center mb-4">
@@ -527,7 +542,7 @@
                     </div>
                     <div class="p-4 border rounded-xl space-y-3">
                         <h4 class="font-bold text-lg">🛡️ Administrateurs <span class="text-xs font-normal text-slate-500">(administrateur principal uniquement)</span></h4>
-                        <p class="text-xs text-slate-500">Clé universelle actuelle : <b class="font-mono">unita@5728</b>. Elle ne sert qu'à créer une clé personnelle ; chaque administrateur se connecte ensuite avec la sienne.</p>
+                        <p class="text-xs text-slate-500">La clé universelle n'est plus affichée ici (elle est connue de vous seul). Elle ne sert qu'à créer une clé personnelle ; chaque administrateur se connecte ensuite avec la sienne.</p>
                         <div id="admin-liste-admins" class="space-y-2"></div>
                     </div>
                     <div class="p-4 border rounded-xl space-y-3">
@@ -680,8 +695,33 @@
     </footer>
 
     <script>
-        const CLE_ADMIN_PRINCIPAL = "kkyao@2804";
-        const CLE_ADMIN_UNIVERSELLE = "unita@5728";
+        // Les clés ne sont plus écrites en clair : on ne garde que leur empreinte SHA-256.
+        const HASH_ADMIN_PRINCIPAL = "d707e949f7c32b6db4df04c6ee340cac312d1daab4e581e964450a94b5118dc3";
+        const HASH_ADMIN_UNIVERSELLE = "f7df399ebf58bee87370c84831ff9541044fce9252e2b1197e6432dbb764afa5";
+        async function sha256Hex(t) {
+            const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+            return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+        }
+        // Blocage temporaire : 5 erreurs => 15 min, puis 30, 60... (stocké sur l'appareil)
+        const ADM_MAX_ESSAIS = 5, ADM_BLOCAGE_MIN = 15, ADM_INACTIVITE_MIN = 15;
+        function admEtatEssais() { return lireStockage('localStorage', 'adm_essais', { n: 0, until: 0, paliers: 0 }); }
+        function admSauverEssais(e) { try { localStorage.setItem('adm_essais', JSON.stringify(e)); } catch (x) { } }
+        function admMinutesBloque() { const e = admEtatEssais(); return e.until > Date.now() ? Math.ceil((e.until - Date.now()) / 60000) : 0; }
+        function admEchec() {
+            const e = admEtatEssais(); e.n++;
+            if (e.n >= ADM_MAX_ESSAIS) { e.paliers = (e.paliers || 0) + 1; e.until = Date.now() + ADM_BLOCAGE_MIN * 60000 * Math.pow(2, e.paliers - 1); e.n = 0; }
+            admSauverEssais(e); return e;
+        }
+        function admSucces() { admSauverEssais({ n: 0, until: 0, paliers: 0 }); }
+        // Déconnexion automatique de l'admin après inactivité
+        let admDernierClic = Date.now();
+        ['click', 'keydown', 'touchstart', 'scroll', 'mousemove'].forEach(ev => window.addEventListener(ev, () => { admDernierClic = Date.now(); }, { passive: true }));
+        setInterval(() => {
+            if (estAdmin && Date.now() - admDernierClic > ADM_INACTIVITE_MIN * 60000) {
+                alert("Session administrateur fermée après " + ADM_INACTIVITE_MIN + " minutes d'inactivité.");
+                deconnexion();
+            }
+        }, 15000);
         let modeAuthActif = 'connexion';
 
         // Lecture sécurisée du stockage (évite le plantage si le navigateur le bloque)
@@ -841,6 +881,7 @@
                 estAdmin = false; roleAdmin = null; adminId = null;
                 ['est_admin', 'role_admin', 'admin_id', 'admin_nom'].forEach(k => { try { sessionStorage.removeItem(k); } catch (e) {} });
             }
+            if (estAdmin && adminRec()) roleAdmin = adminRec().role;
             if (utilisateurActif && !donneesSite.utilisateurs.some(u => u.id === utilisateurActif.id && u.code === utilisateurActif.code)) {
                 utilisateurActif = null;
                 try { sessionStorage.removeItem('utilisateur_actif'); } catch (e) {}
@@ -966,17 +1007,22 @@
         async function verifierAdminPortail() {
             const code = document.getElementById('admin-shortcut-code').value.trim();
             if (!code) return alert("Saisissez un code administrateur.");
+            if (admMinutesBloque()) return alert("Accès administrateur bloqué (trop d'erreurs). Réessayez dans " + admMinutesBloque() + " min.");
             let baseOk = true;
             try { await chargerDonnees(true); } catch (e) { console.warn(e); baseOk = false; }
             if (!baseOk && !donneesSite.admins.length) return alert("Connexion à la base de données impossible : réessayez dans un instant.");
-            if (code === CLE_ADMIN_PRINCIPAL) {
+            const h = await sha256Hex(code);
+            if (h === HASH_ADMIN_PRINCIPAL) {
+                admSucces();
                 const rec = donneesSite.admins.find(a => a.role === 'principal');
                 return rec ? connecterAdmin(rec) : ouvrirInscriptionAdmin('principal');
             }
-            if (code === CLE_ADMIN_UNIVERSELLE) return ouvrirInscriptionAdmin('secondaire');
+            if (h === HASH_ADMIN_UNIVERSELLE) { admSucces(); return ouvrirInscriptionAdmin('secondaire'); }
             const perso = donneesSite.admins.find(a => a.cle && a.cle === code);
-            if (perso) return connecterAdmin(perso);
-            alert("Code administrateur incorrect.");
+            if (perso) { admSucces(); return connecterAdmin(perso); }
+            const e = admEchec();
+            if (admMinutesBloque()) return alert("Trop d'erreurs. Accès administrateur bloqué pendant " + admMinutesBloque() + " min.");
+            alert("Code administrateur incorrect. Essais restants : " + (ADM_MAX_ESSAIS - e.n));
         }
 
         function deconnexion() {
@@ -1009,7 +1055,9 @@
 
         function changerEcran(idEcran) {
             fermerMenu();
+            try { majNavModo(); } catch (e) { }
             if (idEcran === 'admin-panel' && !estAdmin) idEcran = 'accueil';
+            if (idEcran === 'modo-panel' && !peutModerer()) idEcran = 'accueil';
             if (idEcran === 'espace-prof' && !peutEspaceProf()) idEcran = 'accueil';
             if (idEcran === 'eval-detail' && !evalDetailId) idEcran = 'evaluations';
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
@@ -1018,6 +1066,7 @@
             window.scrollTo(0, 0);
             rafraichirAffichagePublic();
             if (idEcran === 'admin-panel') rafraichirAdmin();
+            if (idEcran === 'modo-panel') rafraichirModo();
             if (idEcran === 'espace-prof') epOuvrir();
             rechargerEnFond(idEcran);
         }
@@ -1113,6 +1162,7 @@
         }
 
         function rafraichirAffichagePublic() {
+            try { majNavModo(); } catch (e) { }
             document.getElementById('liste-pdfs-public').innerHTML = grouper('revisions', donneesSite.pdfs, (p, idx) => `
                 <div class="p-4 bg-blue-50 border border-blue-200 rounded-xl flex justify-between items-center gap-2 shadow-sm">
                     <span class="font-medium text-blue-900">${esc(p.titre)}${descr(p)}</span>
@@ -1532,7 +1582,8 @@ const TAGS = {
     secondaire: { i: '🛡️', l: 'Admin' },
     prof:       { i: '🎓', l: 'Prof' },
     etudiant:   { i: '📘', l: 'Étudiant' },
-    sponsor:    { i: '💎', l: 'Sponsor' }
+    sponsor:    { i: '💎', l: 'Sponsor' },
+    moderateur: { i: '🔨', l: 'Modérateur' }
 };
 const ECRANS = { accueil: '🏠 Accueil', cours: '🎓 Cours', revisions: '📚 Révisions', evaluations: '📝 Évaluations', exercices: '💡 Exercices', propositions: '📤 Propositions', forum: '💬 Forum', dons: '❤️ Dons' };
 const MSG_MAINT = "Le site est actuellement en maintenance. Nous revenons très vite.";
@@ -1545,7 +1596,7 @@ const FAQ_DEFAUT = [
     ['Comment proposer un exercice, une révision ou une photo ?', "Dans « Propositions », choisissez le type, puis la sous-catégorie. Un administrateur vérifie avant publication ; suivez l'état dans « Mon suivi ».", 'propositions'],
     ["J'ai oublié mon code de sécurité, que faire ?", "Sur la page de connexion, cliquez sur « Code de sécurité oublié ? » ou contactez l'assistance via WhatsApp.", 'accueil'],
     ['Comment participer au forum ?', "Dans « Forum », créez un sujet ou répondez à un sujet existant. Il n'y a aucune évaluation. Utilisez 🚩 Signaler en cas de message inapproprié.", 'forum'],
-    ['Que signifient les tags ?', "👑 Admin principal, 🛡️ Admin, 🎓 Prof, 📘 Étudiant. Seuls les administrateurs peuvent les attribuer. Cliquez sur un nom pour voir le profil.", 'forum'],
+    ['Que signifient les tags ?', "👑 Admin principal, 🛡️ Admin, 🔨 Modérateur, 🎓 Prof, 📘 Étudiant. Seuls les administrateurs peuvent les attribuer. Cliquez sur un nom pour voir le profil.", 'forum'],
     ['Que se passe-t-il si je suis banni du forum ?', "Vous pouvez toujours lire le forum, mais plus écrire. Le ban peut être temporaire (durée en heures) ou définitif jusqu'à décision d'un administrateur.", 'forum']
 ].map((f, i) => ({ _id: uid(i + 1, 1), q: f[0], r: f[1], ecran: f[2] }));
 
@@ -1567,6 +1618,9 @@ const tagDe = aid => {
     const t = u.tag === undefined ? 'etudiant' : u.tag;
     return ['principal', 'secondaire'].includes(t) ? '' : t;
 };
+const estModo = () => !estAdmin && !!utilisateurActif && tagDe(utilisateurActif.id) === 'moderateur';
+const peutModerer = () => estAdmin || estModo();
+function majNavModo() { const b = document.getElementById('nav-btn-modo'); if (b) b.classList.toggle('hidden', !peutModerer()); }
 const tagHtml = t => TAGS[t] ? `<span class="tag tag-${t}">${TAGS[t].i} ${TAGS[t].l}</span>` : '';
 const nomDe = (aid, snap) => nomComplet(recDe(aid)) || snap;
 const auteurBtn = (aid, nom) => `${avatar(aid, nomDe(aid, nom))}<button data-a="${esc(aid)}" onclick="event.stopPropagation();ouvrirProfil(this.dataset.a)" class="font-bold text-slate-900 hover:text-blue-700 bg-transparent border-none cursor-pointer p-0 text-sm">${esc(nomDe(aid, nom))}</button> ${tagsHtml(aid)}`;
@@ -1669,7 +1723,7 @@ function rafraichirForum() {
     let s = donneesSite.sujets.find(x => x._id === forumOuvert);
     if (!s) forumOuvert = null;
     const m = moi(), b = monBan();
-    const sig = JSON.stringify([donneesSite.sujets, donneesSite.utilisateurs.map(u => [u.id, u.nom, u.prenoms, u.photo, u.tag, u.donateur, u.ban]), donneesSite.admins.map(a => [a._id, a.nom, a.prenoms, a.photo, a.role]), forumOuvert, estAdmin, !!b, m && m.id, !!P().forumSourdine]);
+    const sig = JSON.stringify([donneesSite.sujets, donneesSite.utilisateurs.map(u => [u.id, u.nom, u.prenoms, u.photo, u.tag, u.donateur, u.ban]), donneesSite.admins.map(a => [a._id, a.nom, a.prenoms, a.photo, a.role]), forumOuvert, estAdmin, peutModerer(), !!b, m && m.id, !!P().forumSourdine]);
     if (sig === sigForum) return; sigForum = sig;
     const rep = $('forum-reply'), saved = rep ? rep.value : '', actif = rep && document.activeElement === rep;
     $('forum-ban-info').innerHTML = b ? `<div class="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800">🔨 Vous êtes banni du forum ${txtBan(b)}. Vous pouvez lire, mais plus écrire.</div>` : '';
@@ -1706,8 +1760,8 @@ function rafraichirForum() {
                     <div class="flex items-center gap-1.5 flex-wrap">${auteurBtn(p.aid, p.nom)}<span class="text-xs text-slate-400">${fmt(p.date)}</span></div>
                     <div class="flex gap-1">
                         ${m && p.aid === m.id && !b && !muet && !p.supprime ? bt('bg-blue-100 text-blue-800 hover:bg-blue-200', '✏️ Modifier', `editMsg('forum','${s._id}','${p.id}')`) : ''}${m && p.aid !== m.id && !p.supprime ? bt('bg-amber-100 text-amber-800 hover:bg-amber-200', '🚩 Signaler', `forumSignaler('${s._id}','${p.id}')`) : ''}
-                        ${!b && peutSupprimerMsg(p) && (!estAdmin || p.id === '_main') ? bt('bg-slate-200 text-slate-700 hover:bg-slate-300', '🗑️ Supprimer', `supprimerMonMessage('forum','${s._id}','${p.id}')`) : ''}
-                        ${estAdmin && p.id !== '_main' ? bt('bg-red-600 text-white', '🗑️', `forumSupprimerMsg('${s._id}','${p.id}')`) : ''}
+                        ${!b && peutSupprimerMsg(p) && (!peutModerer() || p.id === '_main') ? bt('bg-slate-200 text-slate-700 hover:bg-slate-300', '🗑️ Supprimer', `supprimerMonMessage('forum','${s._id}','${p.id}')`) : ''}
+                        ${peutModerer() && p.id !== '_main' ? bt('bg-red-600 text-white', '🗑️', `forumSupprimerMsg('${s._id}','${p.id}')`) : ''}
                     </div>
                 </div>
                 <p class="text-sm whitespace-pre-wrap break-words">${texteAff(p)}</p>${modifieHtml(p)}
@@ -1765,7 +1819,7 @@ async function forumSupprimer(sid) {
     await sauvegarderOuAlerter(); rafraichirForum(); rafraichirSignalements();
 }
 async function forumSupprimerMsg(sid, mid) {
-    const s = donneesSite.sujets.find(x => x._id === sid); if (!estAdmin || !s || !confirm('Supprimer ce message ?')) return;
+    const s = donneesSite.sujets.find(x => x._id === sid); if (!peutModerer() || !s || !confirm('Supprimer ce message ?')) return;
     s.messages = s.messages.filter(x => x.id !== mid);
     await sauvegarderOuAlerter(); rafraichirForum();
 }
@@ -1791,13 +1845,21 @@ function ouvrirProfil(aid) {
         if (b) h += `<div class="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800">🔨 Banni ${txtBan(b)}${estAdmin ? `<br><span class="text-xs">Par ${esc(b.parNom)}${b.motif ? ' · ' + esc(b.motif) : ''}</span>` : ''}</div>`;
         if (estAdmin) {
             const oTag = (t, l) => `<button ${du} onclick="profilTag(this.dataset.u,'${t}')" class="px-2.5 py-1 rounded-lg text-xs font-bold border cursor-pointer ${tagDe(u.id) === t ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700'}">${l}</button>`;
-            h += `<div class="space-y-2"><h4 class="font-bold text-sm">🏷️ Tag</h4><div class="flex gap-1.5 flex-wrap">${oTag('etudiant', '📘 Étudiant')}${oTag('prof', '🎓 Prof')}${oTag('sponsor', '💎 Sponsor')}${oTag('', 'Retirer')}</div></div>`;
+            h += `<div class="space-y-2"><h4 class="font-bold text-sm">🏷️ Tag</h4><div class="flex gap-1.5 flex-wrap">${oTag('etudiant', '📘 Étudiant')}${oTag('prof', '🎓 Prof')}${oTag('sponsor', '💎 Sponsor')}${oTag('moderateur', '🔨 Modérateur')}${oTag('', 'Retirer')}</div></div>`;
             if (estPrincipal()) h += `<div class="space-y-2"><h4 class="font-bold text-sm">💝 Tag Donateur <span class="text-xs font-normal text-slate-500">(en plus du tag ci-dessus)</span></h4><button ${du} onclick="profilDonateur(this.dataset.u)" class="w-full ${u.donateur ? 'bg-slate-600' : 'bg-rose-600'} text-white py-2 rounded-xl text-sm font-bold border-none cursor-pointer">${u.donateur ? 'Retirer le tag Donateur' : 'Attribuer le tag Donateur'}</button></div>`;
             h += b
                 ? `<button ${du} onclick="profilLever(this.dataset.u)" class="w-full bg-emerald-600 text-white py-2 rounded-xl text-sm font-bold border-none cursor-pointer">Lever la sanction</button>`
                 : `<div class="space-y-2"><h4 class="font-bold text-sm">🔨 Bannir du forum</h4>
                     <select id="pb-type" onchange="$('pb-h-box').classList.toggle('hidden',this.value!=='temp')" class="w-full p-2 border rounded text-sm bg-white"><option value="temp">Temporaire</option><option value="def">Définitif</option></select>
                     <div id="pb-h-box"><input id="pb-h" type="number" min="1" value="24" class="w-full p-2 border rounded text-sm bg-white"><span class="text-xs text-slate-500">Durée en heures avant fin du blocage</span></div>
+                    <input id="pb-motif" placeholder="Motif (optionnel)" class="w-full p-2 border rounded text-sm bg-white">
+                    <button ${du} onclick="profilBannir(this.dataset.u)" class="w-full bg-red-600 text-white py-2 rounded-xl text-sm font-bold border-none cursor-pointer">Bannir</button></div>`;
+        } else if (estModo() && tagDe(u.id) !== 'moderateur') {
+            h += b
+                ? (b.type === 'temp' ? `<button ${du} onclick="profilLever(this.dataset.u)" class="w-full bg-emerald-600 text-white py-2 rounded-xl text-sm font-bold border-none cursor-pointer">Lever le ban temporaire</button>` : '')
+                : `<div class="space-y-2"><h4 class="font-bold text-sm">🔨 Ban temporaire (modérateur)</h4>
+                    <select id="pb-type" class="w-full p-2 border rounded text-sm bg-white"><option value="temp">Temporaire</option></select>
+                    <input id="pb-h" type="number" min="1" max="72" value="24" class="w-full p-2 border rounded text-sm bg-white"><span class="text-xs text-slate-500">Durée en heures (72 h maximum)</span>
                     <input id="pb-motif" placeholder="Motif (optionnel)" class="w-full p-2 border rounded text-sm bg-white">
                     <button ${du} onclick="profilBannir(this.dataset.u)" class="w-full bg-red-600 text-white py-2 rounded-xl text-sm font-bold border-none cursor-pointer">Bannir</button></div>`;
         }
@@ -1812,14 +1874,20 @@ async function profilTag(id, tag) {
     await sauvegarderOuAlerter(); apresProfil(id);
 }
 async function profilBannir(id) {
-    const u = userParId(id); if (!estAdmin || !u) return;
-    const type = $('pb-type').value; let fin = null;
-    if (type === 'temp') { const h = parseFloat($('pb-h').value); if (!(h > 0)) return alert('Indiquez la durée en heures.'); fin = Date.now() + h * 3600000; }
-    u.ban = { type, fin, par: identAdmin(), parNom: adminNom || 'Admin', motif: $('pb-motif').value.trim(), date: Date.now() };
+    const u = userParId(id); if (!peutModerer() || !u) return;
+    if (!estAdmin && tagDe(id) === 'moderateur') return;
+    const type = estAdmin ? $('pb-type').value : 'temp'; let fin = null;
+    if (type === 'temp') {
+        const h = parseFloat($('pb-h').value); if (!(h > 0)) return alert('Indiquez la durée en heures.');
+        if (!estAdmin && h > 72) return alert('Un modérateur peut bannir au maximum 72 heures.');
+        fin = Date.now() + h * 3600000;
+    }
+    u.ban = { type, fin, par: estAdmin ? identAdmin() : moi().id, parNom: estAdmin ? (adminNom || 'Admin') : moi().nom, motif: $('pb-motif').value.trim(), date: Date.now() };
     await sauvegarderOuAlerter(); apresProfil(id);
 }
 async function profilLever(id) {
-    const u = userParId(id); if (!estAdmin || !u || !u.ban) return;
+    const u = userParId(id); if (!peutModerer() || !u || !u.ban) return;
+    if (!estAdmin && u.ban.type !== 'temp') return;
     if (u.ban.type === 'def' && !estPrincipal() && u.ban.par !== identAdmin()) {
         if (donneesSite.demandesBan.some(d => d.userId === id && d.statut === 'attente')) return alert('Une demande est déjà en attente.');
         donneesSite.demandesBan.push({ userId: id, userNom: u.nom, demandeur: identAdmin(), demandeurNom: adminNom, approbateur: u.ban.par, approbateurNom: u.ban.parNom, statut: 'attente', date: Date.now() });
@@ -1866,17 +1934,24 @@ function rafraichirUtilisateursAdmin() {
 
 function rafraichirSignalements() {
     const L = donneesSite.signalements.filter(x => x.statut === 'ouvert');
-    $('admin-liste-signalements').innerHTML = L.map(r => `
+    const html = L.map(r => `
         <div class="p-3 bg-white border rounded-lg text-sm space-y-1">
             <div class="text-xs text-slate-500">🚩 par ${esc(r.par)} · ${fmt(r.date)} · sujet « ${esc(r.sujetTitre)} »</div>
             <div><b>${esc(r.auteurNom)}</b> : ${esc(r.extrait)}</div>
             <div class="text-xs text-red-700">Motif : ${esc(r.motif)}</div>
             <div class="flex gap-1 flex-wrap pt-1"><button data-a="${esc(r.auteurId)}" onclick="ouvrirProfil(this.dataset.a)" class="bg-indigo-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer">Voir le profil</button>${bt('bg-red-600 text-white', 'Supprimer le message', `sigSupprimer('${r._id}')`)}${bt('bg-slate-200 text-slate-800', 'Classer', `sigClasser('${r._id}')`)}</div>
         </div>`).join('') || "<p class='text-sm text-slate-500 italic'>Aucun signalement.</p>";
+    ['admin-liste-signalements', 'modo-liste-signalements'].forEach(i => { const e = $(i); if (e) e.innerHTML = html; });
 }
-async function sigClasser(id) { const r = donneesSite.signalements.find(x => x._id === id); if (!r) return; r.statut = 'traité'; await sauvegarderOuAlerter(); rafraichirSignalements(); }
+function rafraichirModo() {
+    rafraichirSignalements();
+    const bans = donneesSite.utilisateurs.filter(u => banActif(u) && u.ban.type === 'temp');
+    $('modo-liste-bans').innerHTML = bans.map(u => `<div class="p-3 bg-white border rounded-lg text-sm flex justify-between items-center gap-2 flex-wrap"><div><b>${esc(u.nom)}</b><div class="text-xs text-slate-500">Banni ${txtBan(u.ban)} · par ${esc(u.ban.parNom)}${u.ban.motif ? ' · ' + esc(u.ban.motif) : ''}</div></div><button data-u="${esc(u.id)}" onclick="profilLever(this.dataset.u).then(rafraichirModo)" class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer">Lever</button></div>`).join('') || "<p class='text-sm text-slate-500 italic'>Aucun ban temporaire.</p>";
+    $('modo-liste-sujets').innerHTML = [...donneesSite.sujets].sort((a, b) => (b.date || 0) - (a.date || 0)).slice(0, 15).map(x => `<div class="p-3 bg-slate-50 border rounded-lg text-sm flex justify-between items-center gap-2"><span class="min-w-0 truncate">${esc(x.titre || '')}</span><button onclick="forumOuvert='${x._id}';changerEcran('forum')" class="bg-blue-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer shrink-0">Ouvrir</button></div>`).join('') || "<p class='text-sm text-slate-500 italic'>Aucun sujet.</p>";
+}
+async function sigClasser(id) { const r = donneesSite.signalements.find(x => x._id === id); if (!r || !peutModerer()) return; r.statut = 'traité'; await sauvegarderOuAlerter(); rafraichirSignalements(); }
 async function sigSupprimer(id) {
-    const r = donneesSite.signalements.find(x => x._id === id); if (!r || !estAdmin) return;
+    const r = donneesSite.signalements.find(x => x._id === id); if (!r || !peutModerer()) return;
     const s = donneesSite.sujets.find(x => x._id === r.sujetId);
     if (s) {
         if (r.msgId === '_main') { if (!confirm('Ce message est le début du sujet : supprimer tout le sujet ?')) return; donneesSite.sujets = donneesSite.sujets.filter(x => x._id !== s._id); }
@@ -3161,7 +3236,7 @@ sauvegarder = function () {
 function acteurJournal() {
     const m = moi(); if (!m) return null;
     const role = estAdmin ? roleAdmin : tagDe(m.id);
-    return (estAdmin || role === 'prof') ? { aid: m.id, nom: m.nom, role } : null;
+    return (estAdmin || role === 'prof' || role === 'moderateur') ? { aid: m.id, nom: m.nom, role } : null;
 }
 async function journaliser(act, action, cat) {
     if (!act || !action) return;
