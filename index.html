@@ -107,6 +107,7 @@
             <div id="portail-maint-info" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800 text-center font-semibold">🚧 Le site est en maintenance : seuls les administrateurs peuvent se connecter pour le moment.</div>
 
             <div class="pt-4 border-t text-center">
+                <input type="text" id="admin-shortcut-id" autocomplete="off" autocapitalize="none" placeholder="Identifiant administrateur" class="w-full p-2.5 border rounded-xl bg-slate-100 text-xs mb-2">
                 <input type="password" id="admin-shortcut-code" onkeydown="if(event.key==='Enter'){event.preventDefault();verifierAdminPortail();}" autocomplete="off" placeholder="Code administrateur" class="w-full p-2.5 border rounded-xl bg-slate-100 text-xs mb-2 text-center outline-none focus:ring-2 focus:ring-indigo-500">
                 <button type="button" onclick="verifierAdminPortail()" class="w-full bg-indigo-800 text-white py-2 rounded-xl text-xs font-semibold hover:bg-indigo-900 transition">Accès administrateur</button>
                 <button id="portail-retour-maint" type="button" onclick="fermerPortailAdmin()" class="hidden mt-3 text-xs text-slate-500 underline bg-transparent border-none cursor-pointer">← Retour à la page de maintenance</button>
@@ -804,12 +805,18 @@
     </footer>
 
     <script>
-        // Les clés ne sont plus écrites en clair : on ne garde que leur empreinte SHA-256.
-        const HASH_ADMIN_PRINCIPAL = "d707e949f7c32b6db4df04c6ee340cac312d1daab4e581e964450a94b5118dc3";
-        const HASH_ADMIN_UNIVERSELLE = "f7df399ebf58bee87370c84831ff9541044fce9252e2b1197e6432dbb764afa5";
+        // Plus aucun code ni clé dans la page : la connexion est vérifiée par Supabase Auth (côté serveur).
+        // Le « code » saisi sert de mot de passe ; le préfixe ci-dessous n'est pas un secret, il garantit seulement
+        // la longueur minimale (6) exigée par Supabase pour les codes courts. Même valeur dans les scripts SQL.
+        const PREFIXE_MDP = 'logita:';
+        const mdpDe = code => PREFIXE_MDP + code;
         async function sha256Hex(t) {
             const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
             return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+        }
+        // Adresse technique d'un compte (jamais affichée) : u-… pour un membre, a-… pour un administrateur.
+        async function emailAuth(type, identifiant) {
+            return type + '-' + (await sha256Hex(identifiant)).slice(0, 32) + '@site.local';
         }
         // Blocage temporaire : 5 erreurs => 15 min, puis 30, 60... (stocké sur l'appareil)
         const ADM_MAX_ESSAIS = 5, ADM_BLOCAGE_MIN = 15, ADM_INACTIVITE_MIN = 15;
@@ -868,8 +875,27 @@
         const TABLE = "ykouao5";
         const BUCKET = "fichiers";
         if (!window.supabase) { alert("La bibliothèque Supabase n'a pas pu se charger. Vérifiez votre connexion internet puis rechargez la page."); }
-        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Session de connexion gardée par onglet (comme avant) : elle disparaît à la fermeture de l'onglet.
+        let stockageAuth; try { stockageAuth = window.sessionStorage; stockageAuth.getItem('t'); } catch (e) { stockageAuth = undefined; }
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { storage: stockageAuth, persistSession: !!stockageAuth, autoRefreshToken: true } });
         let derniereErreur = '';
+        let authUser = null;   // compte Supabase connecté (null = visiteur)
+        // Rôle et identité viennent du jeton signé par Supabase (app_metadata), jamais d'une donnée modifiable par l'utilisateur.
+        function appliquerIdentite() {
+            const meta = (authUser && authUser.app_metadata) || {};
+            if (!authUser) { estAdmin = false; roleAdmin = null; adminId = null; utilisateurActif = null; return; }
+            if (meta.role === 'principal' || meta.role === 'secondaire') {
+                estAdmin = true; roleAdmin = meta.role; adminId = meta.admin_rec; utilisateurActif = null;
+            } else {
+                estAdmin = false; roleAdmin = null; adminId = null;
+                utilisateurActif = donneesSite.utilisateurs.find(u => u.id === meta.app_id) || null;
+            }
+        }
+        async function restaurerSession() {
+            try { const { data } = await sb.auth.getSession(); authUser = (data && data.session && data.session.user) || null; }
+            catch (e) { authUser = null; }
+        }
+        sb.auth.onAuthStateChange((ev, session) => { authUser = (session && session.user) || null; });
 
         const COLLECTIONS = Object.keys(DONNEES_PAR_DEFAUT);
 
@@ -905,7 +931,7 @@
         async function chargerDonnees(forcer = true) {
             const v0 = versionLocale, r0 = versionRT;
             const data = [];
-            for (let from = 0; ; from += 1000) {   // Supabase renvoie au plus 1000 lignes par requête
+            for (let from = 0; authUser; from += 1000) {   // Supabase renvoie au plus 1000 lignes par requête (visiteur : base fermée, rien à lire)
                 const { data: lot, error } = await sb.from(TABLE).select('id,collection,data').order('seq', { ascending: true }).range(from, from + 999);
                 if (error) throw error;
                 data.push(...lot);
@@ -919,13 +945,27 @@
                 if (r.collection === 'developpeur') nouveau.developpeur = Object.assign({ photo: '', nom: '', prenom: '', role: '' }, it);
                 else if (Array.isArray(nouveau[r.collection])) nouveau[r.collection].push(it);
             });
+            if (!authUser) {
+                // Visiteur non connecté : la base est fermée. Seul l'état de maintenance est public (table etat_site).
+                try {
+                    const { data: es } = await sb.from('etat_site').select('maintenance,inscription').eq('id', 1).maybeSingle();
+                    if (es && es.maintenance) {
+                        const ins = es.inscription || {};
+                        nouveau.parametres = [{ _id: uid(1, 2), maintenance: es.maintenance, faqInit: true,
+                            invitation: { actif: !!ins.invitation, codes: [] }, charte: ins.charte || undefined }];
+                    }
+                } catch (e) { console.warn('État du site illisible :', e); }
+                donneesSite = nouveau; instantane = {};
+                return true;
+            }
             const premiereFois = data.length === 0;
-            if (premiereFois) {
+            const peutAmorcer = premiereFois && authUser.app_metadata && ['principal', 'secondaire'].includes(authUser.app_metadata.role);
+            if (peutAmorcer) {
                 nouveau.evaluations = DONNEES_PAR_DEFAUT.evaluations.map((e, i) => ({ ...e, _id: '00000000-0000-0000-0000-00000000000' + (i + 1) }));
             }
             donneesSite = nouveau;
             instantane = {};
-            if (!premiereFois) lignes(nouveau).forEach(l => instantane[l.id] = JSON.stringify(l.data));
+            if (!peutAmorcer) lignes(nouveau).forEach(l => instantane[l.id] = JSON.stringify(l.data));
             else await sauvegarder();
             return true;
         }
@@ -939,10 +979,11 @@
             if (idEcran === 'admin-panel' && estAdmin) rafraichirAdmin();
         }
 
-        let utilisateurActif = lireStockage('sessionStorage', 'utilisateur_actif', null);
-        let estAdmin = lireStockage('sessionStorage', 'est_admin', false);
-        let roleAdmin = lireStockage('sessionStorage', 'role_admin', null);
-        let adminId = lireStockage('sessionStorage', 'admin_id', null);
+        // Identité : déduite de la session Supabase (voir appliquerIdentite), jamais relue depuis le navigateur.
+        let utilisateurActif = null;
+        let estAdmin = false;
+        let roleAdmin = null;
+        let adminId = null;
 
         function estPrincipal() { return estAdmin && roleAdmin === 'principal'; }
 
@@ -955,28 +996,50 @@
             return p.finally(() => { synchroEnCours--; });
         }
 
+        const estRefus = e => !!e && (e.code === '42501' || /row-level security|permission denied|refus/i.test(e.message || ''));
         async function synchroniser() {
             try {
+                if (!authUser) throw new Error("Connexion requise pour enregistrer.");
                 const courant = lignes(donneesSite);
                 const ids = new Set(courant.map(l => l.id));
                 const aEcrire = courant.filter(l => instantane[l.id] !== JSON.stringify(l.data));
                 const aSupprimer = Object.keys(instantane).filter(id => !ids.has(id));
-                for (let i = 0; i < aEcrire.length; i += 50) {
-                    const lot = aEcrire.slice(i, i + 50);
-                    const { error } = await sb.from(TABLE).upsert(lot, { onConflict: 'id' });
+                const nouveaux = aEcrire.filter(l => !(l.id in instantane));
+                const modifies = aEcrire.filter(l => l.id in instantane);
+                // 1. Nouvelles lignes : insertion simple (jamais d'upsert : il contournerait les règles par ligne)
+                for (let i = 0; i < nouveaux.length; i += 50) {
+                    const lot = nouveaux.slice(i, i + 50);
+                    const { error } = await sb.from(TABLE).insert(lot);
                     if (error) throw error;
                     lot.forEach(l => instantane[l.id] = JSON.stringify(l.data));
                 }
+                // 2. Lignes modifiées : mise à jour ligne par ligne (la base vérifie chaque droit)
+                for (let i = 0; i < modifies.length; i += 10) {
+                    const lot = modifies.slice(i, i + 10);
+                    const res = await Promise.all(lot.map(l => sb.from(TABLE).update({ data: l.data }).eq('id', l.id).select('id')));
+                    res.forEach((r, k) => {
+                        if (r.error) throw r.error;
+                        if (!r.data || !r.data.length) { const e = new Error("Modification refusée : vous n'avez pas le droit de modifier cet élément."); e.code = '42501'; throw e; }
+                        instantane[lot[k].id] = JSON.stringify(lot[k].data);
+                    });
+                }
+                // 3. Suppressions
                 for (let i = 0; i < aSupprimer.length; i += 50) {
                     const lot = aSupprimer.slice(i, i + 50);
-                    const { error } = await sb.from(TABLE).delete().in('id', lot);
+                    const { data: del, error } = await sb.from(TABLE).delete().in('id', lot).select('id');
                     if (error) throw error;
+                    if (!estAdmin && (!del || del.length < lot.length)) { const e = new Error("Suppression refusée : vous n'avez pas le droit de supprimer cet élément."); e.code = '42501'; throw e; }
                     lot.forEach(id => delete instantane[id]);
                 }
                 return true;
             } catch (e) {
                 console.error("Échec de la sauvegarde Supabase :", e);
                 derniereErreur = (e && (e.message || e.error_description || e.details)) || String(e);
+                if (estRefus(e)) {
+                    derniereErreur = "Action refusée par les règles de sécurité (" + derniereErreur + ")";
+                    // On remet l'affichage d'équerre avec la base pour ne pas retenter indéfiniment la même modification refusée
+                    try { await chargerDonnees(true); } catch (x) { }
+                }
                 return false;
             }
         }
@@ -986,17 +1049,15 @@
         }
 
         function verifierSession() {
-            if (estAdmin && donneesSite.admins.length && !adminRec()) {
-                estAdmin = false; roleAdmin = null; adminId = null;
-                ['est_admin', 'role_admin', 'admin_id', 'admin_nom'].forEach(k => { try { sessionStorage.removeItem(k); } catch (e) {} });
+            appliquerIdentite();
+            if (authUser) {
+                // Compte supprimé côté base alors qu'une session existe encore : on déconnecte proprement
+                const supprime = estAdmin ? (donneesSite.admins.length && !adminRec()) : (donneesSite.utilisateurs.length && !utilisateurActif);
+                if (supprime) { try { sb.auth.signOut(); } catch (e) { } authUser = null; appliquerIdentite(); }
             }
             if (estAdmin && adminRec()) roleAdmin = adminRec().role;
-            if (utilisateurActif && !donneesSite.utilisateurs.some(u => u.id === utilisateurActif.id && u.code === utilisateurActif.code)) {
-                utilisateurActif = null;
-                try { sessionStorage.removeItem('utilisateur_actif'); } catch (e) {}
-            }
             if (utilisateurActif || estAdmin) {
-                ['auth-code', 'admin-shortcut-code'].forEach(id => document.getElementById(id).value = '');
+                ['auth-code', 'admin-shortcut-code', 'admin-shortcut-id'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
                 document.getElementById('portail-connexion').classList.add('hidden');
                 if (estAdmin) {
                     document.getElementById('welcome-user-title').textContent = roleAdmin === 'principal' ? 'Bienvenue, Administrateur Principal' : 'Bienvenue, Administrateur';
@@ -1057,6 +1118,17 @@
             window.open("https://wa.me/2250152801988?text=" + encodeURIComponent(message), "_blank");
         }
 
+        const MSG_AUTH_LIMITE = "Trop de tentatives de connexion. Patientez quelques minutes avant de réessayer.";
+        function msgErreurAuth(error, defaut) {
+            const m = (error && (error.message || '')) || '';
+            if (/rate limit|too many|over_.*_rate/i.test(m) || (error && error.status === 429)) return MSG_AUTH_LIMITE;
+            if (/invalid login|invalid credentials/i.test(m)) return defaut;
+            if (/already registered|already been registered|exists/i.test(m)) return "Ce compte existe déjà (identifiant déjà utilisé). Veuillez vous connecter.";
+            if (/database error|saving new user/i.test(m)) return "Inscription refusée : identifiant ou numéro de téléphone déjà utilisé, ou informations invalides.";
+            if (/password/i.test(m)) return "Code de sécurité invalide (trop court).";
+            return (m || defaut);
+        }
+
         async function gererSoumissionAuth(e) {
             e.preventDefault();
             const id = document.getElementById('auth-id').value.trim();
@@ -1065,82 +1137,83 @@
             if (!id || !code) {
                 return alert("Veuillez remplir tous les champs obligatoires.");
             }
-
-            if (modeAuthActif === 'connexion') {
-                let user = donneesSite.utilisateurs.find(u => u.id === id);
-                if (user) {
-                    if (user.code === code) {
-                        utilisateurActif = user;
-                        estAdmin = false;
-                        ecrireSession('utilisateur_actif', JSON.stringify(utilisateurActif));
-                        ecrireSession('est_admin', JSON.stringify(false));
-                        verifierSession();
-                    } else {
-                        alert("Code de sécurité incorrect.");
+            const btn = document.getElementById('btn-submit-auth'), libelle = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Patientez…';
+            try {
+                if (modeAuthActif === 'connexion') {
+                    const { data, error } = await sb.auth.signInWithPassword({ email: await emailAuth('u', id), password: mdpDe(code) });
+                    if (error) return alert(msgErreurAuth(error, "Identifiant ou code de sécurité incorrect. Si vous n'avez pas de compte, inscrivez-vous."));
+                    authUser = data.user;
+                    if (!authUser.app_metadata || authUser.app_metadata.role !== 'etudiant') {
+                        await sb.auth.signOut(); authUser = null;
+                        return alert("Ce compte n'est pas un compte membre. Utilisez « Accès administrateur ».");
                     }
+                    try { await chargerDonnees(true); } catch (x) { console.warn(x); }
+                    appliquerIdentite();
+                    if (!utilisateurActif) { await sb.auth.signOut(); authUser = null; return alert("Compte introuvable. Contactez l'assistance."); }
+                    if (utilisateurActif.banSite) { await sb.auth.signOut(); authUser = null; appliquerIdentite(); return alert('Ce compte est banni définitivement du site.'); }
+                    if (typeof appareilBanni === 'function' && appareilBanni()) { await sb.auth.signOut(); authUser = null; appliquerIdentite(); return alert('Cet appareil est banni définitivement du site.'); }
+                    try { localStorage.removeItem('usr_essais'); } catch (x) { }
+                    verifierSession();
+                    rafraichirAffichagePublic();
                 } else {
-                    alert("Cet identifiant n'existe pas. Veuillez vous inscrire.");
-                }
-            } else {
-                const nom = document.getElementById('auth-nom').value.trim();
-                const prenoms = document.getElementById('auth-prenoms').value.trim();
-                const telephone = document.getElementById('auth-tel').value.trim();
+                    const nom = document.getElementById('auth-nom').value.trim();
+                    const prenoms = document.getElementById('auth-prenoms').value.trim();
+                    const telephone = document.getElementById('auth-tel').value.trim();
 
-                if (!nom || !prenoms || !telephone) {
-                    return alert("Veuillez remplir toutes les informations d'inscription (Nom, Prénoms, Téléphone).");
+                    if (!nom || !prenoms || !telephone) {
+                        return alert("Veuillez remplir toutes les informations d'inscription (Nom, Prénoms, Téléphone).");
+                    }
+                    if (code.length < 4) return alert("Le code de sécurité doit contenir au moins 4 caractères.");
+                    window._newAcc = id;
+                    // Le profil est créé côté serveur (déclencheur SQL) : le navigateur ne peut pas choisir son rôle.
+                    const { data, error } = await sb.auth.signUp({ email: await emailAuth('u', id), password: mdpDe(code), options: { data: { id, nom, prenoms, telephone, invitation: (document.getElementById('auth-invit') || { value: '' }).value.trim() } } });
+                    if (error) {
+                        const msg = msgErreurAuth(error, "Inscription impossible.");
+                        if (/existe déjà/.test(msg)) basculerModeAuth('connexion');
+                        return alert(msg);
+                    }
+                    if (!data.session) return alert("Compte créé, mais la connexion automatique a échoué : désactivez « Confirm email » dans Supabase puis connectez-vous.");
+                    authUser = data.user;
+                    try { await chargerDonnees(true); } catch (x) { console.warn(x); }
+                    appliquerIdentite();
+                    alert("Inscription réussie ! Vous êtes connectés.");
+                    verifierSession();
+                    rafraichirAffichagePublic();
                 }
-
-                let utilisateurExistant = donneesSite.utilisateurs.find(u => u.id === id || u.telephone === telephone);
-                if (utilisateurExistant) {
-                    alert("Ce compte existe déjà (identifiant ou numéro de téléphone déjà utilisé). Veuillez vous connecter.");
-                    basculerModeAuth('connexion');
-                    return;
-                }
-
-                let nouvelUtilisateur = { id, nom, prenoms, telephone, code, tag: 'etudiant' };
-                donneesSite.utilisateurs.push(nouvelUtilisateur);
-                if (!(await sauvegarder())) {
-                    donneesSite.utilisateurs.pop();
-                    return alert("Impossible d'enregistrer le compte dans la base de données.\n\nDétail : " + derniereErreur + "\n\nContactez l'assistance.");
-                }
-
-                alert("Inscription réussie ! Vous êtes connectés.");
-                utilisateurActif = nouvelUtilisateur;
-                estAdmin = false;
-                ecrireSession('utilisateur_actif', JSON.stringify(utilisateurActif));
-                ecrireSession('est_admin', JSON.stringify(false));
-                verifierSession();
-            }
+            } finally { btn.disabled = false; btn.textContent = libelle; }
         }
 
         async function verifierAdminPortail() {
+            const idEl = document.getElementById('admin-shortcut-id');
+            const login = idEl ? idEl.value.trim() : '';
             const code = document.getElementById('admin-shortcut-code').value.trim();
-            if (!code) return alert("Saisissez un code administrateur.");
+            if (!login || !code) return alert("Saisissez votre identifiant et votre code administrateur.");
             if (admMinutesBloque()) return alert("Accès administrateur bloqué (trop d'erreurs). Réessayez dans " + admMinutesBloque() + " min.");
-            let baseOk = true;
-            try { await chargerDonnees(true); } catch (e) { console.warn(e); baseOk = false; }
-            if (!baseOk && !donneesSite.admins.length) return alert("Connexion à la base de données impossible : réessayez dans un instant.");
-            const h = await sha256Hex(code);
-            if (h === HASH_ADMIN_PRINCIPAL) {
-                admSucces();
-                const rec = donneesSite.admins.find(a => a.role === 'principal');
-                return rec ? connecterAdmin(rec) : ouvrirInscriptionAdmin('principal');
+            const { data, error } = await sb.auth.signInWithPassword({ email: await emailAuth('a', login), password: mdpDe(code) });
+            const meta = (data && data.user && data.user.app_metadata) || {};
+            if (error || !['principal', 'secondaire'].includes(meta.role)) {
+                if (!error) { await sb.auth.signOut(); }
+                const e = admEchec();
+                if (error && /rate limit|too many/i.test(error.message || '')) return alert(MSG_AUTH_LIMITE);
+                if (admMinutesBloque()) return alert("Trop d'erreurs. Accès administrateur bloqué pendant " + admMinutesBloque() + " min.");
+                return alert("Identifiant ou code administrateur incorrect. Essais restants : " + (ADM_MAX_ESSAIS - e.n));
             }
-            if (h === HASH_ADMIN_UNIVERSELLE) { admSucces(); return ouvrirInscriptionAdmin('secondaire'); }
-            const perso = donneesSite.admins.find(a => a.cle && a.cle === code);
-            if (perso) { admSucces(); return connecterAdmin(perso); }
-            const e = admEchec();
-            if (admMinutesBloque()) return alert("Trop d'erreurs. Accès administrateur bloqué pendant " + admMinutesBloque() + " min.");
-            alert("Code administrateur incorrect. Essais restants : " + (ADM_MAX_ESSAIS - e.n));
+            admSucces();
+            authUser = data.user;
+            try { await chargerDonnees(true); } catch (x) { console.warn(x); }
+            appliquerIdentite();
+            const rec = adminRec();
+            if (!rec) { await sb.auth.signOut(); authUser = null; appliquerIdentite(); return alert("Compte administrateur introuvable dans la base. Contactez le développeur."); }
+            connecterAdmin(rec);
         }
 
         function deconnexion() {
-            sessionStorage.removeItem('utilisateur_actif');
-            sessionStorage.removeItem('est_admin');
-            sessionStorage.removeItem('role_admin'); sessionStorage.removeItem('admin_nom'); sessionStorage.removeItem('admin_id');
+            ['utilisateur_actif', 'est_admin', 'role_admin', 'admin_nom', 'admin_id'].forEach(k => { try { sessionStorage.removeItem(k); } catch (x) { } });
             utilisateurActif = null;
             estAdmin = false;
-            window.location.reload();
+            const recharger = () => window.location.reload();
+            try { sb.auth.signOut().then(recharger, recharger); setTimeout(recharger, 2000); } catch (x) { recharger(); }
         }
 
         function majMenu(ouvert) {
@@ -1416,7 +1489,7 @@
                         <input type="text" value="${esc(u.nom)}" id="u-nom-${index}" class="p-1 border rounded w-24 text-xs" placeholder="Nom">
                         <input type="text" value="${esc(u.prenoms)}" id="u-prenoms-${index}" class="p-1 border rounded w-28 text-xs" placeholder="Prénoms">
                         <input type="text" value="${esc(u.telephone)}" id="u-tel-${index}" class="p-1 border rounded w-24 text-xs" placeholder="Téléphone">
-                        <input type="text" value="${esc(u.code)}" id="u-code-${index}" class="p-1 border rounded w-20 text-xs" placeholder="Code">
+                        <input type="text" value="" id="u-code-${index}" class="p-1 border rounded w-28 text-xs" placeholder="Nouveau code (vide = inchangé)" autocomplete="off">
                     </div>
                     <div class="flex gap-2">
                         <button onclick="adminModifierUtilisateur(${index})" class="bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium hover:bg-blue-700 border-none cursor-pointer">Mettre à jour</button>
@@ -1485,12 +1558,17 @@
             if (!u) return;
             const lire = id => document.getElementById(id).value.trim();
             const id = lire(`u-id-${index}`);
-            const code = lire(`u-code-${index}`);
-            if (!id || !code) return alert("L'identifiant et le code sont obligatoires.");
+            const code = lire(`u-code-${index}`);   // vide = on ne change pas le code (il n'est plus stocké dans la base)
+            if (!id) return alert("L'identifiant est obligatoire.");
             if (donneesSite.utilisateurs.some((x, i) => i !== index && x.id === id)) return alert("Cet identifiant est déjà utilisé par un autre compte.");
 
             const ancienId = u.id;
-            Object.assign(u, { id, code, nom: lire(`u-nom-${index}`), prenoms: lire(`u-prenoms-${index}`), telephone: lire(`u-tel-${index}`) });
+            if (id !== ancienId || code) {
+                // Identifiant et code appartiennent au compte de connexion : on les change côté serveur
+                const { error } = await sb.rpc('admin_maj_membre', { p_ancien_id: ancienId, p_nouvel_id: id, p_code: code ? mdpDe(code) : null });
+                if (error) return alert("Modification du compte refusée.\n\nDétail : " + error.message);
+            }
+            Object.assign(u, { id, nom: lire(`u-nom-${index}`), prenoms: lire(`u-prenoms-${index}`), telephone: lire(`u-tel-${index}`) });
             [...donneesSite.exercicesEnAttente, ...donneesSite.exercicesValides, ...(donneesSite.exercicesRejetes || []), ...donneesSite.propositionsArchivees]
                 .forEach(ex => { if (ex.auteurId === ancienId) ex.auteurId = id; });
             await sauvegarderOuAlerter();
@@ -1502,6 +1580,8 @@
             const u = donneesSite.utilisateurs[index];
             if (!u) return;
             if (!confirm(`Supprimer l'utilisateur « ${u.id} » (${u.prenoms} ${u.nom}) ? Il ne pourra plus se connecter.`)) return;
+            const { error: errSupp } = await sb.rpc('admin_supprimer_membre', { p_id: u.id });
+            if (errSupp) return alert("Suppression du compte refusée.\n\nDétail : " + errSupp.message);
             donneesSite.utilisateurs.splice(index, 1);
             await sauvegarderOuAlerter();
             rafraichirAdmin();
@@ -1669,12 +1749,14 @@
         }
 
         window.onload = async () => {
+            await restaurerSession();
             try {
                 await chargerDonnees();
             } catch (e) {
                 console.error(e);
                 alert("Connexion à la base de données impossible.\n\nDétail : " + ((e && (e.message || e.details)) || String(e)) + "\n\nVérifiez votre connexion internet puis rechargez la page.");
             }
+            appliquerIdentite();
             verifierSession();
             rafraichirAffichagePublic();
         };
@@ -1824,6 +1906,7 @@ async function faqSupprimer(id) {
     await sauvegarderOuAlerter(); rafraichirFaq();
 }
 async function initialiserFaq() {
+    if (!estAdmin) return;
     const p = P(); if (p.faqInit) return;
     p.faqInit = true; FAQ_DEFAUT.forEach(f => donneesSite.faqs.push({ ...f }));
     await sauvegarder(); rafraichirFaq();
@@ -2038,7 +2121,7 @@ function rafraichirUtilisateursAdmin() {
                 <div class="flex gap-1"><button data-a="${esc(u.id)}" onclick="ouvrirProfil(this.dataset.a)" class="bg-indigo-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer">Profil · tag · ban</button>${bt('bg-red-600 text-white', '🗑️', `adminSupprimerUtilisateur(${i})`)}</div>
             </div>
             <details class="mt-2"><summary class="text-xs text-blue-700 cursor-pointer">Modifier les informations</summary>
-                <div class="flex gap-2 flex-wrap items-center mt-2">${inp('u-id-' + i, u.id, 'w-20', 'Identifiant')}${inp('u-nom-' + i, u.nom, 'w-24', 'Nom')}${inp('u-prenoms-' + i, u.prenoms, 'w-28', 'Prénoms')}${inp('u-tel-' + i, u.telephone, 'w-24', 'Téléphone')}${inp('u-code-' + i, u.code, 'w-20', 'Code')}${bt('bg-blue-600 text-white', 'Mettre à jour', `adminModifierUtilisateur(${i})`)}</div>
+                <div class="flex gap-2 flex-wrap items-center mt-2">${inp('u-id-' + i, u.id, 'w-20', 'Identifiant')}${inp('u-nom-' + i, u.nom, 'w-24', 'Nom')}${inp('u-prenoms-' + i, u.prenoms, 'w-28', 'Prénoms')}${inp('u-tel-' + i, u.telephone, 'w-24', 'Téléphone')}${inp('u-code-' + i, '', 'w-28', 'Nouveau code (vide = inchangé)')}${bt('bg-blue-600 text-white', 'Mettre à jour', `adminModifierUtilisateur(${i})`)}</div>
             </details>
         </div>`).join('') || "<p class='text-xs text-slate-500 italic'>Aucun utilisateur.</p>";
 }
@@ -2177,12 +2260,6 @@ function chiffresUniques(n) {
     for (let i = 9; i > 0; i--) { const j = r[i] % (i + 1); [d[i], d[j]] = [d[j], d[i]]; }
     return d.slice(0, n).join('');
 }
-function genererClePerso(nom, prenoms) {
-    const base = 'logita@' + initiales(nom + ' ' + prenoms);
-    let k;
-    do { k = base + chiffresUniques(4); } while (donneesSite.admins.some(a => a.cle === k));
-    return k;
-}
 function majTitreBienvenue() {
     const t = $('welcome-user-title'); if (!t) return;
     if (estAdmin) {
@@ -2200,37 +2277,9 @@ function connecterAdmin(rec) {
     changerEcran('admin-panel');
 }
 let inscAdminRole = null, inscAdminRec = null;
-function ouvrirInscriptionAdmin(role) {
-    inscAdminRole = role;
-    $('ia-titre').textContent = role === 'principal' ? "Profil de l'administrateur principal" : 'Créer ma clé personnelle';
-    $('ia-desc').textContent = role === 'principal'
-        ? "Première connexion : indiquez votre nom et vos prénoms (modifiables ensuite dans « Mon profil »)."
-        : "Indiquez votre nom et vos prénoms : une clé personnelle va être générée pour vous. Elle remplacera la clé universelle à chaque connexion.";
-    $('ia-nom').value = $('ia-prenoms').value = '';
-    $('ia-form').classList.remove('hidden'); $('ia-resultat').classList.add('hidden');
-    $('modal-admin-inscription').classList.remove('hidden');
-}
+function ouvrirInscriptionAdmin() { alert("Les comptes administrateurs se créent désormais dans Supabase (script SQL creer_admin)."); }
 function fermerInscriptionAdmin() { $('modal-admin-inscription').classList.add('hidden'); }
-async function validerInscriptionAdmin() {
-    const nom = $('ia-nom').value.trim(), prenoms = $('ia-prenoms').value.trim();
-    if (!nom || !prenoms) return alert('Nom et prénoms obligatoires.');
-    try { await chargerDonnees(true); } catch (e) { console.warn(e); }
-    if (inscAdminRole === 'principal' && donneesSite.admins.some(a => a.role === 'principal')) {
-        fermerInscriptionAdmin(); return alert("Un administrateur principal existe déjà : reconnectez-vous avec votre code.");
-    }
-    const rec = { _id: crypto.randomUUID(), role: inscAdminRole, nom, prenoms, description: '', niveau: '', interets: '', photo: '', date: Date.now() };
-    if (inscAdminRole === 'secondaire') rec.cle = genererClePerso(nom, prenoms);
-    donneesSite.admins.push(rec);
-    if (!(await sauvegarder())) {
-        donneesSite.admins.pop();
-        return alert("Impossible d'enregistrer le compte administrateur.\n\nDétail : " + derniereErreur);
-    }
-    inscAdminRec = rec;
-    if (rec.cle) {
-        $('ia-cle').textContent = rec.cle;
-        $('ia-form').classList.add('hidden'); $('ia-resultat').classList.remove('hidden');
-    } else terminerInscriptionAdmin();
-}
+async function validerInscriptionAdmin() { fermerInscriptionAdmin(); }
 function terminerInscriptionAdmin() { fermerInscriptionAdmin(); if (inscAdminRec) connecterAdmin(inscAdminRec); }
 
 // ----- Liste des administrateurs (principal) -----
@@ -2240,14 +2289,16 @@ function rafraichirAdminsListe() {
     c.innerHTML = L.map(a => `
         <div class="p-3 bg-white border rounded-xl text-sm flex justify-between items-center gap-2 flex-wrap">
             <div class="min-w-0"><b>${esc([a.prenoms, a.nom].filter(Boolean).join(' '))}</b> ${tagHtml(a.role)}
-                ${a.cle && estPrincipal() ? `<details class="mt-1"><summary class="text-xs text-blue-700 cursor-pointer">Voir sa clé personnelle</summary><span class="font-mono text-xs">${esc(a.cle)}</span></details>` : ''}</div>
+    </div>
             ${a.role === 'secondaire' && estPrincipal() ? bt('bg-red-600 text-white', '🗑️ Retirer', `adminSupprimerAdmin('${a._id}')`) : ''}
         </div>`).join('') || "<p class='text-xs italic text-slate-500'>Aucun administrateur enregistré.</p>";
 }
 async function adminSupprimerAdmin(id) {
     if (!estPrincipal()) return;
     const a = donneesSite.admins.find(x => x._id === id); if (!a || a.role !== 'secondaire') return;
-    if (!confirm(`Retirer l'administrateur « ${a.prenoms} ${a.nom} » ? Sa clé personnelle ne fonctionnera plus.`)) return;
+    if (!confirm(`Retirer l'administrateur « ${a.prenoms} ${a.nom} » ? Son accès sera supprimé.`)) return;
+    const { error: errRet } = await sb.rpc('admin_retirer_admin', { p_rec: id });
+    if (errRet) return alert("Retrait refusé.\n\nDétail : " + errRet.message);
     donneesSite.admins = donneesSite.admins.filter(x => x._id !== id);
     await sauvegarderOuAlerter(); rafraichirAdminsListe();
 }
@@ -2263,9 +2314,7 @@ function remplirProfil() {
     $('pf-photo').innerHTML = s.photo ? `<img src="${esc(s.photo)}" alt="" class="w-full h-full object-cover">` : '<div class="w-full h-full flex items-center justify-center text-3xl">👤</div>';
     $('pf-tag').innerHTML = estAdmin ? tagHtml(roleAdmin) : tagsHtml(s.id);
     $('pf-info').textContent = estAdmin ? '' : `Identifiant : ${s.id}`;
-    const cle = estAdmin && s.cle;
-    $('pf-cle-box').classList.toggle('hidden', !cle);
-    $('pf-cle').dataset.cle = cle || ''; $('pf-cle').dataset.visible = '0'; $('pf-cle').textContent = '••••••••••';
+    $('pf-cle-box').classList.add('hidden');   // les clés ne sont plus stockées : elles n'existent que dans Supabase Auth
 }
 function profilBasculerCle() {
     const e = $('pf-cle'), v = e.dataset.visible === '1';
@@ -2906,9 +2955,19 @@ async function rattraper() {
     try { if (!(await chargerDonnees(false))) return; } catch (e) { return; }
     majApresChangement();
 }
+let canalRT = null, rtUserId = null;
+function relancerTempsReel() {
+    // Le canal doit être rouvert une fois connecté : sinon la base (règles RLS) ne lui envoie aucun changement
+    try { if (canalRT) sb.removeChannel(canalRT); } catch (e) { }
+    canalRT = null; rtDejaConnecte = false; demarrerTempsReel();
+}
+sb.auth.onAuthStateChange((ev, session) => {
+    const uid2 = session && session.user ? session.user.id : null;
+    if (uid2 !== rtUserId) { rtUserId = uid2; if (typeof demarrerTempsReel === 'function' && canalRT) relancerTempsReel(); }
+});
 function demarrerTempsReel() {
     try {
-        sb.channel('maj-site')
+        canalRT = sb.channel('maj-site')
             .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, p => { rtFile.push(p); planifierRT(); })
             .subscribe(st => {
                 const ok = st === 'SUBSCRIBED';
@@ -3693,7 +3752,8 @@ basculerModeAuth = function () { _bmaV9.apply(this, arguments); try { majChampsI
 $('form-auth').addEventListener('submit', e => {
     if (modeAuthActif !== 'inscription') return;
     const p = P(), stop = m => { e.preventDefault(); e.stopImmediatePropagation(); alert(m); };
-    if (p.invitation && p.invitation.actif && !(p.invitation.codes || []).includes($('auth-invit').value.trim())) return stop("Code d'invitation invalide : demandez-le à l'administration.");
+    // Le code d'invitation est vérifié par le serveur au moment de l'inscription (les codes ne sont plus envoyés au navigateur)
+    if (p.invitation && p.invitation.actif && !$('auth-invit').value.trim()) return stop("Code d'invitation requis : demandez-le à l'administration.");
     if (p.charte && p.charte.actif && !$('auth-charte').checked) return stop("Vous devez accepter la charte du site pour vous inscrire.");
     window._charteOk = !!(p.charte && p.charte.actif);
 }, true);
@@ -3803,21 +3863,9 @@ const appareilBanni = () => { const id = devId(); return id !== 'inconnu' && ((d
 
 // ----- Connexion : limite de tentatives, comptes et appareils bannis -----
 $('form-auth').addEventListener('submit', e => {
-    const stop = m => { e.preventDefault(); e.stopImmediatePropagation(); alert(m); };
-    if (appareilBanni()) return stop('Cet appareil est banni définitivement du site.');
-    const id = $('auth-id').value.trim(), code = $('auth-code').value.trim();
-    if (modeAuthActif !== 'connexion') { window._newAcc = id; return; }
-    const u = userParId(id);
-    if (u && u.banSite) return stop('Ce compte est banni définitivement du site.');
-    const st = lireStockage('localStorage', 'usr_essais', { n: 0, until: 0, paliers: 0 }), sv = o => { try { localStorage.setItem('usr_essais', JSON.stringify(o)); } catch (x) { } };
-    if (st.until > Date.now()) return stop('Trop de tentatives. Réessayez dans ' + Math.ceil((st.until - Date.now()) / 60000) + ' min.');
-    if (u && u.code === code) return sv({ n: 0, until: 0, paliers: 0 });
-    const c = secu(); st.n++;
-    if (st.n >= c.maxEssais) {
-        st.paliers = (st.paliers || 0) + 1; st.until = Date.now() + c.blocageMin * 60000 * Math.pow(2, st.paliers - 1); st.n = 0; sv(st);
-        return stop('Trop d\'erreurs : connexion bloquée pendant ' + Math.ceil((st.until - Date.now()) / 60000) + ' min.');
-    }
-    sv(st);
+    // Le code est vérifié par Supabase Auth (serveur) ; ici on bloque seulement les appareils bannis.
+    if (appareilBanni()) { e.preventDefault(); e.stopImmediatePropagation(); alert('Cet appareil est banni définitivement du site.'); return; }
+    if (modeAuthActif !== 'connexion') window._newAcc = $('auth-id').value.trim();
 }, true);
 
 // ----- Session : inactivité, déconnexion partout, ban, appareils -----
