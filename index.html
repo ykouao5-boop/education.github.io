@@ -4,9 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mon Site Éducatif (Logistique)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>window.supabase || document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>')</script>
+    <meta name="description" content="Site éducatif de logistique : cours, exercices, évaluations, forum et messagerie pour les élèves et les professeurs.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Mon Site Éducatif (Logistique)">
+    <meta property="og:description" content="Cours, exercices, évaluations et forum de logistique, accessibles depuis votre téléphone.">
+    <script>try{if(localStorage.getItem('theme')==='sombre')document.documentElement.classList.add('sombre')}catch(e){}</script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+    <script>window.supabase || document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.45.4"><\/script>')</script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -50,6 +55,28 @@
         #toast-zone{position:fixed;left:8px;right:8px;bottom:64px;z-index:90;pointer-events:none;display:flex;flex-direction:column;align-items:flex-start;gap:6px}
         .toast{pointer-events:none;max-width:22rem;background:rgba(15,23,42,.94);color:#fff;border-radius:12px;padding:8px 12px;font-size:13px;box-shadow:0 6px 18px #0004;animation:toastIn .25s ease;transition:opacity .4s}
         @keyframes toastIn{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+
+        /* Notifications à l'écran (remplacent alert) : en haut, touchez pour fermer */
+        #notif-zone{position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:200;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+        .notif{pointer-events:auto;cursor:pointer;display:flex;gap:10px;align-items:flex-start;width:100%;max-width:26rem;background:#1e293b;color:#fff;border-left:5px solid #3b82f6;border-radius:12px;padding:10px 14px;font-size:14px;line-height:1.35;box-shadow:0 8px 24px #0005;white-space:pre-line;word-break:break-word;animation:notifIn .25s ease;transition:opacity .35s,transform .35s}
+        .notif .ni{flex:none;font-size:16px;line-height:1.2}
+        .notif.ok{border-left-color:#22c55e}
+        .notif.err{border-left-color:#ef4444}
+        .notif.warn{border-left-color:#f59e0b}
+        .notif.out{opacity:0;transform:translateY(-8px)}
+        @keyframes notifIn{from{transform:translateY(-10px);opacity:0}to{transform:none;opacity:1}}
+
+        html.sombre{filter:invert(1) hue-rotate(180deg);background:#fff}
+        html.sombre img,html.sombre video,html.sombre iframe,html.sombre canvas{filter:invert(1) hue-rotate(180deg)}
+        #btn-sombre{position:fixed;left:8px;bottom:8px;z-index:95;width:40px;height:40px;border-radius:50%;border:0;background:#1e293b;color:#fff;font-size:18px;box-shadow:0 4px 12px #0005;cursor:pointer}
+    </style>
+    <style>
+    /* Rangée du bas (une seule ligne, de gauche à droite) : 🌙 | ✉️ 🔔 📚 | ❤️ Dons | 💬 Assistance */
+    #btn-sombre{left:8px!important;bottom:12px!important}
+    #v11-barre{left:54px!important;bottom:12px!important;gap:6px!important}
+    #v11-barre>button{width:40px!important;height:40px!important;font-size:18px!important}
+    #btn-dons-flottant{position:fixed;bottom:12px;right:126px;z-index:60;width:40px;height:40px;border-radius:50%;border:1px solid #fb7185;background:#e11d48;color:#fff;font-size:18px;box-shadow:0 4px 12px #0005;cursor:pointer;align-items:center;justify-content:center}
+    #btn-assistance{bottom:12px!important;right:8px!important;width:112px;height:40px;padding:0!important;justify-content:center}
     </style>
 </head>
 <body>
@@ -183,6 +210,7 @@
                     </div>
                     <div id="dev-admin" class="hidden">
                         <button onclick="ouvrirModalDeveloppeur()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-700 border-none cursor-pointer">✏️ Modifier</button>
+                        <button onclick="supprimerDeveloppeur()" class="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-700 border-none cursor-pointer ml-2">🗑️ Supprimer</button>
                     </div>
                 </div>
             </div>
@@ -785,26 +813,81 @@
     <div id="decompte-geant" class="hidden fixed inset-0 z-[96] bg-black/80 text-white flex flex-col items-center justify-center text-center pointer-events-none"><p class="text-xl sm:text-3xl font-bold mb-4">🚧 Maintenance dans</p><div id="decompte-chiffre" class="font-extrabold" style="font-size:min(40vw,18rem);line-height:1"></div><p class="text-lg mt-4">secondes</p></div>
     <div id="annonce-bandeau" aria-live="polite"><div class="annonce-boite"><span id="annonce-texte"></span><div class="annonce-barre"></div></div></div>
     <div id="toast-zone" aria-live="polite"></div>
+    <div id="notif-zone" aria-live="polite"></div>
+    <button id="btn-sombre" type="button" aria-label="Mode sombre" title="Mode sombre">🌙</button>
 
-    <!-- Bouton flottant Dons (à l'opposé de l'assistance) -->
-    <button onclick="changerEcran('dons')" aria-label="Dons" class="fixed bottom-4 left-4 z-30 bg-rose-600 text-white px-3 py-2 rounded-xl shadow-lg flex items-center space-x-2 border border-rose-400 hover:bg-rose-700 transition text-xs cursor-pointer">
-        <span class="text-base">❤️</span>
-        <span class="font-bold leading-tight">Dons</span>
-    </button>
+    <!-- Bouton flottant Dons (au centre, entre Mon espace et Assistance) -->
+    <button id="btn-dons-flottant" onclick="changerEcran('dons')" aria-label="Dons" title="Dons" style="display:none">❤️</button>
 
     <!-- Bouton WhatsApp Assistance -->
-    <a href="https://wa.me/2250152801988?text=Bonjour,%20j'ai%20un%20problème%20de%20connexion%20sur%20la%20plateforme%20éducative." target="_blank" class="fixed bottom-4 right-4 z-30 bg-emerald-600 text-white px-3 py-2 rounded-xl shadow-lg flex items-center space-x-2 border border-emerald-400 hover:bg-emerald-700 transition text-xs">
+    <a href="https://wa.me/2250152801988?text=Bonjour,%20j'ai%20un%20problème%20de%20connexion%20sur%20la%20plateforme%20éducative." target="_blank" id="btn-assistance" class="fixed bottom-4 right-4 z-30 bg-emerald-600 text-white px-3 py-2 rounded-xl shadow-lg flex items-center space-x-2 border border-emerald-400 hover:bg-emerald-700 transition text-xs">
         <span class="text-base">💬</span>
         <div>
             <p class="font-bold leading-tight">Assistance</p>
         </div>
     </a>
 
+
+    <div id="modal-createur" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-3 max-h-[90vh] overflow-auto">
+            <h3 class="text-lg font-bold text-blue-900">Titre + photo</h3>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Titre (ex : Site créé par, Supervisé par…)</label><input id="cr-titre" class="w-full p-2.5 border rounded-lg bg-white text-sm"></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Photo</label><input type="file" id="cr-photo" accept="image/*" class="w-full p-2.5 border rounded-lg bg-white text-sm"></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Prénoms</label><input id="cr-prenom" class="w-full p-2.5 border rounded-lg bg-white text-sm"></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Nom</label><input id="cr-nom" class="w-full p-2.5 border rounded-lg bg-white text-sm"></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Rôle</label><input id="cr-role" class="w-full p-2.5 border rounded-lg bg-white text-sm"></div>
+            <div class="flex gap-2 justify-end"><button onclick="fermerCreateur()" class="bg-slate-200 text-slate-800 px-4 py-2 rounded-lg text-sm font-medium border-none cursor-pointer">Annuler</button><button onclick="enregistrerCreateur()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium border-none cursor-pointer">Enregistrer</button></div>
+        </div>
+    </div>
+    <div id="modal-onglet" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-3 max-h-[90vh] overflow-auto">
+            <h3 id="ot-h" class="text-lg font-bold text-blue-900">Onglet</h3>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Nom dans le menu (avec emoji si vous voulez)</label><input id="ot-titre" maxlength="60" class="w-full p-2.5 border rounded-lg bg-white text-sm"></div>
+            <div id="ot-perso"><div><label class="block text-sm font-medium text-slate-700 mb-1">Texte de la page</label><textarea id="ot-contenu" rows="6" class="w-full p-2.5 border rounded-lg bg-white text-sm"></textarea></div>
+            <div class="mt-3"><label class="block text-sm font-medium text-slate-700 mb-1">Photo (facultatif)</label><input type="file" id="ot-photo" accept="image/*" class="w-full p-2.5 border rounded-lg bg-white text-sm"></div></div>
+            <label id="ot-masque-box" class="flex items-center gap-2 text-sm"><input id="ot-masque" type="checkbox" class="w-4 h-4"> Masquer cet onglet aux visiteurs</label>
+            <div class="flex gap-2 justify-end flex-wrap"><button onclick="fermerOnglet()" class="bg-slate-200 text-slate-800 px-4 py-2 rounded-lg text-sm font-medium border-none cursor-pointer">Annuler</button><button id="ot-suppr" onclick="supprimerOnglet()" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium border-none cursor-pointer">Supprimer</button><button onclick="enregistrerOnglet()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium border-none cursor-pointer">Enregistrer</button></div>
+        </div>
+    </div>
+
     <footer class="bg-slate-800 text-slate-400 py-6 text-center text-sm mt-12">
         <p>&copy; 2026 - Plateforme Éducative - Royal Industry</p>
     </footer>
 
     <script>
+        // ---------- Mode sombre ----------
+        document.addEventListener('DOMContentLoaded', function () {
+            const b = document.getElementById('btn-sombre'); if (!b) return;
+            const maj = () => { b.textContent = document.documentElement.classList.contains('sombre') ? '☀️' : '🌙'; };
+            maj();
+            b.addEventListener('click', function () {
+                const on = document.documentElement.classList.toggle('sombre');
+                try { localStorage.setItem('theme', on ? 'sombre' : 'clair'); } catch (e) { }
+                maj();
+            });
+        });
+        // ---------- Notifications à l'écran (remplacent alert) ----------
+        // notif(message) : le type (succès / erreur / attention) est déduit du texte, ou donné en 2e argument.
+        function notif(msg, type, duree) {
+            try {
+                msg = String(msg == null ? '' : msg).trim(); if (!msg) return;
+                if (!type) {
+                    type = /succès|réussie|ajouté|enregistré|validée|envoyé|mis à jour|transmis|Merci|créée|supprimé avec|Déconnexion demandée|masquée|publiée/i.test(msg) && !/impossible|échec|refusé/i.test(msg) ? 'ok'
+                         : /impossible|échec|Erreur|refusé|incorrect|introuvable|banni|bloqué|Détail|n'a pas pu|inaccessible|non envoyé/i.test(msg) ? 'err' : 'warn';
+                }
+                const z = document.getElementById('notif-zone');
+                if (!z) { console.warn(msg); return; }
+                const d = document.createElement('div');
+                d.className = 'notif ' + type; d.setAttribute('role', type === 'err' ? 'alert' : 'status');
+                const i = document.createElement('span'); i.className = 'ni'; i.textContent = type === 'ok' ? '✅' : type === 'err' ? '⛔' : '⚠️';
+                const t = document.createElement('span'); t.textContent = msg;
+                d.appendChild(i); d.appendChild(t);
+                const fermer = () => { d.classList.add('out'); setTimeout(() => d.remove(), 360); };
+                d.addEventListener('click', fermer);
+                z.appendChild(d); while (z.children.length > 3) z.removeChild(z.firstChild);
+                setTimeout(fermer, duree || Math.min(10000, 3500 + msg.length * 45));
+            } catch (e) { console.warn(msg); }
+        }
         // Plus aucun code ni clé dans la page : la connexion est vérifiée par Supabase Auth (côté serveur).
         // Le « code » saisi sert de mot de passe ; le préfixe ci-dessous n'est pas un secret, il garantit seulement
         // la longueur minimale (6) exigée par Supabase pour les codes courts. Même valeur dans les scripts SQL.
@@ -834,7 +917,7 @@
         ['click', 'keydown', 'touchstart', 'scroll', 'mousemove'].forEach(ev => window.addEventListener(ev, () => { admDernierClic = Date.now(); }, { passive: true }));
         setInterval(() => {
             if (estAdmin && Date.now() - admDernierClic > ADM_INACTIVITE_MIN * 60000) {
-                alert("Session administrateur fermée après " + ADM_INACTIVITE_MIN + " minutes d'inactivité.");
+                notif("Session administrateur fermée après " + ADM_INACTIVITE_MIN + " minutes d'inactivité.");
                 deconnexion();
             }
         }, 15000);
@@ -866,7 +949,7 @@
             exercicesRejetes: [],
             propositionsArchivees: [],
             utilisateurs: [],
-            faqs: [], sujets: [], chatAdmin: [], chatProf: [], signalements: [], demandesBan: [], sousCategories: [], parametres: [], rendus: [], admins: [], dons: [], journal: [], messagesPrives: []
+            faqs: [], sujets: [], chatAdmin: [], chatProf: [], signalements: [], demandesBan: [], sousCategories: [], parametres: [], rendus: [], admins: [], dons: [], journal: [], messagesPrives: [], createurs: [], onglets: []
         };
 
         // ===== Connexion à la base de données Supabase =====
@@ -874,7 +957,7 @@
         const SUPABASE_KEY = "sb_publishable_X-wLiwe-nHWseZouv0Mwog_z2ogLydc"; // clé publique (publishable)
         const TABLE = "ykouao5";
         const BUCKET = "fichiers";
-        if (!window.supabase) { alert("La bibliothèque Supabase n'a pas pu se charger. Vérifiez votre connexion internet puis rechargez la page."); }
+        if (!window.supabase) { notif("La bibliothèque Supabase n'a pas pu se charger. Vérifiez votre connexion internet puis rechargez la page."); }
         // Session de connexion gardée par onglet (comme avant) : elle disparaît à la fermeture de l'onglet.
         let stockageAuth; try { stockageAuth = window.sessionStorage; stockageAuth.getItem('t'); } catch (e) { stockageAuth = undefined; }
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { storage: stockageAuth, persistSession: !!stockageAuth, autoRefreshToken: true } });
@@ -1045,7 +1128,7 @@
         }
 
         async function sauvegarderOuAlerter() {
-            if (!(await sauvegarder())) alert("Échec de l'enregistrement dans la base de données. Vérifiez votre connexion puis rechargez la page.\n\nDétail : " + derniereErreur);
+            if (!(await sauvegarder())) notif("Échec de l'enregistrement dans la base de données. Vérifiez votre connexion puis rechargez la page.\n\nDétail : " + derniereErreur);
         }
 
         function verifierSession() {
@@ -1135,24 +1218,24 @@
             const code = document.getElementById('auth-code').value.trim();
 
             if (!id || !code) {
-                return alert("Veuillez remplir tous les champs obligatoires.");
+                return notif("Veuillez remplir tous les champs obligatoires.");
             }
             const btn = document.getElementById('btn-submit-auth'), libelle = btn.textContent;
             btn.disabled = true; btn.textContent = 'Patientez…';
             try {
                 if (modeAuthActif === 'connexion') {
                     const { data, error } = await sb.auth.signInWithPassword({ email: await emailAuth('u', id), password: mdpDe(code) });
-                    if (error) return alert(msgErreurAuth(error, "Identifiant ou code de sécurité incorrect. Si vous n'avez pas de compte, inscrivez-vous."));
+                    if (error) return notif(msgErreurAuth(error, "Identifiant ou code de sécurité incorrect. Si vous n'avez pas de compte, inscrivez-vous."));
                     authUser = data.user;
                     if (!authUser.app_metadata || authUser.app_metadata.role !== 'etudiant') {
                         await sb.auth.signOut(); authUser = null;
-                        return alert("Ce compte n'est pas un compte membre. Utilisez « Accès administrateur ».");
+                        return notif("Ce compte n'est pas un compte membre. Utilisez « Accès administrateur ».");
                     }
                     try { await chargerDonnees(true); } catch (x) { console.warn(x); }
                     appliquerIdentite();
-                    if (!utilisateurActif) { await sb.auth.signOut(); authUser = null; return alert("Compte introuvable. Contactez l'assistance."); }
-                    if (utilisateurActif.banSite) { await sb.auth.signOut(); authUser = null; appliquerIdentite(); return alert('Ce compte est banni définitivement du site.'); }
-                    if (typeof appareilBanni === 'function' && appareilBanni()) { await sb.auth.signOut(); authUser = null; appliquerIdentite(); return alert('Cet appareil est banni définitivement du site.'); }
+                    if (!utilisateurActif) { await sb.auth.signOut(); authUser = null; return notif("Compte introuvable. Contactez l'assistance."); }
+                    if (utilisateurActif.banSite) { await sb.auth.signOut(); authUser = null; appliquerIdentite(); return notif('Ce compte est banni définitivement du site.'); }
+                    if (typeof appareilBanni === 'function' && appareilBanni()) { await sb.auth.signOut(); authUser = null; appliquerIdentite(); return notif('Cet appareil est banni définitivement du site.'); }
                     try { localStorage.removeItem('usr_essais'); } catch (x) { }
                     verifierSession();
                     rafraichirAffichagePublic();
@@ -1162,22 +1245,22 @@
                     const telephone = document.getElementById('auth-tel').value.trim();
 
                     if (!nom || !prenoms || !telephone) {
-                        return alert("Veuillez remplir toutes les informations d'inscription (Nom, Prénoms, Téléphone).");
+                        return notif("Veuillez remplir toutes les informations d'inscription (Nom, Prénoms, Téléphone).");
                     }
-                    if (code.length < 4) return alert("Le code de sécurité doit contenir au moins 4 caractères.");
+                    if (code.length < 4) return notif("Le code de sécurité doit contenir au moins 4 caractères.");
                     window._newAcc = id;
                     // Le profil est créé côté serveur (déclencheur SQL) : le navigateur ne peut pas choisir son rôle.
                     const { data, error } = await sb.auth.signUp({ email: await emailAuth('u', id), password: mdpDe(code), options: { data: { id, nom, prenoms, telephone, invitation: (document.getElementById('auth-invit') || { value: '' }).value.trim() } } });
                     if (error) {
                         const msg = msgErreurAuth(error, "Inscription impossible.");
                         if (/existe déjà/.test(msg)) basculerModeAuth('connexion');
-                        return alert(msg);
+                        return notif(msg);
                     }
-                    if (!data.session) return alert("Compte créé, mais la connexion automatique a échoué : désactivez « Confirm email » dans Supabase puis connectez-vous.");
+                    if (!data.session) return notif("Compte créé, mais la connexion automatique a échoué : désactivez « Confirm email » dans Supabase puis connectez-vous.");
                     authUser = data.user;
                     try { await chargerDonnees(true); } catch (x) { console.warn(x); }
                     appliquerIdentite();
-                    alert("Inscription réussie ! Vous êtes connectés.");
+                    notif("Inscription réussie ! Vous êtes connectés.");
                     verifierSession();
                     rafraichirAffichagePublic();
                 }
@@ -1188,23 +1271,23 @@
             const idEl = document.getElementById('admin-shortcut-id');
             const login = idEl ? idEl.value.trim() : '';
             const code = document.getElementById('admin-shortcut-code').value.trim();
-            if (!login || !code) return alert("Saisissez votre identifiant et votre code administrateur.");
-            if (admMinutesBloque()) return alert("Accès administrateur bloqué (trop d'erreurs). Réessayez dans " + admMinutesBloque() + " min.");
+            if (!login || !code) return notif("Saisissez votre identifiant et votre code administrateur.");
+            if (admMinutesBloque()) return notif("Accès administrateur bloqué (trop d'erreurs). Réessayez dans " + admMinutesBloque() + " min.");
             const { data, error } = await sb.auth.signInWithPassword({ email: await emailAuth('a', login), password: mdpDe(code) });
             const meta = (data && data.user && data.user.app_metadata) || {};
             if (error || !['principal', 'secondaire'].includes(meta.role)) {
                 if (!error) { await sb.auth.signOut(); }
                 const e = admEchec();
-                if (error && /rate limit|too many/i.test(error.message || '')) return alert(MSG_AUTH_LIMITE);
-                if (admMinutesBloque()) return alert("Trop d'erreurs. Accès administrateur bloqué pendant " + admMinutesBloque() + " min.");
-                return alert("Identifiant ou code administrateur incorrect. Essais restants : " + (ADM_MAX_ESSAIS - e.n));
+                if (error && /rate limit|too many/i.test(error.message || '')) return notif(MSG_AUTH_LIMITE);
+                if (admMinutesBloque()) return notif("Trop d'erreurs. Accès administrateur bloqué pendant " + admMinutesBloque() + " min.");
+                return notif("Identifiant ou code administrateur incorrect. Essais restants : " + (ADM_MAX_ESSAIS - e.n));
             }
             admSucces();
             authUser = data.user;
             try { await chargerDonnees(true); } catch (x) { console.warn(x); }
             appliquerIdentite();
             const rec = adminRec();
-            if (!rec) { await sb.auth.signOut(); authUser = null; appliquerIdentite(); return alert("Compte administrateur introuvable dans la base. Contactez le développeur."); }
+            if (!rec) { await sb.auth.signOut(); authUser = null; appliquerIdentite(); return notif("Compte administrateur introuvable dans la base. Contactez le développeur."); }
             connecterAdmin(rec);
         }
 
@@ -1409,16 +1492,16 @@
             e.preventDefault();
             const type = document.getElementById('prop-type').value;
             const titre = document.getElementById('prop-titre').value.trim();
-            if (!titre) return alert(type === 'photo' ? "Veuillez écrire une description pour la photo." : "Veuillez donner un titre à votre proposition.");
+            if (!titre) return notif(type === 'photo' ? "Veuillez écrire une description pour la photo." : "Veuillez donner un titre à votre proposition.");
 
-            if (!document.getElementById('prop-souscat-box').classList.contains('hidden') && !document.getElementById('prop-souscat').value) return alert("Choisissez une sous-catégorie.");
+            if (!document.getElementById('prop-souscat-box').classList.contains('hidden') && !document.getElementById('prop-souscat').value) return notif("Choisissez une sous-catégorie.");
             const fEnonce = document.getElementById('prop-enonce-file').files[0];
             const fCorrige = document.getElementById('prop-corrige-file').files[0];
             const fRevision = document.getElementById('prop-revision-file').files[0];
-            if (type === 'exercice' && (!fEnonce || !fCorrige)) return alert("Veuillez joindre l'énoncé et le corrigé.");
+            if (type === 'exercice' && (!fEnonce || !fCorrige)) return notif("Veuillez joindre l'énoncé et le corrigé.");
             const fPhoto = document.getElementById('prop-photo-file').files[0];
-            if (type === 'revision' && !fRevision) return alert("Veuillez joindre le document de révision.");
-            if (type === 'photo' && !fPhoto) return alert("Veuillez joindre la photo.");
+            if (type === 'revision' && !fRevision) return notif("Veuillez joindre le document de révision.");
+            if (type === 'photo' && !fPhoto) return notif("Veuillez joindre la photo.");
 
             const btn = this.querySelector('button[type="submit"]');
             btn.disabled = true;
@@ -1444,16 +1527,16 @@
                 donneesSite.exercicesEnAttente.push(proposition);
                 if (!(await sauvegarder())) {
                     donneesSite.exercicesEnAttente.pop();
-                    alert("Envoi impossible : échec de l'enregistrement (connexion ou fichiers trop volumineux). Essayez avec des fichiers plus légers.");
+                    notif("Envoi impossible : échec de l'enregistrement (connexion ou fichiers trop volumineux). Essayez avec des fichiers plus légers.");
                 } else {
-                    alert("Proposition envoyée avec succès ! Vous pouvez suivre son état dans votre suivi.");
+                    notif("Proposition envoyée avec succès ! Vous pouvez suivre son état dans votre suivi.");
                     this.reset();
                     majFormProposition();
                     rafraichirAffichagePublic();
                 }
             } catch (err) {
                 console.error(err);
-                alert("Erreur lors de la lecture des fichiers\n\nDétail : " + ((err && (err.message || err.error || err.details)) || String(err)) + "\n\n(Vérifiez que le dossier 'fichiers' existe dans Supabase Storage et que sa règle est créée.)");
+                notif("Erreur lors de la lecture des fichiers\n\nDétail : " + ((err && (err.message || err.error || err.details)) || String(err)) + "\n\n(Vérifiez que le dossier 'fichiers' existe dans Supabase Storage et que sa règle est créée.)");
             } finally {
                 btn.disabled = false;
                 btn.textContent = "Envoyer pour vérification";
@@ -1504,22 +1587,22 @@
             if (!peutPanelProf()) return;
             const titre = document.getElementById('admin-cours-titre').value.trim();
             const fichier = document.getElementById('admin-cours-file').files[0];
-            if (!titre || !fichier) return alert("Renseignez le titre et choisissez le fichier du cours.");
+            if (!titre || !fichier) return notif("Renseignez le titre et choisissez le fichier du cours.");
             try {
                 const fileUrl = await lireFichier(fichier);
                 const m = moi();
                 donneesSite.cours.push({ titre, fileUrl, fileName: fichier.name, sousCat: document.getElementById('admin-cours-souscat').value, auteurId: m.id, auteurNom: m.nom, date: Date.now() });
                 if (!(await sauvegarder())) {
                     donneesSite.cours.pop();
-                    return alert("Ajout impossible : échec de l'enregistrement (connexion ou fichier trop volumineux).");
+                    return notif("Ajout impossible : échec de l'enregistrement (connexion ou fichier trop volumineux).");
                 }
                 document.getElementById('admin-cours-titre').value = '';
                 document.getElementById('admin-cours-file').value = '';
-                alert("Cours ajouté !");
+                notif("Cours ajouté !");
                 rafraichirAffichagePublic();
             } catch (err) {
                 console.error(err);
-                alert("Erreur lors de la lecture du fichier\n\nDétail : " + ((err && (err.message || err.error || err.details)) || String(err)) + "\n\n(Vérifiez que le dossier 'fichiers' existe dans Supabase Storage et que sa règle est créée.)");
+                notif("Erreur lors de la lecture du fichier\n\nDétail : " + ((err && (err.message || err.error || err.details)) || String(err)) + "\n\n(Vérifiez que le dossier 'fichiers' existe dans Supabase Storage et que sa règle est créée.)");
             }
         }
 
@@ -1539,7 +1622,7 @@
             await sauvegarderOuAlerter();
             rafraichirAdmin();
             rafraichirAffichagePublic();
-            alert("Proposition validée et publiée !");
+            notif("Proposition validée et publiée !");
         }
 
         async function adminRejeterExo(index) {
@@ -1550,7 +1633,7 @@
             donneesSite.exercicesRejetes.push(p);
             await sauvegarderOuAlerter();
             rafraichirAdmin();
-            alert("Proposition rejetée.");
+            notif("Proposition rejetée.");
         }
 
         async function adminModifierUtilisateur(index) {
@@ -1559,21 +1642,32 @@
             const lire = id => document.getElementById(id).value.trim();
             const id = lire(`u-id-${index}`);
             const code = lire(`u-code-${index}`);   // vide = on ne change pas le code (il n'est plus stocké dans la base)
-            if (!id) return alert("L'identifiant est obligatoire.");
-            if (donneesSite.utilisateurs.some((x, i) => i !== index && x.id === id)) return alert("Cet identifiant est déjà utilisé par un autre compte.");
+            if (!id) return notif("L'identifiant est obligatoire.");
+            if (donneesSite.utilisateurs.some((x, i) => i !== index && x.id === id)) return notif("Cet identifiant est déjà utilisé par un autre compte.");
 
             const ancienId = u.id;
             if (id !== ancienId || code) {
                 // Identifiant et code appartiennent au compte de connexion : on les change côté serveur
                 const { error } = await sb.rpc('admin_maj_membre', { p_ancien_id: ancienId, p_nouvel_id: id, p_code: code ? mdpDe(code) : null });
-                if (error) return alert("Modification du compte refusée.\n\nDétail : " + error.message);
+                if (error) return notif("Modification du compte refusée.\n\nDétail : " + error.message);
             }
             Object.assign(u, { id, nom: lire(`u-nom-${index}`), prenoms: lire(`u-prenoms-${index}`), telephone: lire(`u-tel-${index}`) });
             [...donneesSite.exercicesEnAttente, ...donneesSite.exercicesValides, ...(donneesSite.exercicesRejetes || []), ...donneesSite.propositionsArchivees]
                 .forEach(ex => { if (ex.auteurId === ancienId) ex.auteurId = id; });
             await sauvegarderOuAlerter();
-            alert("Informations utilisateur mises à jour avec succès !");
+            notif("Informations utilisateur mises à jour avec succès !");
             rafraichirAdmin();
+        }
+
+        async function adminReinitCode(index) {
+            const u = donneesSite.utilisateurs[index]; if (!u) return;
+            if (!confirm(`Réinitialiser le code de « ${u.id} » (${u.prenoms} ${u.nom}) ? Un nouveau code provisoire sera généré.`)) return;
+            const a = new Uint32Array(1); crypto.getRandomValues(a);
+            const nouveau = String(100000 + (a[0] % 900000));
+            const { error } = await sb.rpc('admin_maj_membre', { p_ancien_id: u.id, p_nouvel_id: u.id, p_code: mdpDe(nouveau) });
+            if (error) return notif("Réinitialisation refusée.\n\nDétail : " + error.message, 'err');
+            try { await navigator.clipboard.writeText(nouveau); } catch (e) { }
+            notif(`Nouveau code de ${u.id} : ${nouveau}\n(copié) Transmettez-le au membre et conseillez-lui de le changer.`, 'ok', 45000);
         }
 
         async function adminSupprimerUtilisateur(index) {
@@ -1581,7 +1675,7 @@
             if (!u) return;
             if (!confirm(`Supprimer l'utilisateur « ${u.id} » (${u.prenoms} ${u.nom}) ? Il ne pourra plus se connecter.`)) return;
             const { error: errSupp } = await sb.rpc('admin_supprimer_membre', { p_id: u.id });
-            if (errSupp) return alert("Suppression du compte refusée.\n\nDétail : " + errSupp.message);
+            if (errSupp) return notif("Suppression du compte refusée.\n\nDétail : " + errSupp.message);
             donneesSite.utilisateurs.splice(index, 1);
             await sauvegarderOuAlerter();
             rafraichirAdmin();
@@ -1603,7 +1697,7 @@
                 }
                 await sauvegarderOuAlerter();
                 rafraichirAffichagePublic();
-                alert("Élément supprimé avec succès.");
+                notif("Élément supprimé avec succès.");
             }
         }
 
@@ -1722,12 +1816,12 @@
                 if (fichier) nouveau.photo = await lireFichier(fichier, 800);
             } catch (err) {
                 console.error(err);
-                return alert("Erreur lors de la lecture de la photo\n\nDétail : " + ((err && (err.message || err.error || err.details)) || String(err)) + "\n\n(Vérifiez que le dossier 'fichiers' existe dans Supabase Storage et que sa règle est créée.)");
+                return notif("Erreur lors de la lecture de la photo\n\nDétail : " + ((err && (err.message || err.error || err.details)) || String(err)) + "\n\n(Vérifiez que le dossier 'fichiers' existe dans Supabase Storage et que sa règle est créée.)");
             }
             donneesSite.developpeur = nouveau;
             if (!(await sauvegarder())) {
                 donneesSite.developpeur = ancien;
-                return alert("Enregistrement impossible : base de données inaccessible.");
+                return notif("Enregistrement impossible : base de données inaccessible.");
             }
             fermerModalDeveloppeur();
             rafraichirDeveloppeur();
@@ -1754,7 +1848,7 @@
                 await chargerDonnees();
             } catch (e) {
                 console.error(e);
-                alert("Connexion à la base de données impossible.\n\nDétail : " + ((e && (e.message || e.details)) || String(e)) + "\n\nVérifiez votre connexion internet puis rechargez la page.");
+                notif("Connexion à la base de données impossible.\n\nDétail : " + ((e && (e.message || e.details)) || String(e)) + "\n\nVérifiez votre connexion internet puis rechargez la page.");
             }
             appliquerIdentite();
             verifierSession();
@@ -1869,7 +1963,7 @@ async function enregistrerMessageMaintenance() {
     if (!estPrincipal()) return;
     const p = P(); p.maintenance = p.maintenance || {};
     p.maintenance.message = $('maint-input').value.trim();
-    await sauvegarderOuAlerter(); majMaintenance(); alert('Message enregistré.');
+    await sauvegarderOuAlerter(); majMaintenance(); notif('Message enregistré.');
 }
 function ouvrirPortailAdmin() {
     // Un utilisateur déjà connecté (donc bloqué) doit pouvoir passer par l'accès admin
@@ -1895,7 +1989,7 @@ function rafraichirFaq() {
 async function faqAjouter() {
     if (!estPrincipal()) return;
     const q = $('faq-q').value.trim(), r = $('faq-r').value.trim();
-    if (!q || !r) return alert('Question et réponse obligatoires.');
+    if (!q || !r) return notif('Question et réponse obligatoires.');
     donneesSite.faqs.push({ q, r, ecran: $('faq-ecran').value });
     $('faq-q').value = $('faq-r').value = '';
     await sauvegarderOuAlerter(); rafraichirFaq();
@@ -1969,16 +2063,16 @@ function forumNouveau() { $('forum-nouveau').classList.toggle('hidden'); }
 
 // Recharge, vérifie le ban, applique, enregistre
 async function ecritureForum(fn) {
-    if (!moi()) return alert('Connectez-vous pour participer.');
+    if (!moi()) return notif('Connectez-vous pour participer.');
     try { await chargerDonnees(true); } catch (e) { }
-    if (monBan()) { rafraichirForum(); return alert('Vous êtes banni du forum : écriture impossible.'); }
+    if (monBan()) { rafraichirForum(); return notif('Vous êtes banni du forum : écriture impossible.'); }
     const sj = donneesSite.sujets.find(x => x._id === forumOuvert);
-    if (!estAdmin && (P().forumSourdine || (sj && sj.sourdine))) { rafraichirForum(); return alert('Le forum est en sourdine : seuls les administrateurs peuvent écrire.'); }
+    if (!estAdmin && (P().forumSourdine || (sj && sj.sourdine))) { rafraichirForum(); return notif('Le forum est en sourdine : seuls les administrateurs peuvent écrire.'); }
     fn(); await sauvegarderOuAlerter(); rafraichirForum();
 }
 async function forumCreer() {
     const titre = $('fn-titre').value.trim(), texte = $('fn-texte').value.trim();
-    if (!titre || !texte) return alert('Titre et message obligatoires.');
+    if (!titre || !texte) return notif('Titre et message obligatoires.');
     $('fn-titre').value = $('fn-texte').value = ''; $('forum-nouveau').classList.add('hidden');
     await ecritureForum(() => {
         const m = moi(), s = { _id: crypto.randomUUID(), titre, texte, auteurId: m.id, auteurNom: m.nom, date: Date.now(), messages: [] };
@@ -1997,10 +2091,10 @@ async function forumSignaler(sid, mid) {
     const m = moi(); if (!m) return;
     const s = donneesSite.sujets.find(x => x._id === sid); if (!s) return;
     const p = mid === '_main' ? { aid: s.auteurId, nom: s.auteurNom, texte: s.texte, supprime: s.supprime } : s.messages.find(x => x.id === mid); if (!p) return;
-    if (p.supprime) return alert('Ce message a été supprimé.');
+    if (p.supprime) return notif('Ce message a été supprimé.');
     const motif = prompt('Motif du signalement :'); if (motif === null) return;
     donneesSite.signalements.push({ sujetId: sid, sujetTitre: s.titre, msgId: mid, auteurId: p.aid, auteurNom: p.nom, extrait: (p.texte || '').slice(0, 200), par: m.nom, motif: motif.trim() || '—', date: Date.now(), statut: 'ouvert' });
-    await sauvegarderOuAlerter(); alert('Merci, le signalement a été transmis aux administrateurs.');
+    await sauvegarderOuAlerter(); notif('Merci, le signalement a été transmis aux administrateurs.');
 }
 async function forumRenommer(sid) {
     const s = donneesSite.sujets.find(x => x._id === sid); if (!estAdmin || !s) return;
@@ -2063,7 +2157,7 @@ function ouvrirProfil(aid) {
 function apresProfil(id) { ouvrirProfil(id); rafraichirAffichagePublic(); if (estAdmin) { rafraichirAdminLeger(); if (ongletAdmin === 'utilisateurs') rafraichirUtilisateursAdmin(); } }
 async function profilTag(id, tag) {
     const u = userParId(id); if (!estAdmin || !u) return;
-    if (['principal', 'secondaire'].includes(tag)) return alert("Les tags « Admin » et « Admin principal » sont attribués automatiquement aux administrateurs : on ne peut pas les donner.");
+    if (['principal', 'secondaire'].includes(tag)) return notif("Les tags « Admin » et « Admin principal » sont attribués automatiquement aux administrateurs : on ne peut pas les donner.");
     u.tag = tag || '';
     await sauvegarderOuAlerter(); apresProfil(id);
 }
@@ -2072,8 +2166,8 @@ async function profilBannir(id) {
     if (!estAdmin && tagDe(id) === 'moderateur') return;
     const type = estAdmin ? $('pb-type').value : 'temp'; let fin = null;
     if (type === 'temp') {
-        const h = parseFloat($('pb-h').value); if (!(h > 0)) return alert('Indiquez la durée en heures.');
-        if (!estAdmin && h > 72) return alert('Un modérateur peut bannir au maximum 72 heures.');
+        const h = parseFloat($('pb-h').value); if (!(h > 0)) return notif('Indiquez la durée en heures.');
+        if (!estAdmin && h > 72) return notif('Un modérateur peut bannir au maximum 72 heures.');
         fin = Date.now() + h * 3600000;
     }
     u.ban = { type, fin, par: estAdmin ? identAdmin() : moi().id, parNom: estAdmin ? (adminNom || 'Admin') : moi().nom, motif: $('pb-motif').value.trim(), date: Date.now() };
@@ -2083,15 +2177,15 @@ async function profilLever(id) {
     const u = userParId(id); if (!peutModerer() || !u || !u.ban) return;
     if (!estAdmin && u.ban.type !== 'temp') return;
     if (u.ban.type === 'def' && !estPrincipal() && u.ban.par !== identAdmin()) {
-        if (donneesSite.demandesBan.some(d => d.userId === id && d.statut === 'attente')) return alert('Une demande est déjà en attente.');
+        if (donneesSite.demandesBan.some(d => d.userId === id && d.statut === 'attente')) return notif('Une demande est déjà en attente.');
         donneesSite.demandesBan.push({ userId: id, userNom: u.nom, demandeur: identAdmin(), demandeurNom: adminNom, approbateur: u.ban.par, approbateurNom: u.ban.parNom, statut: 'attente', date: Date.now() });
-        await sauvegarderOuAlerter(); alert(`Demande envoyée : ${u.ban.parNom} doit approuver la levée du ban.`);
+        await sauvegarderOuAlerter(); notif(`Demande envoyée : ${u.ban.parNom} doit approuver la levée du ban.`);
     } else { delete u.ban; await sauvegarderOuAlerter(); }
     apresProfil(id);
 }
 async function demandeTraiter(did, ok) {
     const d = donneesSite.demandesBan.find(x => x._id === did); if (!d) return;
-    if (!estPrincipal() && identAdmin() !== d.approbateur) return alert("Seul l'administrateur qui a banni peut décider.");
+    if (!estPrincipal() && identAdmin() !== d.approbateur) return notif("Seul l'administrateur qui a banni peut décider.");
     if (ok) { const u = userParId(d.userId); if (u) delete u.ban; }
     donneesSite.demandesBan = donneesSite.demandesBan.filter(x => x._id !== did);
     await sauvegarderOuAlerter(); rafraichirSanctions(); rafraichirAffichagePublic();
@@ -2121,7 +2215,7 @@ function rafraichirUtilisateursAdmin() {
                 <div class="flex gap-1"><button data-a="${esc(u.id)}" onclick="ouvrirProfil(this.dataset.a)" class="bg-indigo-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer">Profil · tag · ban</button>${bt('bg-red-600 text-white', '🗑️', `adminSupprimerUtilisateur(${i})`)}</div>
             </div>
             <details class="mt-2"><summary class="text-xs text-blue-700 cursor-pointer">Modifier les informations</summary>
-                <div class="flex gap-2 flex-wrap items-center mt-2">${inp('u-id-' + i, u.id, 'w-20', 'Identifiant')}${inp('u-nom-' + i, u.nom, 'w-24', 'Nom')}${inp('u-prenoms-' + i, u.prenoms, 'w-28', 'Prénoms')}${inp('u-tel-' + i, u.telephone, 'w-24', 'Téléphone')}${inp('u-code-' + i, '', 'w-28', 'Nouveau code (vide = inchangé)')}${bt('bg-blue-600 text-white', 'Mettre à jour', `adminModifierUtilisateur(${i})`)}</div>
+                <div class="flex gap-2 flex-wrap items-center mt-2">${inp('u-id-' + i, u.id, 'w-20', 'Identifiant')}${inp('u-nom-' + i, u.nom, 'w-24', 'Nom')}${inp('u-prenoms-' + i, u.prenoms, 'w-28', 'Prénoms')}${inp('u-tel-' + i, u.telephone, 'w-24', 'Téléphone')}${inp('u-code-' + i, '', 'w-28', 'Nouveau code (vide = inchangé)')}${bt('bg-blue-600 text-white', 'Mettre à jour', `adminModifierUtilisateur(${i})`)}${bt('bg-amber-500 text-white', '🔑 Réinitialiser le code', `adminReinitCode(${i})`)}</div>
             </details>
         </div>`).join('') || "<p class='text-xs text-slate-500 italic'>Aucun utilisateur.</p>";
 }
@@ -2194,7 +2288,7 @@ function rafraichirSousCats() {
     });
 }
 async function sousCatAjouter() {
-    const nom = $('souscat-nom').value.trim(); if (!peutPanelProf() || !nom) return alert('Indiquez un nom.');
+    const nom = $('souscat-nom').value.trim(); if (!peutPanelProf() || !nom) return notif('Indiquez un nom.');
     donneesSite.sousCategories.push({ section: $('souscat-section').value, nom });
     $('souscat-nom').value = ''; await sauvegarderOuAlerter(); rafraichirSousCats(); rafraichirAffichagePublic();
 }
@@ -2277,7 +2371,7 @@ function connecterAdmin(rec) {
     changerEcran('admin-panel');
 }
 let inscAdminRole = null, inscAdminRec = null;
-function ouvrirInscriptionAdmin() { alert("Les comptes administrateurs se créent désormais dans Supabase (script SQL creer_admin)."); }
+function ouvrirInscriptionAdmin() { notif("Les comptes administrateurs se créent désormais dans Supabase (script SQL creer_admin)."); }
 function fermerInscriptionAdmin() { $('modal-admin-inscription').classList.add('hidden'); }
 async function validerInscriptionAdmin() { fermerInscriptionAdmin(); }
 function terminerInscriptionAdmin() { fermerInscriptionAdmin(); if (inscAdminRec) connecterAdmin(inscAdminRec); }
@@ -2298,7 +2392,7 @@ async function adminSupprimerAdmin(id) {
     const a = donneesSite.admins.find(x => x._id === id); if (!a || a.role !== 'secondaire') return;
     if (!confirm(`Retirer l'administrateur « ${a.prenoms} ${a.nom} » ? Son accès sera supprimé.`)) return;
     const { error: errRet } = await sb.rpc('admin_retirer_admin', { p_rec: id });
-    if (errRet) return alert("Retrait refusé.\n\nDétail : " + errRet.message);
+    if (errRet) return notif("Retrait refusé.\n\nDétail : " + errRet.message);
     donneesSite.admins = donneesSite.admins.filter(x => x._id !== id);
     await sauvegarderOuAlerter(); rafraichirAdminsListe();
 }
@@ -2323,16 +2417,16 @@ function profilBasculerCle() {
 async function enregistrerProfil() {
     const s = profilSource(); if (!s) return;
     const nom = $('pf-nom').value.trim(), prenoms = $('pf-prenoms').value.trim();
-    if (!nom || !prenoms) return alert('Nom et prénoms obligatoires.');
+    if (!nom || !prenoms) return notif('Nom et prénoms obligatoires.');
     const f = $('pf-photo-file').files[0]; let photo = s.photo || '';
     try { if (f) photo = await lireFichier(f, 400); }
-    catch (err) { console.error(err); return alert("Erreur lors de l'envoi de la photo\n\nDétail : " + ((err && (err.message || err.details)) || String(err))); }
+    catch (err) { console.error(err); return notif("Erreur lors de l'envoi de la photo\n\nDétail : " + ((err && (err.message || err.details)) || String(err))); }
     const avant = { ...s };
     Object.assign(s, { nom, prenoms, photo, niveau: $('pf-niveau').value.trim(), interets: $('pf-interets').value.trim(), description: $('pf-description').value.trim() });
-    if (!(await sauvegarder())) { Object.assign(s, avant); return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
+    if (!(await sauvegarder())) { Object.assign(s, avant); return notif("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
     if (!estAdmin) { utilisateurActif = s; ecrireSession('utilisateur_actif', JSON.stringify(s)); }
     majTitreBienvenue(); sigForum = ''; remplirProfil(); rafraichirAffichagePublic();
-    alert('Profil enregistré.');
+    notif('Profil enregistré.');
 }
 
 
@@ -2416,13 +2510,13 @@ document.addEventListener('click', e => { if (!e.target.closest('#mention-pop'))
 async function forumSourdineGlobal() {
     if (!estAdmin) return;
     const p = P(); p.forumSourdine = !p.forumSourdine;
-    if (!(await sauvegarder())) { p.forumSourdine = !p.forumSourdine; return alert("Échec de l'enregistrement.\n\nDétail : " + derniereErreur); }
+    if (!(await sauvegarder())) { p.forumSourdine = !p.forumSourdine; return notif("Échec de l'enregistrement.\n\nDétail : " + derniereErreur); }
     rafraichirForum();
 }
 async function forumSourdineSujet(id) {
     const s = donneesSite.sujets.find(x => x._id === id); if (!estAdmin || !s) return;
     s.sourdine = !s.sourdine;
-    if (!(await sauvegarder())) { s.sourdine = !s.sourdine; return alert("Échec de l'enregistrement.\n\nDétail : " + derniereErreur); }
+    if (!(await sauvegarder())) { s.sourdine = !s.sourdine; return notif("Échec de l'enregistrement.\n\nDétail : " + derniereErreur); }
     rafraichirForum();
 }
 
@@ -2522,14 +2616,14 @@ async function adminAjouterEvaluation() {
     if (!peutPanelProf()) return;
     const m = moi(), btn = $('btn-add-eval');
     const titre = $('admin-eval-titre').value.trim(), description = $('admin-eval-desc').value.trim(), fichier = $('admin-eval-file').files[0];
-    if (!titre || !fichier) return alert("Renseignez le titre et choisissez le fichier de l'évaluation (page .html, PDF ou photo).");
+    if (!titre || !fichier) return notif("Renseignez le titre et choisissez le fichier de l'évaluation (page .html, PDF ou photo).");
     const html = estHtml(fichier);
-    if (!html && !(/\.pdf$/i.test(fichier.name) || /^image\//.test(fichier.type) || fichier.type === 'application/pdf')) return alert('Format non pris en charge : utilisez une page .html, un PDF ou une photo.');
+    if (!html && !(/\.pdf$/i.test(fichier.name) || /^image\//.test(fichier.type) || fichier.type === 'application/pdf')) return notif('Format non pris en charge : utilisez une page .html, un PDF ou une photo.');
     const nature = $('admin-eval-nature').value, aRendre = $('admin-eval-arendre').checked;
     let delai = null;
     if (aRendre && $('admin-eval-delai').value) {
         delai = new Date($('admin-eval-delai').value).getTime();
-        if (!(delai > Date.now())) return alert('La date limite doit être dans le futur.');
+        if (!(delai > Date.now())) return notif('La date limite doit être dans le futur.');
     }
     const fCorr = aRendre ? $('admin-eval-correction-file').files[0] : null;
     btn.disabled = true; btn.textContent = 'Envoi…';
@@ -2541,15 +2635,15 @@ async function adminAjouterEvaluation() {
         donneesSite.evaluations.push(ev);
         if (!(await sauvegarder())) {
             donneesSite.evaluations.pop();
-            return alert("Ajout impossible : échec de l'enregistrement (connexion ou fichier trop volumineux).");
+            return notif("Ajout impossible : échec de l'enregistrement (connexion ou fichier trop volumineux).");
         }
         ['admin-eval-titre', 'admin-eval-desc', 'admin-eval-file', 'admin-eval-correction-file', 'admin-eval-delai'].forEach(id => $(id).value = '');
         $('admin-eval-arendre').checked = false; evalMajARendre(); evalFichierChange();
-        alert('Évaluation ajoutée !');
+        notif('Évaluation ajoutée !');
         rafraichirAffichagePublic();
     } catch (err) {
         console.error(err);
-        alert("Erreur lors de la lecture du fichier\n\nDétail : " + ((err && (err.message || err.error || err.details)) || String(err)));
+        notif("Erreur lors de la lecture du fichier\n\nDétail : " + ((err && (err.message || err.error || err.details)) || String(err)));
     } finally { btn.disabled = false; btn.textContent = 'Ajouter'; }
 }
 
@@ -2651,9 +2745,9 @@ function evalVoirCopies() {
 async function evalEnvoyer() {
     const ev = donneesSite.evaluations.find(e => e._id === evalDetailId);
     if (!ev || !evalEcritureAutorisee() || !aRendreEv(ev)) return;
-    if (delaiDepasse(ev)) return alert("Le délai est dépassé : l'envoi est fermé.");
+    if (delaiDepasse(ev)) return notif("Le délai est dépassé : l'envoi est fermé.");
     const texte = $('ed-texte').value.trim(), f = $('ed-file').files[0];
-    if (!texte && !f && !(renduDe(ev._id) || {}).fileUrl) return alert('Écris tes réponses ou joins un fichier.');
+    if (!texte && !f && !(renduDe(ev._id) || {}).fileUrl) return notif('Écris tes réponses ou joins un fichier.');
     const btn = $('ed-btn-envoyer'), libelle = btn.textContent;
     btn.disabled = true; btn.textContent = 'Envoi…';
     let avant = null, cree = null;
@@ -2669,13 +2763,13 @@ async function evalEnvoyer() {
         }
         if (!(await sauvegarder())) {
             if (cree) donneesSite.rendus = donneesSite.rendus.filter(r => r !== cree); else Object.assign(ex, avant);
-            return alert("Envoi impossible : échec de l'enregistrement.\n\nDétail : " + derniereErreur);
+            return notif("Envoi impossible : échec de l'enregistrement.\n\nDétail : " + derniereErreur);
         }
         ecrireBrouillon(ev._id, ''); $('ed-file').value = '';
         evalDetailMaj(true); rafraichirAffichagePublic();
-        alert("Devoir envoyé à l'administrateur et au professeur ✅");
+        notif("Devoir envoyé à l'administrateur et au professeur ✅");
     } catch (err) {
-        console.error(err); alert("Erreur lors de l'envoi\n\nDétail : " + ((err && (err.message || err.details)) || String(err)));
+        console.error(err); notif("Erreur lors de l'envoi\n\nDétail : " + ((err && (err.message || err.details)) || String(err)));
     } finally { btn.disabled = delaiDepasse(ev); btn.textContent = libelle; evalDetailMaj(true); }
 }
 
@@ -2750,8 +2844,8 @@ async function enregistrerClasser() {
                 if (f) it.correctionUrl = await lireFichier(f);
             } else it.delai = null;
         }
-    } catch (err) { Object.assign(it, avant); console.error(err); return alert("Erreur lors de l'envoi de la correction\n\nDétail : " + ((err && (err.message || err.details)) || String(err))); }
-    if (!(await sauvegarder())) { Object.assign(it, avant); return alert('Enregistrement impossible.\n\nDétail : ' + derniereErreur); }
+    } catch (err) { Object.assign(it, avant); console.error(err); return notif("Erreur lors de l'envoi de la correction\n\nDétail : " + ((err && (err.message || err.details)) || String(err))); }
+    if (!(await sauvegarder())) { Object.assign(it, avant); return notif('Enregistrement impossible.\n\nDétail : ' + derniereErreur); }
     $('modal-classer').classList.add('hidden'); rafraichirAffichagePublic(); rafraichirRendus();
 }
 
@@ -2796,13 +2890,13 @@ function rafraichirChatProf() {
 async function epChatEnvoyer() {
     if (!peutEspaceProf()) return;
     const inp = $('chat-prof-input'), t = inp.value.trim(); if (!t) return;
-    if (monBan()) return alert('Vous êtes banni : écriture impossible.');
+    if (monBan()) return notif('Vous êtes banni : écriture impossible.');
     const m = moi(), msg = { aid: m.id, nom: m.nom, texte: t, date: Date.now() };
     donneesSite.chatProf.push(msg); inp.value = '';
     rafraichirChatProf(); $('chat-prof-liste').scrollTop = 1e9;
     if (!(await sauvegarder())) {
         donneesSite.chatProf = donneesSite.chatProf.filter(x => x !== msg); inp.value = t; rafraichirChatProf();
-        alert("Message non envoyé : échec de l'enregistrement.\n\nDétail : " + derniereErreur);
+        notif("Message non envoyé : échec de l'enregistrement.\n\nDétail : " + derniereErreur);
     }
 }
 async function epChatSupprimer(id) {
@@ -2826,7 +2920,7 @@ function annonceVerifier() {
 async function annonceEnvoyer() {
     if (!estPrincipal()) return;
     const t = $('annonce-input').value.trim();
-    if (!t) return alert('Écrivez le message à afficher.');
+    if (!t) return notif('Écrivez le message à afficher.');
     await annEcrire([...(P().annoncesCib || []), { id: crypto.randomUUID(), texte: t, cible: $('ann-cible').value || 'tous', date: Date.now(), par: adminNom || 'Admin' }], () => { $('annonce-input').value = ''; });
 }
 
@@ -3065,10 +3159,10 @@ function donsNon() {
 }
 async function donsOui() {
     const m = moi();
-    if (!m) return alert('Connectez-vous pour continuer.');
+    if (!m) return notif('Connectez-vous pour continuer.');
     const brut = $('dons-montant').value.trim(), montant = Math.round(Number(brut));
-    if (!brut || !(montant > 0)) return alert("Indiquez le montant de votre don avant de répondre « Oui ».");
-    if (montant > 100000000) return alert('Montant invalide.');
+    if (!brut || !(montant > 0)) return notif("Indiquez le montant de votre don avant de répondre « Oui ».");
+    if (montant > 100000000) return notif('Montant invalide.');
     const btn = $('dons-oui'), lib = btn.textContent;
     btn.disabled = true; btn.textContent = 'Envoi…';
     const d = { auteurId: m.id, auteurNom: m.nom, montant, date: Date.now(), statut: 'attente' };
@@ -3076,7 +3170,7 @@ async function donsOui() {
     try {
         if (!(await sauvegarder())) {
             donneesSite.dons = donneesSite.dons.filter(x => x !== d);
-            return alert("Envoi impossible : échec de l'enregistrement. Vérifiez votre connexion puis réessayez.\n\nDétail : " + derniereErreur);
+            return notif("Envoi impossible : échec de l'enregistrement. Vérifiez votre connexion puis réessayez.\n\nDétail : " + derniereErreur);
         }
         $('dons-montant').value = '';
         $('dons-question').classList.add('hidden');
@@ -3131,21 +3225,21 @@ async function donsStatut(id, statut) {
     if (!estAdmin) return;
     const d = donneesSite.dons.find(x => x._id === id); if (!d) return;
     const avant = d.statut; d.statut = statut; d.parAdmin = adminNom || 'Admin'; d.dateTraitement = Date.now();
-    if (!(await sauvegarder())) { d.statut = avant; return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
+    if (!(await sauvegarder())) { d.statut = avant; return notif("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
     rafraichirDonsAdmin(); rafraichirDons();
 }
 async function donsSupprimer(id) {
     if (!estPrincipal() || !confirm('Supprimer cette déclaration de don ?')) return;
     const avant = donneesSite.dons;
     donneesSite.dons = donneesSite.dons.filter(x => x._id !== id);
-    if (!(await sauvegarder())) { donneesSite.dons = avant; return alert("Suppression impossible.\n\nDétail : " + derniereErreur); }
+    if (!(await sauvegarder())) { donneesSite.dons = avant; return notif("Suppression impossible.\n\nDétail : " + derniereErreur); }
     rafraichirDonsAdmin(); rafraichirDons();
 }
 // Tag « Donateur » : réservé à l'administrateur principal, indépendant du tag existant
 async function basculerDonateur(userId) {
     const u = userParId(userId); if (!estPrincipal() || !u) return false;
     u.donateur = !u.donateur;
-    if (!(await sauvegarder())) { u.donateur = !u.donateur; alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); return false; }
+    if (!(await sauvegarder())) { u.donateur = !u.donateur; notif("Enregistrement impossible.\n\nDétail : " + derniereErreur); return false; }
     sigForum = ''; rafraichirAffichagePublic();
     return true;
 }
@@ -3160,10 +3254,10 @@ async function donsEnregistrerMessages() {
     p.donsNote = $('dons-edit-note').value.trim();
     if (!(await sauvegarder())) {
         p.donsMessage = avant.m; p.donsMerci = avant.r; p.donsNote = avant.n;
-        return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur);
+        return notif("Enregistrement impossible.\n\nDétail : " + derniereErreur);
     }
     donsEditSale = false; rafraichirDons(); rafraichirDonsAdmin();
-    alert('Messages de la page Dons enregistrés.');
+    notif('Messages de la page Dons enregistrés.');
 }
 ['dons-edit-message', 'dons-edit-merci', 'dons-edit-note'].forEach(id => $(id).addEventListener('input', () => { donsEditSale = true; }));
 ['dons-edit-objectif', 'dons-edit-obj-titre'].forEach(id => $(id).addEventListener('input', () => { donsObjSale = true; }));
@@ -3171,16 +3265,16 @@ async function donsEnregistrerMessages() {
 async function donsEnregistrerObjectif() {
     if (!estPrincipal()) return;
     const brut = $('dons-edit-objectif').value.trim(), obj = brut === '' ? 0 : Math.round(Number(brut));
-    if (!isFinite(obj) || obj < 0 || obj > 10000000000) return alert("Objectif invalide : indiquez un montant en FCFA (ou laissez vide pour masquer la jauge).");
+    if (!isFinite(obj) || obj < 0 || obj > 10000000000) return notif("Objectif invalide : indiquez un montant en FCFA (ou laissez vide pour masquer la jauge).");
     const p = P(), avant = { o: p.donsObjectif, t: p.donsObjectifTitre, d: p.donsDepuis };
     p.donsObjectif = obj; p.donsObjectifTitre = $('dons-edit-obj-titre').value.trim();
     if ($('dons-edit-zero').checked) p.donsDepuis = Date.now();
     if (!(await sauvegarder())) {
         p.donsObjectif = avant.o; p.donsObjectifTitre = avant.t; p.donsDepuis = avant.d;
-        return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur);
+        return notif("Enregistrement impossible.\n\nDétail : " + derniereErreur);
     }
     $('dons-edit-zero').checked = false; donsObjSale = false; rafraichirDons(); rafraichirDonsAdmin();
-    alert(obj > 0 ? 'Objectif de collecte enregistré.' : 'Jauge masquée (aucun objectif).');
+    notif(obj > 0 ? 'Objectif de collecte enregistré.' : 'Jauge masquée (aucun objectif).');
 }
 
 // ---------- Branchement sur le code existant ----------
@@ -3223,7 +3317,7 @@ function editMsg(type, id, mid) {
     if (!o || o.aid !== m.id || o.ref.supprime) return;
     if (type === 'chatAdmin' && !estAdmin) return;
     if (type === 'chatProf' && !peutEspaceProf()) return;
-    if (type !== 'chatAdmin' && monBan()) return alert('Vous êtes banni : modification impossible.');
+    if (type !== 'chatAdmin' && monBan()) return notif('Vous êtes banni : modification impossible.');
     editCtx = { type, id, mid };
     $('edit-msg-texte').value = o.ref.texte || '';
     $('modal-edit-msg').classList.remove('hidden');
@@ -3237,9 +3331,9 @@ function majApresEdition() {
 async function validerEditMsg() {
     if (!editCtx) return;
     const m = moi(), o = trouverMsg(editCtx.type, editCtx.id, editCtx.mid);
-    if (!m || !o || o.aid !== m.id || o.ref.supprime) { fermerEditMsg(); return alert('Ce message est introuvable, supprimé ou ne vous appartient pas.'); }
+    if (!m || !o || o.aid !== m.id || o.ref.supprime) { fermerEditMsg(); return notif('Ce message est introuvable, supprimé ou ne vous appartient pas.'); }
     const t = $('edit-msg-texte').value.trim();
-    if (!t) return alert('Le message ne peut pas être vide.');
+    if (!t) return notif('Le message ne peut pas être vide.');
     if (t === o.ref.texte) return fermerEditMsg();
     const btn = $('edit-msg-ok'); btn.disabled = true;
     const avant = { texte: o.ref.texte, modifie: o.ref.modifie, hist: o.ref.hist }, maintenant = Date.now();
@@ -3251,7 +3345,7 @@ async function validerEditMsg() {
             o.ref.texte = avant.texte;
             if (avant.hist === undefined) delete o.ref.hist; else o.ref.hist = avant.hist;
             if (avant.modifie === undefined) delete o.ref.modifie; else o.ref.modifie = avant.modifie;
-            return alert("Modification impossible : échec de l'enregistrement.\n\nDétail : " + derniereErreur);
+            return notif("Modification impossible : échec de l'enregistrement.\n\nDétail : " + derniereErreur);
         }
         fermerEditMsg(); majApresEdition();
     } finally { btn.disabled = false; }
@@ -3338,7 +3432,7 @@ verifierSession = function () {
 ECRANS.profil = '👤 Mon profil';
 $('faq-ecran').innerHTML = Object.entries(ECRANS).map(([k, v]) => `<option value="${k}">Redirige vers : ${v}</option>`).join('');
 const FAQ_PLUS = [
-    ['Comment faire un don ?', "Ouvrez « Dons » dans le menu (ou touchez le bouton ❤️ en bas à gauche), puis appuyez sur « FAITES UN DON ». Le paiement se fait uniquement par Wave. Ensuite, revenez sur la page et répondez « Oui » en indiquant le montant que vous avez envoyé.", 'dons'],
+    ['Comment faire un don ?', "Ouvrez « Dons » dans le menu (ou touchez le bouton rond ❤️ en bas, à gauche d'« Assistance »), puis appuyez sur « FAITES UN DON ». Le paiement se fait uniquement par Wave. Ensuite, revenez sur la page et répondez « Oui » en indiquant le montant que vous avez envoyé.", 'dons'],
     ['Comment savoir si mon don a été reçu ?', "Dans la page « Dons », la liste « Mes dons déclarés » affiche l'état de chaque don : en attente, reçu ou pas reçu. L'administration le vérifie avant de le confirmer.", 'dons'],
     ['Que signifie le tag 💝 Donateur ?', "Il est attribué par l'administrateur principal aux personnes qui soutiennent la plateforme. Il s'ajoute à votre tag habituel (Étudiant, Prof, Sponsor) sans le remplacer.", 'forum'],
     ["Comment modifier un message que j'ai envoyé ?", "Sur votre propre message (forum ou discussions), appuyez sur « ✏️ Modifier », changez le texte puis enregistrez. La mention « (modifié) » apparaît alors en petit sous le message.", 'forum'],
@@ -3373,19 +3467,19 @@ function peutSupprimerMsg(x) {
 }
 async function supprimerMonMessage(type, id, mid) {
     const m = moi(); if (!m) return;
-    if (type !== 'chatAdmin' && monBan()) return alert('Vous êtes banni : suppression impossible.');
+    if (type !== 'chatAdmin' && monBan()) return notif('Vous êtes banni : suppression impossible.');
     if (!confirm('Supprimer ce message ? Cette action est définitive.')) return;
     try { await chargerDonnees(true); } catch (e) { }
     const o = trouverMsg(type, id, mid);
-    if (!o || o.aid !== m.id) return alert('Ce message est introuvable ou ne vous appartient pas.');
+    if (!o || o.aid !== m.id) return notif('Ce message est introuvable ou ne vous appartient pas.');
     if (o.ref.supprime) return majApresEdition();
-    if (Date.now() - (o.ref.date || 0) < DELAI_SUPPR_MSG) return alert("Ce message ne peut pas encore être supprimé.");
+    if (Date.now() - (o.ref.date || 0) < DELAI_SUPPR_MSG) return notif("Ce message ne peut pas encore être supprimé.");
     const avant = { texte: o.ref.texte, modifie: o.ref.modifie };
     o.ref.texte = ''; o.ref.supprime = Date.now(); delete o.ref.modifie;
     if (!(await sauvegarder())) {
         o.ref.texte = avant.texte; delete o.ref.supprime; if (avant.modifie !== undefined) o.ref.modifie = avant.modifie;
         majApresEdition();
-        return alert("Suppression impossible : échec de l'enregistrement.\n\nDétail : " + derniereErreur);
+        return notif("Suppression impossible : échec de l'enregistrement.\n\nDétail : " + derniereErreur);
     }
     majApresEdition();
 }
@@ -3415,23 +3509,23 @@ function rafraichirPresets() {
 async function annoncePreSauver(nouvelle, echec) {
     const p = P(), avant = p.annoncesPre;
     p.annoncesPre = nouvelle;
-    if (!(await sauvegarder())) { p.annoncesPre = avant; alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); return false; }
+    if (!(await sauvegarder())) { p.annoncesPre = avant; notif("Enregistrement impossible.\n\nDétail : " + derniereErreur); return false; }
     rafraichirPresets(); return true;
 }
 async function annoncePreAjouter() {
     if (!estPrincipal()) return;
     const t = $('annonce-input').value.trim();
-    if (!t) return alert("Écrivez d'abord le message à pré-enregistrer.");
+    if (!t) return notif("Écrivez d'abord le message à pré-enregistrer.");
     const L = P().annoncesPre || [];
-    if (L.some(a => a.texte === t)) return alert('Ce message est déjà pré-enregistré.');
-    if (L.length >= 30) return alert('30 messages pré-enregistrés au maximum : supprimez-en un.');
+    if (L.some(a => a.texte === t)) return notif('Ce message est déjà pré-enregistré.');
+    if (L.length >= 30) return notif('30 messages pré-enregistrés au maximum : supprimez-en un.');
     if (await annoncePreSauver([...L, { id: crypto.randomUUID(), texte: t }])) $('annonce-input').value = '';
 }
 async function annoncePreModifier(id) {
     if (!estPrincipal()) return;
     const L = P().annoncesPre || [], a = L.find(x => x.id === id); if (!a) return;
     const t = prompt('Modifier le message (160 caractères max) :', a.texte); if (t === null) return;
-    const v = t.trim().slice(0, 160); if (!v) return alert('Le message ne peut pas être vide.');
+    const v = t.trim().slice(0, 160); if (!v) return notif('Le message ne peut pas être vide.');
     await annoncePreSauver(L.map(x => x.id === id ? { ...x, texte: v } : x));
 }
 async function annoncePreSupprimer(id) {
@@ -3555,7 +3649,7 @@ async function journalSupprimer(id) {
     if (!estPrincipal() || !confirm('Supprimer cette entrée de l\'historique ?')) return;
     const avant = donneesSite.journal;
     donneesSite.journal = avant.filter(e => e._id !== id);
-    if (!(await sauvegarder())) { donneesSite.journal = avant; alert("Suppression impossible.\n\nDétail : " + derniereErreur); }
+    if (!(await sauvegarder())) { donneesSite.journal = avant; notif("Suppression impossible.\n\nDétail : " + derniereErreur); }
     rafraichirJournal();
 }
 async function journalVider(portee) {
@@ -3564,7 +3658,7 @@ async function journalVider(portee) {
     if (!confirm(prof ? "Vider l'historique des ajouts des professeurs ?" : "Vider TOUT l'historique des actions ? Cette action est définitive.")) return;
     const avant = donneesSite.journal;
     donneesSite.journal = prof ? avant.filter(e => !(e.cat === 'ajout' && e.role === 'prof')) : [];
-    if (!(await sauvegarder())) { donneesSite.journal = avant; alert("Opération impossible.\n\nDétail : " + derniereErreur); }
+    if (!(await sauvegarder())) { donneesSite.journal = avant; notif("Opération impossible.\n\nDétail : " + derniereErreur); }
     rafraichirJournal();
 }
 const _rafLegerJ = rafraichirAdminLeger;
@@ -3598,18 +3692,18 @@ function mpLire() {
 async function mpEnregistrer() {
     if (!estPrincipal()) return;
     const p = P(), av = p.maintConfig; p.maintConfig = mpLire();
-    if (!(await sauvegarder())) { p.maintConfig = av; return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
-    mpSale = false; mpChargerChamps(); alert('Réglages enregistrés.');
+    if (!(await sauvegarder())) { p.maintConfig = av; return notif("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
+    mpSale = false; mpChargerChamps(); notif('Réglages enregistrés.');
 }
 async function mpLancer() {
     if (!estPrincipal()) return;
-    const p = P(); if (p.maintenance && p.maintenance.actif) return alert('Le site est déjà en maintenance.');
+    const p = P(); if (p.maintenance && p.maintenance.actif) return notif('Le site est déjà en maintenance.');
     const cfg = mpLire(), avance = Math.max(0, ...cfg.etapes.map(e => e.min)) * 60000 + cfg.decompte * 1000;
     if (!confirm('Lancer la maintenance automatique ? Les messages partiront aux visiteurs et le site sera bloqué à la fin du décompte.')) return;
     const av = { c: p.maintConfig, m: p.maintPlan };
     p.maintConfig = cfg;
     p.maintPlan = { id: crypto.randomUUID(), debut: Date.now() + avance, etapes: cfg.etapes, decompte: cfg.decompte, duree: cfg.duree, reste: cfg.reste, lance: false };
-    if (!(await sauvegarder())) { p.maintConfig = av.c; p.maintPlan = av.m; return alert("Lancement impossible.\n\nDétail : " + derniereErreur); }
+    if (!(await sauvegarder())) { p.maintConfig = av.c; p.maintPlan = av.m; return notif("Lancement impossible.\n\nDétail : " + derniereErreur); }
     mpSale = false; mpTick();
 }
 async function mpAnnuler() {
@@ -3623,19 +3717,19 @@ const mpFin = plan => plan.finFixe || (plan.duree ? plan.debut + plan.duree * 60
 async function mpProgrammer() {
     if (!estPrincipal()) return;
     const p = P();
-    if (p.maintenance && p.maintenance.actif) return alert('Le site est déjà en maintenance.');
-    if (p.maintPlan && !p.maintPlan.lance) return alert("Une procédure est déjà en cours : annulez-la d'abord.");
+    if (p.maintenance && p.maintenance.actif) return notif('Le site est déjà en maintenance.');
+    if (p.maintPlan && !p.maintPlan.lance) return notif("Une procédure est déjà en cours : annulez-la d'abord.");
     const d = $('mp-prog-debut').value, f = $('mp-prog-fin').value;
     const debut = d ? Date.parse(d + 'Z') : NaN, fin = f ? Date.parse(f + 'Z') : null;
-    if (isNaN(debut)) return alert("Choisissez la date et l'heure de début (GMT+0).");
-    if (debut <= Date.now() + 60000) return alert('Le début doit être dans le futur.');
-    if (f && (isNaN(fin) || fin <= debut)) return alert('La fin doit être après le début.');
+    if (isNaN(debut)) return notif("Choisissez la date et l'heure de début (GMT+0).");
+    if (debut <= Date.now() + 60000) return notif('Le début doit être dans le futur.');
+    if (f && (isNaN(fin) || fin <= debut)) return notif('La fin doit être après le début.');
     const cfg = mpLire();
     if (!confirm('Programmer la maintenance du ' + fmtGMT(debut) + (fin ? ' au ' + fmtGMT(fin) : '') + ' (GMT+0) ?')) return;
     const av = { c: p.maintConfig, m: p.maintPlan };
     p.maintConfig = cfg;
     p.maintPlan = { id: crypto.randomUUID(), debut, etapes: cfg.etapes, decompte: cfg.decompte, duree: fin ? null : cfg.duree, finFixe: fin, reste: !!($('mp-reste').checked && (fin || cfg.duree)), lance: false };
-    if (!(await sauvegarder())) { p.maintConfig = av.c; p.maintPlan = av.m; return alert("Programmation impossible.\n\nDétail : " + derniereErreur); }
+    if (!(await sauvegarder())) { p.maintConfig = av.c; p.maintPlan = av.m; return notif("Programmation impossible.\n\nDétail : " + derniereErreur); }
     mpSale = false; mpTick();
 }
 async function mpTick() {
@@ -3704,12 +3798,12 @@ function aaRendreHeures() { $('aa-heures').innerHTML = aaHeures.map((h, i) => `<
 function aaAjouterHeure() { const v = $('aa-heure').value; if (!v) return; if (!aaHeures.includes(v)) aaHeures.push(v); aaHeures.sort(); aaRendreHeures(); }
 async function aaCreer() {
     if (!estPrincipal()) return;
-    const t = $('annonce-input').value.trim(); if (!t) return alert('Écrivez le message.');
-    if (!aaHeures.length) return alert('Ajoutez au moins une heure.');
+    const t = $('annonce-input').value.trim(); if (!t) return notif('Écrivez le message.');
+    if (!aaHeures.length) return notif('Ajoutez au moins une heure.');
     const jours = [...document.querySelectorAll('.aa-j:checked')].map(x => +x.value);
     const p = P(), av = p.annoncesAuto;
     p.annoncesAuto = [...(av || []), { id: crypto.randomUUID(), texte: t, heures: [...aaHeures], jours, actif: true, cible: $('ann-cible').value || 'tous' }];
-    if (!(await sauvegarder())) { p.annoncesAuto = av; return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
+    if (!(await sauvegarder())) { p.annoncesAuto = av; return notif("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
     $('annonce-input').value = ''; aaHeures = []; aaRendreHeures(); document.querySelectorAll('.aa-j').forEach(x => x.checked = false); aaListe();
 }
 function aaListe() {
@@ -3751,7 +3845,7 @@ const _bmaV9 = basculerModeAuth;
 basculerModeAuth = function () { _bmaV9.apply(this, arguments); try { majChampsInscription(); } catch (e) { } };
 $('form-auth').addEventListener('submit', e => {
     if (modeAuthActif !== 'inscription') return;
-    const p = P(), stop = m => { e.preventDefault(); e.stopImmediatePropagation(); alert(m); };
+    const p = P(), stop = m => { e.preventDefault(); e.stopImmediatePropagation(); notif(m); };
     // Le code d'invitation est vérifié par le serveur au moment de l'inscription (les codes ne sont plus envoyés au navigateur)
     if (p.invitation && p.invitation.actif && !$('auth-invit').value.trim()) return stop("Code d'invitation requis : demandez-le à l'administration.");
     if (p.charte && p.charte.actif && !$('auth-charte').checked) return stop("Vous devez accepter la charte du site pour vous inscrire.");
@@ -3784,19 +3878,19 @@ ouvrirProfil = function (aid) {
 
 // ----- Lecture seule, anti-spam, mots interdits -----
 function ecritureBloquee() {
-    if (!estAdmin && P().lectureSeule) { alert("Le site est en mode lecture seule : la consultation reste possible, l'écriture est bloquée."); return true; }
+    if (!estAdmin && P().lectureSeule) { notif("Le site est en mode lecture seule : la consultation reste possible, l'écriture est bloquée."); return true; }
     return false;
 }
 function texteAutorise(txt) {
     if (estAdmin || !txt.trim()) return true;
     const p = P(), n = norm(txt);
     const mot = (p.motsInterdits || []).find(m => m && n.includes(norm(m)));
-    if (mot) { alert("Votre message contient un mot interdit : « " + mot + " »."); return false; }
+    if (mot) { notif("Votre message contient un mot interdit : « " + mot + " »."); return false; }
     const sec = p.antiSpamSec || 0;
     if (sec > 0) {
         let last = 0; try { last = +localStorage.getItem('dernier_msg') || 0; } catch (e) { }
         const reste = Math.ceil((last + sec * 1000 - Date.now()) / 1000);
-        if (reste > 0) { alert('Patientez encore ' + reste + ' s avant d\'envoyer un autre message.'); return false; }
+        if (reste > 0) { notif('Patientez encore ' + reste + ' s avant d\'envoyer un autre message.'); return false; }
         try { localStorage.setItem('dernier_msg', String(Date.now())); } catch (e) { }
     }
     return true;
@@ -3833,13 +3927,13 @@ async function reglesEnregistrer() {
     if (!estPrincipal()) return;
     const p = P(), av = { i: p.invitation, c: p.charte, l: p.lectureSeule, s: p.antiSpamSec, m: p.motsInterdits };
     p.invitation = { actif: $('rg-invit-actif').checked, codes: $('rg-invit-codes').value.split(/[\n,;]+/).map(x => x.trim()).filter(Boolean) };
-    if (p.invitation.actif && !p.invitation.codes.length) { Object.assign(p, { invitation: av.i }); return alert("Ajoutez au moins un code d'invitation ou désactivez l'option."); }
+    if (p.invitation.actif && !p.invitation.codes.length) { Object.assign(p, { invitation: av.i }); return notif("Ajoutez au moins un code d'invitation ou désactivez l'option."); }
     p.charte = { actif: $('rg-charte-actif').checked, texte: $('rg-charte-texte').value.trim() || CHARTE_DEF };
     p.lectureSeule = $('rg-lecture').checked;
     p.antiSpamSec = Math.max(0, parseInt($('rg-spam').value) || 0);
     p.motsInterdits = $('rg-mots').value.split(/[,;\n]+/).map(x => x.trim()).filter(Boolean);
-    if (!(await sauvegarder())) { Object.assign(p, { invitation: av.i, charte: av.c, lectureSeule: av.l, antiSpamSec: av.s, motsInterdits: av.m }); return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
-    reglesSale = false; majChampsInscription(); alert('Règles enregistrées.');
+    if (!(await sauvegarder())) { Object.assign(p, { invitation: av.i, charte: av.c, lectureSeule: av.l, antiSpamSec: av.s, motsInterdits: av.m }); return notif("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
+    reglesSale = false; majChampsInscription(); notif('Règles enregistrées.');
 }
 ['rg-invit-actif', 'rg-invit-codes', 'rg-charte-actif', 'rg-charte-texte', 'rg-lecture', 'rg-spam', 'rg-mots'].forEach(id => { const e = $(id); if (e) e.addEventListener('input', () => { reglesSale = true; }); });
 const _rafLegerV9 = rafraichirAdminLeger;
@@ -3864,14 +3958,14 @@ const appareilBanni = () => { const id = devId(); return id !== 'inconnu' && ((d
 // ----- Connexion : limite de tentatives, comptes et appareils bannis -----
 $('form-auth').addEventListener('submit', e => {
     // Le code est vérifié par Supabase Auth (serveur) ; ici on bloque seulement les appareils bannis.
-    if (appareilBanni()) { e.preventDefault(); e.stopImmediatePropagation(); alert('Cet appareil est banni définitivement du site.'); return; }
+    if (appareilBanni()) { e.preventDefault(); e.stopImmediatePropagation(); notif('Cet appareil est banni définitivement du site.'); return; }
     if (modeAuthActif !== 'connexion') window._newAcc = $('auth-id').value.trim();
 }, true);
 
 // ----- Session : inactivité, déconnexion partout, ban, appareils -----
 let secuDernier = Date.now(), secuSortie = false;
 ['click', 'keydown', 'touchstart', 'scroll', 'mousemove'].forEach(ev => window.addEventListener(ev, () => { secuDernier = Date.now(); }, { passive: true }));
-function secuSortir(msg) { if (secuSortie) return; secuSortie = true; alert(msg); deconnexion(); }
+function secuSortir(msg) { if (secuSortie) return; secuSortie = true; notif(msg); deconnexion(); }
 function secuPresence(force) {
     if (!utilisateurActif || estAdmin) return;
     const u = userParId(utilisateurActif.id); if (!u) return;
@@ -3929,7 +4023,7 @@ async function secuDeco(id) {
     if (!confirm('Déconnecter ' + (soi ? 'tous vos appareils (celui-ci reste connecté)' : 'cet utilisateur de tous ses appareils') + ' ?')) return;
     u.deconnexionAvant = Date.now();
     if (soi) { try { sessionStorage.setItem('login_ts', String(Date.now() + 1000)); } catch (e) { } }
-    await sauvegarderOuAlerter(); alert('Déconnexion demandée sur tous les appareils.');
+    await sauvegarderOuAlerter(); notif('Déconnexion demandée sur tous les appareils.');
 }
 async function secuBanSite(id) {
     if (!estAdmin) return; const u = userParId(id); if (!u) return;
@@ -4000,8 +4094,8 @@ async function secuEnregistrer() {
     if (!estPrincipal()) return;
     const p = P(), av = p.secu, n = (id, d, a, b) => Math.min(b, Math.max(a, parseInt($(id).value) || d));
     p.secu = { maxEssais: n('sc-max', 5, 3, 20), blocageMin: n('sc-bloc', 15, 1, 1440), inactiviteMin: Math.min(1440, Math.max(0, parseInt($('sc-inact').value) || 0)), seuilRafale: n('sc-rafale', 5, 2, 100) };
-    if (!(await sauvegarder())) { p.secu = av; return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
-    secuSale = false; secuChamps(); alert('Réglages de sécurité enregistrés.');
+    if (!(await sauvegarder())) { p.secu = av; return notif("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
+    secuSale = false; secuChamps(); notif('Réglages de sécurité enregistrés.');
 }
 // Alerte automatique pour les admins (une fois par 30 min et par session)
 setInterval(() => {
@@ -4021,13 +4115,13 @@ const CIBLES = { tous: 'Tous', prof: 'Professeurs', etudiant: 'Étudiants', admi
 async function annEcrire(L, ok) {
     const p = P(), av = p.annoncesCib, now = Date.now();
     p.annoncesCib = [...L.filter(a => a.date > now), ...L.filter(a => a.date <= now).sort((a, b) => b.date - a.date).slice(0, 50)];
-    if (!(await sauvegarder())) { p.annoncesCib = av; return alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
+    if (!(await sauvegarder())) { p.annoncesCib = av; return notif("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
     if (ok) ok(); annListe();
 }
 async function annCreer() {
     if (!estPrincipal()) return;
-    const t = $('annonce-input').value.trim(); if (!t) return alert('Écrivez le message.');
-    const d = $('ann-date').value, date = d ? Date.parse(d + 'Z') : NaN; if (isNaN(date)) return alert('Choisissez la date et l\'heure (GMT+0).');
+    const t = $('annonce-input').value.trim(); if (!t) return notif('Écrivez le message.');
+    const d = $('ann-date').value, date = d ? Date.parse(d + 'Z') : NaN; if (isNaN(date)) return notif('Choisissez la date et l\'heure (GMT+0).');
     await annEcrire([...(P().annoncesCib || []), { id: crypto.randomUUID(), texte: t, cible: $('ann-cible').value, date, par: adminNom || 'Admin' }], () => { $('annonce-input').value = ''; $('ann-date').value = ''; });
 }
 async function annReafficher(id) {
@@ -4136,7 +4230,7 @@ async function forumVoter(sid, i) {
 const _fcV11 = forumCreer;
 forumCreer = async function () {
     const L = (($('fn-sondage') || {}).value || '').split('\n').map(x => x.trim()).filter(Boolean).slice(0, 6);
-    if (L.length === 1) return alert('Un sondage demande au moins 2 options (une par ligne), ou laissez le champ vide.');
+    if (L.length === 1) return notif('Un sondage demande au moins 2 options (une par ligne), ou laissez le champ vide.');
     const avant = donneesSite.sujets.length;
     await _fcV11.apply(this, arguments);
     if (L.length >= 2 && donneesSite.sujets.length > avant) {
@@ -4247,7 +4341,7 @@ async function mpEnvoyer() {
     const m = moi(), t = ($('mp-saisie') || {}).value.trim(); if (!m || !t || !v11Conv || v11Conv === '_nouveau') return;
     if (ecritureBloquee() || !texteAutorise(t)) return;
     const dest = userParId(v11Conv), nomDest = dest ? nomComplet(dest) : (((mpConvs().find(c => c.id === v11Conv)) || {}).nom || v11Conv);
-    if (dest && dest.banSite) return alert('Cet utilisateur n\'est plus disponible.');
+    if (dest && dest.banSite) return notif('Cet utilisateur n\'est plus disponible.');
     $('mp-saisie').value = '';
     try { await chargerDonnees(true); } catch (e) { }
     (donneesSite.messagesPrives = donneesSite.messagesPrives || []).push({ _id: crypto.randomUUID(), de: m.id, deNom: m.nom, a: v11Conv, aNom: nomDest, texte: t.slice(0, 500), date: Date.now() });
@@ -4257,7 +4351,7 @@ async function mpSignaler(id) {
     const m = moi(), x = (donneesSite.messagesPrives || []).find(y => y._id === id); if (!m || !x) return;
     const motif = prompt('Motif du signalement :'); if (motif === null) return;
     donneesSite.signalements.push({ sujetId: 'mp:' + id, sujetTitre: 'Message privé', msgId: id, auteurId: x.de, auteurNom: x.deNom, extrait: (x.texte || '').slice(0, 200), par: m.nom, motif: motif.trim() || '—', date: Date.now(), statut: 'ouvert' });
-    await sauvegarderOuAlerter(); alert('Merci, le signalement a été transmis aux administrateurs.');
+    await sauvegarderOuAlerter(); notif('Merci, le signalement a été transmis aux administrateurs.');
 }
 const _ssV11 = sigSupprimer;
 sigSupprimer = async function (id) {
@@ -4338,7 +4432,7 @@ async function favBasculer(l, id) {
 async function dupliquerEval(id) {
     const ev = donneesSite.evaluations.find(e => e._id === id); if (!ev || !peutGerer(ev)) return;
     const c = JSON.parse(JSON.stringify(ev)); delete c._id; c.titre = ev.titre + ' (copie)'; c.statutPub = 'brouillon'; delete c.publieLe;
-    donneesSite.evaluations.push(c); await sauvegarderOuAlerter(); rafraichirAffichagePublic(); alert('Copie créée en brouillon : ouvrez 🗓️ pour la publier.');
+    donneesSite.evaluations.push(c); await sauvegarderOuAlerter(); rafraichirAffichagePublic(); notif('Copie créée en brouillon : ouvrez 🗓️ pour la publier.');
 }
 
 // ----- Fenêtre générique -----
@@ -4367,7 +4461,7 @@ function pubOuvrir(l, id) {
 async function pubEnregistrer() {
     if (!v12Cible) return; const it = (donneesSite[v12Cible.l] || []).find(x => x._id === v12Cible.id); if (!it || !peutGerer(it)) return;
     const st = $('pb12-st').value, d = $('pb12-date').value, liste = id => $(id).value.split(/[,;]+/).map(x => x.trim()).filter(Boolean);
-    if (st === 'programme') { const t = d ? Date.parse(d + 'Z') : NaN; if (isNaN(t) || t <= Date.now()) return alert('Choisissez une date de publication future (GMT+0).'); it.publieLe = t; delete it.statutPub; }
+    if (st === 'programme') { const t = d ? Date.parse(d + 'Z') : NaN; if (isNaN(t) || t <= Date.now()) return notif('Choisissez une date de publication future (GMT+0).'); it.publieLe = t; delete it.statutPub; }
     else { delete it.publieLe; if (st === 'publie') delete it.statutPub; else it.statutPub = st; }
     it.classes = liste('pb12-cl'); it.etiquettes = liste('pb12-et');
     if (!it.classes.length) delete it.classes; if (!it.etiquettes.length) delete it.etiquettes;
@@ -4382,7 +4476,7 @@ ouvrirProfil = function (aid) {
     d.innerHTML = `<label class="font-bold">🎓 Classe :</label><input id="pf-classe" value="${esc(u.classe || '')}" placeholder="ex : 3A" class="p-1.5 border rounded bg-white text-xs w-24"><button data-u="${esc(u.id)}" onclick="classeEnregistrer(this.dataset.u)" class="px-2 py-1.5 rounded bg-blue-600 text-white border-none cursor-pointer text-xs font-bold">OK</button>`;
     $('profil-contenu').appendChild(d);
 };
-async function classeEnregistrer(id) { const u = userParId(id); if (!u || !estAdmin) return; u.classe = $('pf-classe').value.trim(); if (!u.classe) delete u.classe; await sauvegarderOuAlerter(); alert('Classe enregistrée.'); }
+async function classeEnregistrer(id) { const u = userParId(id); if (!u || !estAdmin) return; u.classe = $('pf-classe').value.trim(); if (!u.classe) delete u.classe; await sauvegarderOuAlerter(); notif('Classe enregistrée.'); }
 
 // ----- Correction rapide, stats, export -----
 const noteTxt = r => r.note != null ? `${r.note}/${r.sur || 20}` : '';
@@ -4404,13 +4498,13 @@ function corrOuvrir(rid) {
 async function corrEnregistrer() {
     const r = donneesSite.rendus.find(x => x._id === corrId); if (!r || !peutVoirCopie(r)) return;
     const note = parseFloat($('c12-note').value), sur = parseFloat($('c12-sur').value) || 20;
-    if (isNaN(note) || note < 0 || note > sur) return alert('Note invalide.');
+    if (isNaN(note) || note < 0 || note > sur) return notif('Note invalide.');
     Object.assign(r, { note, sur, commentaire: $('c12-com').value.trim(), corrigeLe: Date.now(), corrigePar: (moi() || {}).nom || '' });
     await sauvegarderOuAlerter(); v12Fermer(); try { rafraichirAdminLeger(); rafraichirEspaceProf(); } catch (e) { }
 }
 function exportBtn(evId) { return `<button data-e="${evId}" onclick="exporterCopies(this.dataset.e)" class="px-2 py-1 rounded-lg text-xs bg-slate-700 text-white border-none cursor-pointer">⬇️ Excel</button>`; }
 function exporterCopies(evId) {
-    const ev = donneesSite.evaluations.find(e => e._id === evId), L = donneesSite.rendus.filter(r => r.evalId === evId && peutVoirCopie(r)); if (!L.length) return alert('Aucune copie à exporter.');
+    const ev = donneesSite.evaluations.find(e => e._id === evId), L = donneesSite.rendus.filter(r => r.evalId === evId && peutVoirCopie(r)); if (!L.length) return notif('Aucune copie à exporter.');
     const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
     const rows = [['Nom', 'Identifiant', 'Rendu le', 'Note', 'Sur', 'Commentaire'], ...L.map(r => [r.auteurNom, r.auteurId, fmt(r.date), r.note != null ? r.note : '', r.note != null ? (r.sur || 20) : '', r.commentaire || ''])];
     const blob = new Blob(['\ufeff' + rows.map(x => x.map(q).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' }), a = document.createElement('a');
@@ -4458,7 +4552,7 @@ function tCarnet() {
 }
 async function carnetAjouter() {
     const u = meUser(); if (!u) return; const titre = $('cn-titre').value.trim(), note = parseFloat($('cn-note').value), sur = parseFloat($('cn-sur').value) || 20, coef = parseFloat($('cn-coef').value) || 1;
-    if (!titre || isNaN(note) || note < 0 || note > sur) return alert('Renseignez un intitulé et une note valide.');
+    if (!titre || isNaN(note) || note < 0 || note > sur) return notif('Renseignez un intitulé et une note valide.');
     (u.carnet = u.carnet || []).push({ id: crypto.randomUUID(), titre, matiere: $('cn-mat').value.trim(), note, sur, coef, date: Date.now() });
     await sauvegarderOuAlerter(); v12Rendre();
 }
@@ -4484,7 +4578,7 @@ function gloListe() {
     c.innerHTML = [...((donneesSite.parametres[0] || {}).glossaire || [])].filter(g => !q || norm(g.terme + ' ' + g.def).includes(q)).sort((a, b) => a.terme.localeCompare(b.terme, 'fr')).map(g => `<div class="p-2 mb-1.5 bg-slate-50 border rounded-lg"><div class="flex justify-between gap-2"><b>${esc(g.terme)}</b>${estAdmin ? `<button data-i="${g.id}" onclick="gloSupprimer(this.dataset.i)" class="px-1.5 rounded bg-slate-200 text-xs border-none cursor-pointer">🗑️</button>` : ''}</div><div class="text-slate-700 break-words">${esc(g.def)}</div></div>`).join('') || '<p class="text-slate-500 italic">Aucun terme.</p>';
 }
 async function gloAjouter() {
-    if (!estAdmin) return; const t = $('gl-terme').value.trim(), d = $('gl-def').value.trim(); if (!t || !d) return alert('Terme et définition obligatoires.');
+    if (!estAdmin) return; const t = $('gl-terme').value.trim(), d = $('gl-def').value.trim(); if (!t || !d) return notif('Terme et définition obligatoires.');
     const p = P(); (p.glossaire = p.glossaire || []).push({ id: crypto.randomUUID(), terme: t, def: d }); await sauvegarderOuAlerter(); v12Rendre(); gloListe();
 }
 async function gloSupprimer(id) { if (!estAdmin || !confirm('Supprimer ce terme ?')) return; const p = P(); p.glossaire = (p.glossaire || []).filter(g => g.id !== id); await sauvegarderOuAlerter(); v12Rendre(); gloListe(); }
@@ -4577,7 +4671,7 @@ async function lotAgir(n, cle) {
     if (a.confirmer && !confirm(a.confirmer(ids))) return;
     LOT.busy = true;
     try { if ((await a.run(ids)) !== false) lotSet(n).clear(); }
-    catch (e) { console.error('Action groupée :', e); alert('Action groupée impossible : ' + ((e && e.message) || e)); }
+    catch (e) { console.error('Action groupée :', e); notif('Action groupée impossible : ' + ((e && e.message) || e)); }
     finally { LOT.busy = false; lotBarre(n); }
 }
 
@@ -4620,7 +4714,7 @@ async function donsStatutLot(ids, statut) {
     L.forEach(d => { d.statut = statut; d.parAdmin = nom; d.dateTraitement = t; });
     if (!(await sauvegarder())) {
         snap.forEach(([d, st, pa, dt]) => { d.statut = st; d.parAdmin = pa; d.dateTraitement = dt; });
-        alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); return false;
+        notif("Enregistrement impossible.\n\nDétail : " + derniereErreur); return false;
     }
     rafraichirDonsAdmin(); rafraichirDons(); return true;
 }
@@ -4628,7 +4722,7 @@ async function donsSupprimerLot(ids) {
     if (!estPrincipal()) return false;
     const avant = donneesSite.dons;
     donneesSite.dons = avant.filter(d => !ids.includes(d._id));
-    if (!(await sauvegarder())) { donneesSite.dons = avant; alert("Suppression impossible.\n\nDétail : " + derniereErreur); return false; }
+    if (!(await sauvegarder())) { donneesSite.dons = avant; notif("Suppression impossible.\n\nDétail : " + derniereErreur); return false; }
     rafraichirDonsAdmin(); rafraichirDons(); return true;
 }
 async function sigLot(ids, mode) {
@@ -4643,7 +4737,7 @@ async function sigLot(ids, mode) {
     R.forEach(r => { r.statut = 'traité'; });
     if (!(await sauvegarder())) {
         donneesSite.sujets = sujets0; msgs0.forEach((m, s) => { s.messages = m; }); st0.forEach(([r, st]) => { r.statut = st; });
-        alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); return false;
+        notif("Enregistrement impossible.\n\nDétail : " + derniereErreur); return false;
     }
     rafraichirSignalements(); rafraichirForum(); return true;
 }
@@ -4671,17 +4765,17 @@ async function propLot(ids, mode) {
     if (!(await sauvegarder())) {
         Object.assign(D, snap);
         clones.forEach(([p, c]) => { Object.keys(p).forEach(k => delete p[k]); Object.assign(p, c); });
-        alert("Enregistrement impossible.\n\nDétail : " + derniereErreur); rafraichirAdmin(); return false;
+        notif("Enregistrement impossible.\n\nDétail : " + derniereErreur); rafraichirAdmin(); return false;
     }
     rafraichirAdmin(); rafraichirAffichagePublic();
-    alert(mode === 'valider' ? `${pluriel(S.length, 'proposition validée', 'propositions validées')} et publiée(s).` : `${pluriel(S.length, 'proposition rejetée', 'propositions rejetées')}.`);
+    notif(mode === 'valider' ? `${pluriel(S.length, 'proposition validée', 'propositions validées')} et publiée(s).` : `${pluriel(S.length, 'proposition rejetée', 'propositions rejetées')}.`);
     return true;
 }
 async function journalSupprimerLot(ids) {
     if (!estPrincipal()) return false;
     const avant = donneesSite.journal, set = new Set(ids);
     donneesSite.journal = avant.filter(e => !set.has(e._id));
-    if (!(await sauvegarder())) { donneesSite.journal = avant; alert("Suppression impossible.\n\nDétail : " + derniereErreur); rafraichirJournal(); return false; }
+    if (!(await sauvegarder())) { donneesSite.journal = avant; notif("Suppression impossible.\n\nDétail : " + derniereErreur); rafraichirJournal(); return false; }
     rafraichirJournal(); return true;
 }
 // La barre d'actions de l'historique se place entre les filtres et la liste
@@ -4730,10 +4824,10 @@ function rafraichirHistMsgs() {
 async function annulerModifMsg(type, sid, mid, hid) {
     if (!estAdmin) return false;
     const o = trouverMsg(type, sid, mid);
-    if (!o || o.ref.supprime) { alert('Ce message est introuvable ou a été supprimé.'); return false; }
+    if (!o || o.ref.supprime) { notif('Ce message est introuvable ou a été supprimé.'); return false; }
     const H = o.ref.hist || [], k = H.findIndex(x => x.id === hid), h = H[k];
     if (!h || h.annule) return false;
-    if (k !== histDernierActif(H)) { alert("Annulez d'abord les modifications plus récentes de ce message."); return false; }
+    if (k !== histDernierActif(H)) { notif("Annulez d'abord les modifications plus récentes de ce message."); return false; }
     const ap = (h.ancien || '').length > 200 ? h.ancien.slice(0, 200) + '…' : (h.ancien || '');
     if (!confirm('Annuler cette modification ?\n\nLe message reprendra son texte précédent :\n« ' + ap + ' »')) return false;
     const m = moi(), avant = { texte: o.ref.texte, modifie: o.ref.modifie };
@@ -4742,7 +4836,7 @@ async function annulerModifMsg(type, sid, mid, hid) {
     if (!(await sauvegarder())) {
         o.ref.texte = avant.texte; delete h.annule;
         if (avant.modifie === undefined) delete o.ref.modifie; else o.ref.modifie = avant.modifie;
-        alert("Annulation impossible : échec de l'enregistrement.\n\nDétail : " + derniereErreur); return false;
+        notif("Annulation impossible : échec de l'enregistrement.\n\nDétail : " + derniereErreur); return false;
     }
     majApresEdition(); rafraichirHistMsgs(); return true;
 }
@@ -4758,5 +4852,391 @@ surveiller('propLot', 'action', (ids, mode) => `Action groupée : ${ids.length} 
 surveiller('annulerModifMsg', 'action', (t, s, m, h) => { const o = trouverMsg(t, s, m), r = o && o.ref, e = r && (r.hist || []).find(x => x.id === h); return `Modification de message annulée (${(r && (r.nom || r.auteurNom)) || '?'}) : « ${_t(e, 'nouveau').slice(0, 60)} »`; });
 </script>
 
+
+<script>
+// ===== Créateurs (titre + photo), onglets modifiables, FAQ v3 =====
+(function () {
+const $ = id => document.getElementById(id);
+const BTN = 'text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base';
+const MINI = 'bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium border-none cursor-pointer';
+let crId = null, otRef = null, otPerso = false, persoId = null;
+const liste = c => donneesSite[c] || (donneesSite[c] = []);
+const echec = () => notif("Enregistrement impossible : base de données inaccessible.");
+
+async function commit(col, snap) {
+    if (await sauvegarder()) return true;
+    donneesSite[col] = JSON.parse(snap); echec(); return false;
+}
+const photoHtml = p => p ? `<img src="${esc(p)}" alt="" class="block w-full h-auto">` : '<div class="h-40 flex items-center justify-center text-5xl">👤</div>';
+
+// ---- Créateurs ----
+window.rafraichirCreateurs = function () {
+    const sec = $('section-developpeur'); if (!sec) return;
+    const adm = estPrincipal(), d = donneesSite.developpeur || {}, l = liste('createurs');
+    const rempli = !!(d.nom || d.prenom || d.role || d.photo);
+    let box = $('createurs-liste');
+    if (!box) { box = document.createElement('div'); box.id = 'createurs-liste'; box.className = 'mt-6 space-y-6'; sec.appendChild(box); }
+    box.innerHTML = l.map(c => `<div class="border-t pt-6 flex flex-col items-center text-center gap-3">
+        <h3 class="text-2xl font-bold text-blue-800">${esc(c.titre || 'Site créé par')}</h3>
+        <div class="w-40 sm:w-52 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">${photoHtml(c.photo)}</div>
+        <p class="text-lg font-bold text-slate-900">${esc([c.prenom, c.nom].filter(Boolean).join(' '))}</p>
+        <p class="text-sm text-slate-600">${esc(c.role || '')}</p>
+        ${adm ? `<div class="flex gap-2"><button onclick="ouvrirCreateur('${c._id}')" class="${MINI}">✏️ Modifier</button><button onclick="supprimerCreateur('${c._id}')" class="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium border-none cursor-pointer">🗑️ Supprimer</button></div>` : ''}</div>`).join('')
+        + (adm ? `<div class="text-center border-t pt-4"><button onclick="ouvrirCreateur()" class="${MINI}">➕ Ajouter un titre et une photo</button></div>` : '');
+    [...sec.children].slice(0, 2).forEach(e => e.style.display = (rempli || adm) ? '' : 'none');
+    sec.classList.toggle('hidden', !(rempli || l.length || adm));
+};
+window.ouvrirCreateur = id => {
+    if (!estPrincipal()) return; crId = id || null;
+    const c = liste('createurs').find(x => x._id === id) || {};
+    $('cr-titre').value = c.titre || 'Site créé par'; $('cr-prenom').value = c.prenom || ''; $('cr-nom').value = c.nom || ''; $('cr-role').value = c.role || ''; $('cr-photo').value = '';
+    $('modal-createur').classList.remove('hidden');
+};
+window.fermerCreateur = () => $('modal-createur').classList.add('hidden');
+window.enregistrerCreateur = async () => {
+    if (!estPrincipal()) return;
+    const n = { titre: $('cr-titre').value.trim(), prenom: $('cr-prenom').value.trim(), nom: $('cr-nom').value.trim(), role: $('cr-role').value.trim() };
+    const l = liste('createurs'), ex = l.find(x => x._id === crId), f = $('cr-photo').files[0];
+    try { n.photo = f ? await lireFichier(f, 800) : (ex ? ex.photo || '' : ''); } catch (e) { return notif('Erreur lors de la lecture de la photo : ' + ((e && e.message) || e)); }
+    if (!n.titre && !n.nom && !n.prenom && !n.photo) return notif('Renseignez au moins un titre ou une photo.');
+    const snap = JSON.stringify(l);
+    if (ex) Object.assign(ex, n); else l.push(Object.assign({ _id: crypto.randomUUID() }, n));
+    if (await commit('createurs', snap)) { fermerCreateur(); rafraichirCreateurs(); }
+};
+window.supprimerCreateur = async id => {
+    if (!estPrincipal() || !confirm('Supprimer ce bloc (titre + photo) ?')) return;
+    const snap = JSON.stringify(liste('createurs'));
+    donneesSite.createurs = liste('createurs').filter(x => x._id !== id);
+    if (await commit('createurs', snap)) rafraichirCreateurs();
+};
+window.supprimerDeveloppeur = async () => {
+    if (!estPrincipal() || !confirm('Supprimer le bloc « Site développé par » ?')) return;
+    const ancien = donneesSite.developpeur;
+    donneesSite.developpeur = { photo: '', nom: '', prenom: '', role: '' };
+    if (!(await sauvegarder())) { donneesSite.developpeur = ancien; return echec(); }
+    rafraichirDeveloppeur();
+};
+
+// ---- Onglets : modifier les existants, en ajouter, supprimer ----
+const ov = id => liste('onglets').find(o => o.cible === id);
+const persos = () => liste('onglets').filter(o => !o.cible);
+window.majOnglets = function () {
+    const nav = document.querySelector('#menu-deroulant > div'); if (!nav) return; const adm = estPrincipal();
+    nav.querySelectorAll('button[onclick^="changerEcran("]').forEach(b => {
+        const m = b.getAttribute('onclick').match(/changerEcran\('([^']+)'\)/);
+        if (!m || ['espace-prof', 'modo-panel', 'admin-panel'].includes(m[1])) return;
+        const id = m[1], o = ov(id), cache = !!(o && o.masque) && id !== 'accueil';
+        if (!b.dataset.orig) b.dataset.orig = b.textContent.trim();
+        b.classList.toggle('hidden', cache && !adm); b.style.opacity = cache ? '.5' : '';
+        b.innerHTML = esc((o && o.titre) || b.dataset.orig) + (cache ? ' <small>(masqué)</small>' : '') + (adm ? `<span style="float:right" onclick="event.stopPropagation();editerOnglet('${id}')">✏️</span>` : '');
+    });
+    let box = $('onglets-perso');
+    if (!box) { const faq = nav.querySelector('button[onclick="changerEcran(\'faq\')"]'); if (!faq) return; box = document.createElement('div'); box.id = 'onglets-perso'; box.className = 'flex flex-col'; faq.before(box); }
+    box.innerHTML = persos().map(o => `<button onclick="ouvrirOnglet('${o._id}')" class="${BTN}">${esc(o.titre)}${adm ? `<span style="float:right" onclick="event.stopPropagation();editerOnglet('${o._id}',true)">✏️</span>` : ''}</button>`).join('')
+        + (adm ? `<button onclick="editerOnglet()" class="${BTN} font-bold">➕ Ajouter un onglet</button>` : '');
+};
+window.ouvrirOnglet = id => { persoId = id; rendrePerso(); changerEcran('onglet-perso'); };
+function rendrePerso() {
+    let sc = $('onglet-perso');
+    if (!sc) { sc = document.createElement('div'); sc.id = 'onglet-perso'; sc.className = 'screen space-y-6'; document.querySelector('main').appendChild(sc); }
+    const o = persos().find(x => x._id === persoId), adm = estPrincipal();
+    sc.innerHTML = o ? `<div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-4">
+        <h3 class="text-2xl font-bold text-blue-800">${esc(o.titre)}</h3>
+        ${o.photo ? `<img src="${esc(o.photo)}" alt="" class="max-w-full rounded-xl">` : ''}
+        <p class="text-slate-700 whitespace-pre-wrap break-words">${esc(o.contenu || '')}</p>
+        ${adm ? `<div class="flex gap-2"><button onclick="editerOnglet('${o._id}',true)" class="${MINI}">✏️ Modifier</button></div>` : ''}</div>`
+        : '<div class="bg-white p-6 rounded-2xl shadow-md text-slate-500 italic">Onglet introuvable.</div>';
+}
+window.editerOnglet = (ref, perso) => {
+    if (!estPrincipal()) return; otRef = ref || null; otPerso = !!perso || !ref;
+    const o = otPerso ? persos().find(x => x._id === ref) : ov(ref);
+    const orig = (!otPerso && document.querySelector(`#menu-deroulant button[onclick="changerEcran('${ref}')"]`) || {dataset:{}}).dataset.orig || '';
+    $('ot-h').textContent = otPerso ? (o ? 'Modifier l\'onglet' : 'Nouvel onglet') : 'Modifier « ' + orig + ' »';
+    $('ot-titre').value = (o && o.titre) || orig; $('ot-contenu').value = (o && o.contenu) || ''; $('ot-photo').value = '';
+    $('ot-masque').checked = !!(o && o.masque);
+    $('ot-perso').classList.toggle('hidden', !otPerso);
+    $('ot-masque-box').classList.toggle('hidden', otPerso || ref === 'accueil');
+    $('ot-suppr').classList.toggle('hidden', otPerso ? !o : !o);
+    $('ot-suppr').textContent = otPerso ? 'Supprimer' : 'Rétablir';
+    $('modal-onglet').classList.remove('hidden');
+};
+window.fermerOnglet = () => $('modal-onglet').classList.add('hidden');
+window.enregistrerOnglet = async () => {
+    if (!estPrincipal()) return;
+    const t = $('ot-titre').value.trim(); if (!t) return notif('Le nom de l\'onglet est obligatoire.');
+    const l = liste('onglets'); let o = otPerso ? l.find(x => x._id === otRef) : ov(otRef), photo = o ? o.photo || '' : '';
+    const f = $('ot-photo').files[0];
+    try { if (otPerso && f) photo = await lireFichier(f, 1200); } catch (e) { return notif('Erreur lors de la lecture de la photo : ' + ((e && e.message) || e)); }
+    const snap = JSON.stringify(l);
+    if (!o) { o = { _id: crypto.randomUUID() }; if (!otPerso) o.cible = otRef; l.push(o); }
+    o.titre = t;
+    if (otPerso) { o.contenu = $('ot-contenu').value; o.photo = photo; } else o.masque = $('ot-masque').checked;
+    if (await commit('onglets', snap)) { fermerOnglet(); majOnglets(); if (otPerso) { persoId = o._id; rendrePerso(); } }
+};
+window.supprimerOnglet = async () => {
+    if (!estPrincipal() || !confirm(otPerso ? 'Supprimer définitivement cet onglet ?' : 'Rétablir le nom d\'origine de cet onglet ?')) return;
+    const snap = JSON.stringify(liste('onglets'));
+    donneesSite.onglets = liste('onglets').filter(x => otPerso ? x._id !== otRef : x.cible !== otRef);
+    if (await commit('onglets', snap)) { fermerOnglet(); majOnglets(); if (otPerso && persoId === otRef) { persoId = null; changerEcran('accueil'); } }
+};
+
+// ---- Bouton Dons : visible seulement une fois connecté ----
+window.majBoutonDons = function () {
+    const b = $('btn-dons-flottant'); if (!b) return;
+    let ok = false; try { ok = !!moi() && ($('ecran-maintenance').classList.contains('hidden') || estAdmin); } catch (e) { }
+    b.style.display = ok ? 'flex' : 'none';
+};
+setInterval(majBoutonDons, 1000);
+// ---- Branchement sur le rafraîchissement existant ----
+const _rap = rafraichirAffichagePublic;
+rafraichirAffichagePublic = function () { const r = _rap.apply(this, arguments); try { majOnglets(); rendrePerso(); rafraichirCreateurs(); majBoutonDons(); } catch (e) { console.warn(e); } return r; };
+const _rd = rafraichirDeveloppeur;
+rafraichirDeveloppeur = function () { _rd(); try { rafraichirCreateurs(); } catch (e) { console.warn(e); } };
+
+// ---- FAQ v3 (mise à jour des réponses + nouvelles questions) ----
+const FAQ_V3 = [
+    [101, 'Comment faire un don ?', "Touchez le bouton rond ❤️ en bas de l'écran (juste à gauche du bouton « Assistance », après vos boutons ✉️ 🔔 📚) ou ouvrez « Dons » dans le menu, puis appuyez sur « FAITES UN DON ». Le paiement se fait uniquement par Wave. Revenez ensuite sur la page et répondez « Oui » en indiquant le montant.", 'dons'],
+    [201, 'À quoi servent les trois boutons en bas de l\'écran ?', "Une seule rangée, de gauche à droite : 🌙 mode sombre ; ✉️ messages privés, 🔔 notifications et 📚 « Mon espace » (favoris, carnet, échéances, réglages) ; ❤️ Dons (visible une fois connecté) ; 💬 « Assistance » : conversation WhatsApp avec le service client.", 'accueil'],
+    [202, 'Qui a créé le site ?', "En bas de la page d'accueil, la section « Site développé par » présente les créateurs avec leur photo et leur rôle. D'autres blocs (« Site créé par », etc.) peuvent s'y ajouter.", 'accueil'],
+    [203, 'Comment ajouter ou supprimer un titre et une photo dans « Site développé par » ?', "Réservé à l'administrateur principal : sur la page d'accueil, utilisez « ➕ Ajouter un titre et une photo », puis ✏️ Modifier ou 🗑️ Supprimer sous chaque bloc.", 'accueil'],
+    [204, 'Comment ajouter ou modifier un onglet du menu ?', "Réservé à l'administrateur principal : ouvrez le menu ☰. Touchez ✏️ à droite d'un onglet pour le renommer ou le masquer (« Rétablir » remet le nom d'origine). « ➕ Ajouter un onglet » crée une nouvelle page avec titre, texte et photo, que vous pouvez modifier ou supprimer.", 'accueil'],
+    [205, 'Un onglet a disparu du menu, pourquoi ?', "L'administrateur peut masquer un onglet. Il reste visible pour lui (en grisé) et peut le réafficher à tout moment.", 'accueil']
+].map(f => ({ _id: uid(f[0], 1), q: f[1], r: f[2], ecran: f[3] }));
+async function majFaqV3() {
+    if (!(utilisateurActif || estAdmin)) return;
+    const p = P(); if (p.faqV3b) return;
+    FAQ_V3.forEach(f => { const e = donneesSite.faqs.find(x => x._id === f._id); if (e) Object.assign(e, f); else donneesSite.faqs.push({ ...f }); });
+    p.faqV3b = true; await sauvegarder(); rafraichirFaq();
+}
+window.addEventListener('load', () => setTimeout(() => { majFaqV3().catch(console.warn); try { majOnglets(); rafraichirCreateurs(); } catch (e) { } }, 3000));
+})();
+</script>
+<script>
+(function () {
+const $ = id => document.getElementById(id);
+['annonces', 'agenda', 'accueil'].forEach(c => { if (!COLLECTIONS.includes(c)) COLLECTIONS.push(c); if (!donneesSite[c]) donneesSite[c] = []; });
+const L = c => donneesSite[c] || (donneesSite[c] = []);
+const MINI = 'bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium border-none cursor-pointer';
+const RED = 'bg-red-600 text-white px-2 py-1 rounded-lg text-xs border-none cursor-pointer';
+async function maj(col, fn) {
+    if (!estPrincipal()) return;
+    const snap = JSON.stringify(L(col)); const r = fn(L(col)); if (r) donneesSite[col] = r;
+    if (!(await sauvegarder())) { donneesSite[col] = JSON.parse(snap); notif('Enregistrement impossible : base de données inaccessible.'); }
+    rendreExtra();
+}
+function parseDate(s) {
+    s = String(s).trim(); let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m) return new Date(+m[1], m[2] - 1, +m[3]);
+    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? new Date(+m[3], m[2] - 1, +m[1]) : null;
+}
+const jours = d => { const t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((d - t) / 864e5); };
+
+window.annAjouter = () => { const t = (prompt("Message de l'annonce (examen, nouveau cours, date limite…)") || '').trim(); if (t) maj('annonces', a => { a.push({ _id: crypto.randomUUID(), texte: t, date: Date.now() }); }); };
+window.annSuppr = id => { if (confirm('Supprimer cette annonce ?')) maj('annonces', a => a.filter(x => x._id !== id)); };
+window.agAjouter = () => {
+    const t = (prompt('Titre (ex : Examen de Logistique)') || '').trim(); if (!t) return;
+    const d = parseDate(prompt('Date (AAAA-MM-JJ ou JJ/MM/AAAA)') || ''); if (!d) return notif('Date invalide.');
+    const ty = (prompt('Type : examen, devoir ou autre', 'devoir') || 'autre').trim().toLowerCase();
+    const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    maj('agenda', a => { a.push({ _id: crypto.randomUUID(), titre: t, date: iso, type: ty }); });
+};
+window.agSuppr = id => { if (confirm('Supprimer cette date ?')) maj('agenda', a => a.filter(x => x._id !== id)); };
+window.accueilEditer = () => {
+    const c = L('accueil')[0] || {};
+    const h = prompt('Titre de bienvenue (vide = automatique)', c.h || ''); if (h === null) return;
+    const p = prompt("Sous-titre (vide = texte d'origine)", c.p || ''); if (p === null) return;
+    maj('accueil', a => { if (a[0]) { a[0].h = h.trim(); a[0].p = p.trim(); } else a.push({ _id: crypto.randomUUID(), h: h.trim(), p: p.trim() }); });
+};
+function textesAccueil() {
+    const c = L('accueil')[0]; if (!c) return; const t = $('welcome-user-title'); if (!t) return;
+    if (c.h) t.textContent = c.h; const s = t.nextElementSibling; if (s && c.p) s.textContent = c.p;
+}
+function rendreExtra() {
+    const acc = $('accueil'); if (!acc) return; let box = $('accueil-extra');
+    if (!box) { box = document.createElement('div'); box.id = 'accueil-extra'; box.className = 'space-y-4'; acc.firstElementChild.after(box); }
+    const adm = estPrincipal();
+    const ann = L('annonces').slice().sort((a, b) => b.date - a.date);
+    const ag = L('agenda').map(e => ({ ...e, d: parseDate(e.date) })).filter(e => e.d).sort((a, b) => a.d - b.d).filter(e => adm || jours(e.d) >= 0);
+    let h = ann.map(a => `<div class="p-4 bg-amber-50 border-2 border-amber-300 rounded-2xl text-amber-900 flex gap-3 items-start"><span class="text-xl">📌</span><p class="flex-1 whitespace-pre-wrap break-words font-semibold">${esc(a.texte)}</p>${adm ? `<button onclick="annSuppr('${a._id}')" class="${RED}">🗑️</button>` : ''}</div>`).join('');
+    if (ag.length || adm) h += `<div class="bg-white p-5 rounded-2xl shadow-md border border-slate-100"><h3 class="text-xl font-bold text-blue-800 mb-3">📅 Calendrier des devoirs et examens</h3><div class="space-y-2">${ag.map(e => {
+        const j = jours(e.d), urg = j >= 0 && j <= 3, ic = e.type === 'examen' ? '📝' : e.type === 'devoir' ? '📖' : '📌';
+        return `<div class="p-3 rounded-xl border flex justify-between items-center gap-2 ${j < 0 ? 'opacity-50 ' : ''}${urg ? 'bg-red-50 border-red-300' : 'bg-slate-50'}"><div><p class="font-semibold">${ic} ${esc(e.titre)}</p><p class="text-xs text-slate-600">${e.d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} · ${j < 0 ? 'passé' : j === 0 ? "<b>aujourd'hui</b>" : j === 1 ? '<b>demain</b>' : 'dans ' + j + ' jours'}</p></div>${adm ? `<button onclick="agSuppr('${e._id}')" class="${RED}">🗑️</button>` : ''}</div>`;
+    }).join('') || '<p class="text-sm text-slate-500 italic">Rien de prévu pour le moment.</p>'}</div>${adm ? `<button onclick="agAjouter()" class="${MINI} mt-3">➕ Ajouter une date</button>` : ''}</div>`;
+    h += `<div class="flex flex-wrap gap-2 justify-center"><a href="https://wa.me/?text=${encodeURIComponent('📚 Mon Site Éducatif — ' + location.origin + location.pathname)}" target="_blank" rel="noopener" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-medium no-underline">📲 Partager le site sur WhatsApp</a>${adm ? `<button onclick="annAjouter()" class="${MINI} py-2">📌 Nouvelle annonce</button><button onclick="accueilEditer()" class="${MINI} py-2">✏️ Textes de l'accueil</button>` : ''}</div>`;
+    if (adm) {
+        const n = c => L(c).length;
+        h += `<details class="bg-white p-5 rounded-2xl shadow-md border border-slate-100"><summary class="font-bold text-blue-800 cursor-pointer">📊 Statistiques</summary><div class="grid grid-cols-2 gap-2 mt-3 text-sm">${[['👥 Inscrits', n('utilisateurs')], ['📝 Copies rendues', n('rendus')], ['🎓 Cours', n('cours')], ['📚 Révisions', n('pdfs')], ['📋 Évaluations', n('evaluations')], ['💡 Exercices validés', n('exercicesValides')], ['⏳ Propositions en attente', n('exercicesEnAttente')], ['💬 Sujets du forum', n('sujets')], ['❤️ Dons déclarés', n('dons')]].map(([a, b]) => `<div class="p-3 bg-slate-50 rounded-xl"><p class="text-2xl font-extrabold text-blue-700">${b}</p><p class="text-xs text-slate-600">${a}</p></div>`).join('')}</div></details>`;
+    }
+    if (box.dataset.h !== h) { box.innerHTML = h; box.dataset.h = h; }
+}
+function partages() {
+    document.querySelectorAll('button[onclick^="ouvrirDoc("]').forEach(b => {
+        if (b.dataset.p) return; b.dataset.p = '1';
+        const s = b.closest('div.flex.justify-between'), t = ((s && s.querySelector('span')) || {}).textContent || 'Document';
+        const a = document.createElement('a');
+        a.href = 'https://wa.me/?text=' + encodeURIComponent('📚 ' + t.trim().split('\n')[0] + ' — ' + location.origin + location.pathname);
+        a.target = '_blank'; a.rel = 'noopener'; a.title = 'Partager sur WhatsApp'; a.textContent = '📲';
+        a.className = 'bg-emerald-600 text-white px-2.5 py-1.5 rounded-lg text-sm no-underline'; b.after(a);
+    });
+}
+const vus = new Set();
+function rappels() {
+    if (!(utilisateurActif || estAdmin)) return;
+    L('agenda').forEach(e => {
+        const d = parseDate(e.date); if (!d || vus.has(e._id)) return; const j = jours(d);
+        if (j >= 0 && j <= 2) { vus.add(e._id); try { annonceAfficher('⏰ ' + e.titre + ' — ' + (j === 0 ? "aujourd'hui" : j === 1 ? 'demain' : 'dans 2 jours')); } catch (x) { } }
+    });
+}
+function tout() { try { rendreExtra(); textesAccueil(); partages(); rappels(); } catch (e) { console.warn(e); } }
+const _r = rafraichirAffichagePublic;
+rafraichirAffichagePublic = function () { const r = _r.apply(this, arguments); tout(); return r; };
+setInterval(tout, 2000);
+})();
+</script>
+<script>
+(function () {
+const $ = id => document.getElementById(id);
+['quiz', 'scoresQuiz', 'vues'].forEach(c => { if (!COLLECTIONS.includes(c)) COLLECTIONS.push(c); if (!donneesSite[c]) donneesSite[c] = []; });
+const L = c => donneesSite[c] || (donneesSite[c] = []);
+const BTN = 'text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base';
+const MINI = 'bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium border-none cursor-pointer';
+const RED = 'bg-red-600 text-white px-2 py-1 rounded-lg text-xs border-none cursor-pointer';
+const mmss = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+let session = null, timer = null, ouvert = null;
+
+// ===== QUIZ CHRONOMÉTRÉS =====
+document.body.insertAdjacentHTML('beforeend', `<div id="modal-quiz" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-3 max-h-[90vh] overflow-auto">
+<h3 class="text-lg font-bold text-blue-900">Nouveau quiz</h3>
+<input id="qz-titre" placeholder="Titre du quiz" class="w-full p-2.5 border rounded-lg text-sm">
+<input id="qz-min" type="number" min="1" value="5" class="w-full p-2.5 border rounded-lg text-sm" placeholder="Durée totale en minutes">
+<textarea id="qz-txt" rows="10" class="w-full p-2.5 border rounded-lg text-sm" placeholder="Question 1 ?\nRéponse A\nRéponse B*\nRéponse C\n\nQuestion 2 ?\nRéponse A*\nRéponse B"></textarea>
+<p class="text-xs text-slate-500">Une ligne par réponse, la bonne se termine par *. Laissez une ligne vide entre deux questions.</p>
+<div class="flex gap-2 justify-end"><button onclick="document.getElementById('modal-quiz').classList.add('hidden')" class="bg-slate-200 px-4 py-2 rounded-lg text-sm border-none cursor-pointer">Annuler</button><button onclick="quizEnregistrer()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm border-none cursor-pointer">Enregistrer</button></div></div></div>`);
+function parseQuiz(txt) {
+    const out = [], blocs = txt.replace(/\r/g, '').split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+    for (const [i, b] of blocs.entries()) {
+        const l = b.split('\n').map(x => x.trim()).filter(Boolean), q = l.shift();
+        const c = l.map(x => x.replace(/\*+$/, '').trim()), bons = l.map((x, k) => /\*$/.test(x) ? k : -1).filter(k => k >= 0);
+        if (c.length < 2 || c.length > 6 || bons.length !== 1) return 'Question ' + (i + 1) + ' : 2 à 6 réponses, dont une seule marquée avec *.';
+        out.push({ q, c, b: bons[0] });
+    }
+    return out.length ? out : 'Aucune question.';
+}
+window.quizNouveau = () => { if (estPrincipal()) $('modal-quiz').classList.remove('hidden'); };
+window.quizEnregistrer = async () => {
+    if (!estPrincipal()) return; const titre = $('qz-titre').value.trim(), minutes = Math.max(1, +$('qz-min').value || 5), r = parseQuiz($('qz-txt').value);
+    if (!titre) return notif('Titre obligatoire.'); if (typeof r === 'string') return notif(r);
+    L('quiz').push({ _id: crypto.randomUUID(), titre, minutes, questions: r });
+    if (!(await sauvegarder())) { L('quiz').pop(); return notif('Enregistrement impossible : base de données inaccessible.'); }
+    $('modal-quiz').classList.add('hidden'); $('qz-titre').value = $('qz-txt').value = ''; rendreQuiz();
+};
+window.quizSuppr = async id => {
+    if (!estPrincipal() || !confirm('Supprimer ce quiz et ses scores ?')) return;
+    donneesSite.quiz = L('quiz').filter(z => z._id !== id); donneesSite.scoresQuiz = L('scoresQuiz').filter(s => s.quizId !== id);
+    await sauvegarder(); rendreQuiz();
+};
+const meilleurs = qid => { const m = {}; L('scoresQuiz').filter(s => s.quizId === qid).forEach(s => { const b = m[s.auteurId]; if (!b || s.score > b.score || (s.score === b.score && s.secondes < b.secondes)) m[s.auteurId] = s; }); return Object.values(m).sort((a, b) => b.score - a.score || a.secondes - b.secondes); };
+window.quizClassement = id => { ouvert = ouvert === id ? null : id; rendreQuiz(); };
+function rendreQuiz() {
+    const sc = $('quiz-ecran'); if (!sc || session) return; const adm = estPrincipal(), m = moi();
+    const cartes = L('quiz').map(z => {
+        const cl = meilleurs(z._id), mien = m && cl.find(s => s.auteurId === m.id);
+        return `<div class="p-4 border rounded-xl bg-slate-50 space-y-2"><p class="font-bold text-blue-800">${esc(z.titre)}</p><p class="text-xs text-slate-600">${z.questions.length} questions · ⏱️ ${z.minutes} min${mien ? ` · Mon meilleur score : <b>${mien.score}/${mien.total}</b>` : ''}</p>
+<div class="flex flex-wrap gap-2"><button onclick="quizCommencer('${z._id}')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm border-none cursor-pointer">▶️ Commencer</button><button onclick="quizClassement('${z._id}')" class="${MINI}">🏆 Classement</button>${adm ? `<button onclick="quizSuppr('${z._id}')" class="${RED}">🗑️</button>` : ''}</div>
+${ouvert === z._id ? `<ol class="text-sm space-y-1 pt-2">${cl.slice(0, 10).map((s, k) => `<li>${['🥇', '🥈', '🥉'][k] || (k + 1) + '.'} ${esc(s.nom)} — <b>${s.score}/${s.total}</b> · ${mmss(s.secondes)}</li>`).join('') || '<li class="italic text-slate-500">Aucun score pour le moment.</li>'}</ol>` : ''}</div>`;
+    }).join('') || '<p class="text-slate-500 italic">Aucun quiz disponible.</p>';
+    const h = `<div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-4"><h3 class="text-2xl font-bold text-blue-800">🧠 Quiz chronométrés</h3><p class="text-slate-600 text-sm">Répondez avant la fin du temps. Votre meilleur score est enregistré.</p>${cartes}${adm ? `<button onclick="quizNouveau()" class="${MINI} py-2">➕ Nouveau quiz</button>` : ''}</div>`;
+    if (sc.dataset.h !== h) { sc.innerHTML = h; sc.dataset.h = h; }
+}
+window.quizCommencer = id => {
+    if (!moi()) return; const z = L('quiz').find(x => x._id === id); if (!z) return;
+    session = { q: z, i: 0, rep: [], fin: Date.now() + z.minutes * 60000, t0: Date.now() }; clearInterval(timer); timer = setInterval(tick, 1000); rendreSession();
+};
+function rendreSession() {
+    const s = session, q = s.q.questions[s.i], reste = Math.max(0, Math.round((s.fin - Date.now()) / 1000));
+    $('quiz-ecran').dataset.h = ''; $('quiz-ecran').innerHTML = `<div class="bg-white p-5 rounded-2xl shadow-md space-y-4"><div class="flex justify-between font-bold"><span>Question ${s.i + 1}/${s.q.questions.length}</span><span id="quiz-chrono" class="${reste < 30 ? 'text-red-600' : 'text-blue-700'}">⏱️ ${mmss(reste)}</span></div><p class="text-lg font-semibold">${esc(q.q)}</p><div class="space-y-2">${q.c.map((c, k) => `<button onclick="quizRepondre(${k})" class="w-full text-left p-3 rounded-xl border bg-slate-50 cursor-pointer">${esc(c)}</button>`).join('')}</div><button onclick="quizAbandon()" class="text-xs text-slate-500 underline bg-transparent border-none cursor-pointer">Abandonner</button></div>`;
+}
+function tick() {
+    if (!session || session.done) return clearInterval(timer);
+    const reste = Math.round((session.fin - Date.now()) / 1000), e = $('quiz-chrono');
+    if (reste <= 0) return quizFin(); if (e) { e.textContent = '⏱️ ' + mmss(reste); e.className = reste < 30 ? 'text-red-600' : 'text-blue-700'; }
+}
+window.quizRepondre = k => { const s = session; if (!s || s.done) return; s.rep[s.i] = k; s.i++; if (s.i >= s.q.questions.length) quizFin(); else rendreSession(); };
+window.quizAbandon = () => { if (confirm('Abandonner ce quiz ?')) { clearInterval(timer); session = null; rendreQuiz(); } };
+window.quizRetour = () => { session = null; rendreQuiz(); };
+async function quizFin() {
+    const s = session; if (!s || s.done) return; s.done = true; clearInterval(timer);
+    const qs = s.q.questions, score = qs.filter((q, i) => s.rep[i] === q.b).length, secondes = Math.min(s.q.minutes * 60, Math.round((Date.now() - s.t0) / 1000)), m = moi();
+    if (m && !estAdmin) { L('scoresQuiz').push({ _id: crypto.randomUUID(), quizId: s.q._id, auteurId: m.id, nom: m.nom, score, total: qs.length, secondes, date: Date.now() }); try { await sauvegarder(); } catch (e) { } }
+    $('quiz-ecran').dataset.h = ''; $('quiz-ecran').innerHTML = `<div class="bg-white p-5 rounded-2xl shadow-md space-y-3"><h3 class="text-2xl font-bold text-blue-800">Résultat : ${score}/${qs.length}</h3><p class="text-sm text-slate-600">Temps : ${mmss(secondes)}</p>
+${qs.map((q, i) => `<div class="p-3 rounded-xl border ${s.rep[i] === q.b ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}"><p class="font-semibold text-sm">${s.rep[i] === q.b ? '✅' : '❌'} ${esc(q.q)}</p>${s.rep[i] === q.b ? '' : `<p class="text-xs mt-1">Bonne réponse : <b>${esc(q.c[q.b])}</b></p>`}</div>`).join('')}
+<button onclick="quizRetour()" class="${MINI} py-2">← Retour aux quiz</button></div>`;
+}
+
+// ===== FICHES MÉMO dans « Mon espace » (gardées sur l'appareil) =====
+ONGLETS12.push(['fiches', '📝 Fiches']);
+const cleF = () => 'fiches:' + monId(), lireF = () => { try { return JSON.parse(ls(cleF()) || '[]'); } catch (e) { return []; } };
+window.ficheAjouter = () => {
+    const t = $('nf-titre').value.trim(), x = $('nf-texte').value.trim(); if (!t && !x) return;
+    const a = lireF(); a.unshift({ id: Date.now(), titre: t || 'Sans titre', cours: $('nf-cours').value, texte: x, date: Date.now() }); ls(cleF(), JSON.stringify(a)); v12Rendre();
+};
+window.ficheSuppr = id => { if (confirm('Supprimer cette fiche ?')) { ls(cleF(), JSON.stringify(lireF().filter(f => f.id !== id))); v12Rendre(); } };
+const _v12 = v12Rendre;
+v12Rendre = function () {
+    if (v12Tab !== 'fiches') return _v12.apply(this, arguments);
+    const tabs = '<div class="flex gap-1 overflow-x-auto pb-2 mb-3 border-b">' + ONGLETS12.map(([k, l]) => `<button onclick="v12Ouvrir('${k}')" class="px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border-none cursor-pointer ${k === 'fiches' ? 'bg-indigo-600 text-white' : 'bg-slate-100'}">${l}</button>`).join('') + '</div>';
+    const opts = '<option value="">— Cours (facultatif) —</option>' + [...L('cours'), ...L('pdfs')].map(c => `<option>${esc(c.titre)}</option>`).join('');
+    const inp = 'w-full p-2 border rounded-lg text-sm bg-white';
+    v12Ov(v12Titre('📚 Mon espace') + tabs + `<div class="space-y-2 mb-4"><input id="nf-titre" placeholder="Titre de la fiche" class="${inp}"><select id="nf-cours" class="${inp}">${opts}</select><textarea id="nf-texte" rows="4" placeholder="Vos notes…" class="${inp}"></textarea><button onclick="ficheAjouter()" class="${btn12('bg-indigo-600')}">➕ Enregistrer la fiche</button><p class="text-xs text-slate-500">Vos fiches restent privées, sur cet appareil.</p></div>`
+        + lireF().map(f => `<div class="p-3 border rounded-xl mb-2 bg-slate-50"><div class="flex justify-between gap-2"><b>${esc(f.titre)}</b><button onclick="ficheSuppr(${f.id})" class="${RED}">🗑️</button></div>${f.cours ? `<p class="text-xs text-indigo-700">📎 ${esc(f.cours)}</p>` : ''}<p class="text-sm whitespace-pre-wrap break-words mt-1">${esc(f.texte)}</p></div>`).join(''));
+};
+
+// ===== CONSULTATIONS, CONTRIBUTIONS, ANNONCE « NOUVEAU COURS » =====
+const _od = ouvrirDoc;
+ouvrirDoc = function (liste, idx) {
+    try {
+        const it = donneesSite[liste][idx], m = moi();
+        if (it && m && !estAdmin) { const cle = liste + ':' + (it.titre || it.description), v = L('vues').find(x => x.cle === cle && x.auteurId === m.id); if (v) v.n++; else L('vues').push({ _id: crypto.randomUUID(), cle, auteurId: m.id, n: 1 }); sauvegarder().catch(() => { }); }
+    } catch (e) { }
+    return _od.apply(this, arguments);
+};
+window.annoncerNouveau = async t => {
+    if (!estPrincipal()) return;
+    window.open('https://wa.me/?text=' + encodeURIComponent('🆕 Nouveau contenu disponible : ' + t + ' — ' + location.origin + location.pathname), '_blank');
+    if (confirm("Épingler aussi cette annonce sur l'accueil ?")) { (donneesSite.annonces || (donneesSite.annonces = [])).push({ _id: crypto.randomUUID(), texte: '🆕 Nouveau : ' + t, date: Date.now() }); await sauvegarder(); }
+};
+const badge = n => n >= 5 ? '🥇 Expert' : n >= 3 ? '🥈 Actif' : '🥉 Contributeur';
+function extra2() {
+    const acc = $('accueil'); if (!acc) return; let b = $('accueil-extra2');
+    if (!b) { b = document.createElement('div'); b.id = 'accueil-extra2'; b.className = 'space-y-4'; (acc.firstElementChild).after(b); }
+    const e1 = $('accueil-extra'); if (e1 && e1.nextElementSibling !== b) e1.after(b);
+    const cnt = {}; ['exercicesValides', 'pdfs', 'photos'].forEach(c => L(c).forEach(x => { if (x.auteurId && x.auteurId !== 'Administrateur') cnt[x.auteurId] = (cnt[x.auteurId] || 0) + 1; }));
+    const top = Object.entries(cnt).map(([id, n]) => ({ n, u: userParId(id) })).filter(x => x.u).sort((a, b) => b.n - a.n).slice(0, 5);
+    let h = top.length ? `<div class="bg-white p-5 rounded-2xl shadow-md border border-slate-100"><h3 class="text-xl font-bold text-blue-800 mb-3">🏆 Meilleures contributions</h3><div class="space-y-2">${top.map(x => `<div class="p-3 bg-slate-50 rounded-xl flex justify-between gap-2 text-sm"><span class="font-semibold">${esc(nomComplet(x.u))}</span><span>${badge(x.n)} · ${x.n}</span></div>`).join('')}</div></div>` : '';
+    if (estPrincipal()) {
+        const v = {}; L('vues').forEach(x => v[x.cle] = (v[x.cle] || 0) + x.n);
+        const t = Object.entries(v).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        h += `<details class="bg-white p-5 rounded-2xl shadow-md border border-slate-100"><summary class="font-bold text-blue-800 cursor-pointer">📈 Documents les plus consultés</summary><div class="space-y-1 mt-3 text-sm">${t.map(([k, n]) => `<div class="flex justify-between"><span>${esc(k.split(':').slice(1).join(':'))}</span><b>${n} 👁️</b></div>`).join('') || '<p class="italic text-slate-500">Aucune consultation enregistrée.</p>'}</div></details>`;
+    }
+    if (b.dataset.h !== h) { b.innerHTML = h; b.dataset.h = h; }
+}
+function ajouts() {
+    document.querySelectorAll('button[onclick^="ouvrirDoc("]').forEach(bt => {
+        if (!estPrincipal() || bt.dataset.n) return; bt.dataset.n = '1';
+        const s = bt.closest('div.flex.justify-between'), t = (((s && s.querySelector('span')) || {}).textContent || 'Document').trim().split('\n')[0];
+        const a = document.createElement('button'); a.textContent = '📣'; a.title = 'Annoncer sur WhatsApp'; a.className = 'bg-amber-500 text-white px-2.5 py-1.5 rounded-lg text-sm border-none cursor-pointer'; a.onclick = () => annoncerNouveau(t); bt.after(a);
+    });
+}
+function menuQuiz() {
+    if (!$('quiz-ecran')) { const sc = document.createElement('div'); sc.id = 'quiz-ecran'; sc.className = 'screen space-y-6'; document.querySelector('main').appendChild(sc); }
+    if ($('nav-quiz')) return; const faq = document.querySelector('#menu-deroulant button[onclick="changerEcran(\'faq\')"]'); if (!faq) return;
+    const b = document.createElement('button'); b.id = 'nav-quiz'; b.setAttribute('onclick', "changerEcran('quiz-ecran')"); b.className = BTN; b.textContent = '🧠 Quiz'; faq.before(b);
+}
+function tout() { try { menuQuiz(); rendreQuiz(); extra2(); ajouts(); } catch (e) { console.warn(e); } }
+const _r = rafraichirAffichagePublic;
+rafraichirAffichagePublic = function () { const r = _r.apply(this, arguments); tout(); return r; };
+setInterval(tout, 2000);
+})();
+</script>
 </body>
 </html>
