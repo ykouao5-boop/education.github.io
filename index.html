@@ -78,6 +78,7 @@
     #btn-dons-flottant{position:fixed;bottom:12px;right:126px;z-index:60;width:40px;height:40px;border-radius:50%;border:1px solid #fb7185;background:#e11d48;color:#fff;font-size:18px;box-shadow:0 4px 12px #0005;cursor:pointer;align-items:center;justify-content:center}
     #btn-assistance{bottom:12px!important;right:8px!important;width:112px;height:40px;padding:0!important;justify-content:center}
     </style>
+<style>body.abo-lock #abonnement{display:block!important;position:fixed;inset:0;z-index:70;overflow:auto;background:#0f172a;padding:calc(env(safe-area-inset-top,0px) + 1.5rem) 1rem 2rem}</style>
 </head>
 <body>
 
@@ -162,6 +163,7 @@
                 <button onclick="changerEcran('propositions')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">📤 Propositions</button>
                 <button onclick="changerEcran('forum')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">💬 Forum</button>
                 <button onclick="changerEcran('dons')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">❤️ Dons</button>
+                <button onclick="changerEcran('abonnement')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">💳 Abonnement</button>
                 <button id="nav-btn-prof" onclick="changerEcran('espace-prof')" class="hidden text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">🤝 Espace prof/sponsors</button>
                 <button onclick="changerEcran('profil')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">👤 Mon profil</button>
                 <button onclick="changerEcran('faq')" class="text-left w-full px-3 py-3 text-white bg-transparent border-none cursor-pointer hover:bg-blue-700 rounded-lg font-medium text-base">❓ FAQ</button>
@@ -364,6 +366,27 @@
                 </div>
                 <p id="dons-note" class="text-xs text-slate-500"></p>
             </div>
+        </div>
+
+                <div id="abonnement" class="screen space-y-6">
+            <div id="abo-verrou-tete" class="hidden text-center text-white max-w-2xl mx-auto"><div class="text-7xl mb-3">🔒</div><h2 id="abo-verrou-titre" class="text-3xl sm:text-5xl font-extrabold mb-3"></h2><p id="abo-verrou-msg" class="text-lg text-slate-300"></p></div>
+            <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-md border border-slate-100 max-w-2xl mx-auto space-y-6 text-center">
+                <h3 class="text-2xl font-bold text-indigo-700">💳 Abonnement</h3>
+                <div id="abo-statut" class="p-4 rounded-2xl border text-sm font-semibold"></div>
+                <p class="text-slate-700">Accès complet pendant <b id="abo-jours">30</b> jours, <b>téléchargement des fichiers</b> inclus.<br><span class="text-3xl font-extrabold text-indigo-700">500 FCFA / mois</span></p>
+                <a id="btn-abonner" href="https://pay.wave.com/m/M_ci_T-r32Il5V0lx/c/ci/" target="_blank" rel="noopener" onclick="aboApresClic()" class="block w-full bg-indigo-600 hover:bg-indigo-700 text-white text-2xl font-extrabold py-5 rounded-2xl shadow-lg no-underline">💳 S'ABONNER — 500 FCFA</a>
+                <div id="abo-question" class="hidden text-left p-4 bg-indigo-50 border border-indigo-200 rounded-2xl space-y-3">
+                    <p class="font-bold text-indigo-900">Avez-vous payé 500 FCFA ?</p>
+                    <div><label class="block text-sm font-medium text-slate-700 mb-1">Numéro Wave utilisé pour payer (à écrire avant de répondre « Oui »)</label><input id="abo-numero" type="tel" inputmode="tel" placeholder="Ex : 07 00 00 00 00" class="w-full p-3 border rounded-xl bg-white text-sm focus:ring-2 focus:ring-indigo-400 outline-none"></div>
+                    <div class="flex gap-2">
+                        <button id="abo-oui" onclick="aboOui()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold border-none cursor-pointer text-sm">✅ Oui, j'ai payé</button>
+                        <button onclick="document.getElementById('abo-question').classList.add('hidden')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 py-3 rounded-xl font-bold border-none cursor-pointer text-sm">Non</button>
+                    </div>
+                </div>
+                <div id="abo-merci" class="hidden p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-900 font-semibold"></div>
+                <div id="abo-historique-box" class="hidden text-left space-y-2"><h4 class="font-bold text-slate-800 text-sm">Mes paiements d'abonnement</h4><div id="abo-historique" class="space-y-2"></div></div>
+            </div>
+            <div id="abo-verrou-pied" class="hidden text-center space-y-3"><a href="https://wa.me/2250152801988?text=Bonjour,%20j'ai%20un%20probl%C3%A8me%20avec%20mon%20abonnement." target="_blank" class="inline-block bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl text-lg font-bold no-underline">💬 Assistance</a><div><button onclick="deconnexion()" class="text-xs text-slate-400 bg-transparent border-none cursor-pointer underline">Se déconnecter</button></div></div>
         </div>
 
         <div id="profil" class="screen space-y-6">
@@ -621,6 +644,15 @@
                     <p class="text-xs text-slate-500">Dons déclarés par les membres après un paiement Wave. Vérifiez dans Wave Business, puis indiquez « Reçu » ou « Pas reçu ». Le montant est celui que le membre a écrit.</p>
                     <div id="admin-dons-resume" class="hidden p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm space-y-2"></div>
                     <div data-lotbar="dons" class="hidden"></div>
+                                        <div id="abo-admin-box" class="hidden p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-sm space-y-2">
+                        <b>💳 Abonnements (500 FCFA)</b> — les paiements d'abonnement apparaissent ci-dessous avec « 📅 ABONNEMENT ». « ✅ Reçu » active l'abonnement du membre.
+                        <div id="abo-duree-edit" class="hidden flex gap-2 items-center flex-wrap"><label class="font-semibold">Durée (jours) :</label><input id="abo-duree" type="number" min="1" max="365" class="p-2 border rounded bg-white w-24"><button onclick="aboEnregistrerDuree()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-bold border-none cursor-pointer">Enregistrer</button><span class="text-xs text-slate-500">(administrateur principal uniquement)</span></div>
+                    </div>
+                    <div id="abo-registre-box" class="hidden space-y-2">
+                        <div class="flex justify-between items-center gap-2 flex-wrap"><h4 class="font-bold text-indigo-900">📒 Registre des abonnés</h4><button onclick="aboExporter()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-bold border-none cursor-pointer">⬇️ Exporter (CSV)</button></div>
+                        <p class="text-xs text-slate-500">Nom, identité et numéro de paiement de chaque abonnement. Visible par tous les administrateurs ; modifiable par l'administrateur principal uniquement.</p>
+                        <div id="abo-registre" class="space-y-2"></div>
+                    </div>
                     <div id="admin-liste-dons" class="space-y-2"></div>
                 </div>
 
@@ -706,7 +738,7 @@
                 <div class="flex justify-between items-center pb-3 border-b mb-2">
                     <h3 id="modal-titre-fichier" class="text-lg font-bold text-blue-900">Visualisation</h3>
                     <div class="flex items-center gap-4">
-                        <a id="lien-ouvrir-fichier" href="#" target="_blank" class="text-sm text-blue-600 underline">Ouvrir dans un nouvel onglet</a>
+                        <a id="lien-ouvrir-fichier" href="#" onclick="aboTelechargerLecteur();return false" class="text-sm text-blue-600 underline">⬇️ Télécharger</a>
                         <button onclick="fermerLecteur()" class="text-slate-500 hover:text-slate-800 text-2xl font-bold bg-transparent border-none cursor-pointer">&times;</button>
                     </div>
                 </div>
@@ -1402,7 +1434,7 @@
             } else {
                 img.classList.add('hidden');
                 iframe.classList.remove('hidden');
-                iframe.src = src;
+                iframe.src = src + (aboRestreint() ? '#toolbar=0&navpanes=0' : '');
             }
         }
 
@@ -2696,7 +2728,7 @@ function evalDetailConstruire(ev) {
             const f = document.createElement('iframe');
             f.className = 'w-full block bg-white border-none'; f.style.height = '75vh'; f.style.minHeight = '420px'; f.src = ev.fileUrl; box.appendChild(f);
         }
-        lien = `<a href="${esc(ev.fileUrl)}" target="_blank" rel="noopener" class="underline text-blue-600 text-xs">Le sujet ne s'affiche pas bien ? Ouvrir ou télécharger le fichier</a>`;
+        lien = `<a href="#" onclick="aboTelEval(\'${ev._id}\');return false" class="underline text-blue-600 text-xs">Le sujet ne s'affiche pas bien ? Le télécharger</a>`;
     } else if (ev.lien) {
         box.innerHTML = `<div class="p-6 text-center"><a href="${esc(ev.lien)}" target="_blank" rel="noopener" class="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium no-underline">Ouvrir le sujet</a></div>`;
     }
@@ -3107,7 +3139,7 @@ const pluriel = (n, s, pl) => n + ' ' + (n > 1 ? pl : s);
 // Jauge : seuls les dons « Reçu » (vérifiés par l'administration) comptent, à partir de la date de départ éventuelle
 function donsCollecte() {
     const p = donsParam(), depuis = Number(p.donsDepuis) || 0;
-    const L = (donneesSite.dons || []).filter(d => d.statut === 'recu' && (d.date || 0) >= depuis);
+    const L = (donneesSite.dons || []).filter(d => d.type !== 'abo' && d.statut === 'recu' && (d.date || 0) >= depuis);
     return { total: L.reduce((n, d) => n + (Number(d.montant) || 0), 0), nb: L.length, objectif: Math.max(0, Math.round(Number(p.donsObjectif) || 0)), titre: p.donsObjectifTitre || '', depuis };
 }
 function donsJaugeHtml(c) {
@@ -3140,7 +3172,7 @@ function rafraichirDons() {
     const jg = $('dons-jauge'), jh = donsJaugeHtml(donsCollecte());
     if (jg) { jg.classList.toggle('hidden', !jh); if (jg.dataset.h !== jh) { jg.dataset.h = jh; jg.innerHTML = jh; } }
     const m = moi();
-    const L = m ? donneesSite.dons.filter(d => d.auteurId === m.id).sort((a, b) => b.date - a.date) : [];
+    const L = m ? donneesSite.dons.filter(d => d.auteurId === m.id && d.type !== 'abo').sort((a, b) => b.date - a.date) : [];
     $('dons-historique-box').classList.toggle('hidden', !L.length);
     $('dons-historique').innerHTML = L.map(d => {
         const [c, l] = donsBadge(d.statut);
@@ -3191,7 +3223,7 @@ function rafraichirDonsAdmin() {
         const [cl, lb] = donsBadge(d.statut), u = String(d.auteurId).startsWith('@') ? null : userParId(d.auteurId);
         return `<div class="p-3 bg-white border rounded-xl text-sm space-y-2">
             <div class="flex justify-between items-center gap-2 flex-wrap"><span class="flex items-center gap-2">${window.lotCheck ? lotCheck('dons', d._id) : ''}<span>${auteurBtn(d.auteurId, d.auteurNom)} <span class="text-xs text-slate-400">${fmt(d.date)}</span></span></span><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${cl}">${lb}</span></div>
-            <div class="font-bold text-rose-700">💰 ${fmtMontant(d.montant)} FCFA <span class="text-xs font-normal text-slate-500">(montant déclaré)</span></div>
+            <div class="font-bold text-rose-700">${d.type === 'abo' ? '📅 ABONNEMENT ' + (d.jours || 30) + ' j — ' : ''}💰 ${fmtMontant(d.montant)} FCFA <span class="text-xs font-normal text-slate-500">(montant déclaré)</span></div>
             <div class="flex gap-1 flex-wrap">${bt('bg-emerald-600 text-white', '✅ Reçu', `donsStatut('${d._id}','recu')`)}${bt('bg-red-600 text-white', '❌ Pas reçu', `donsStatut('${d._id}','non_recu')`)}${estPrincipal() && u ? `<button data-u="${esc(u.id)}" onclick="donsTagDonateur(this.dataset.u)" class="bg-rose-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold border-none cursor-pointer">${u.donateur ? '💝 Retirer le tag Donateur' : '💝 Donner le tag Donateur'}</button>` : ''}${estPrincipal() ? bt('bg-slate-200 text-slate-800', '🗑️', `donsSupprimer('${d._id}')`) : ''}</div>
         </div>`;
     }).join('') || "<p class='text-sm text-slate-500 italic'>Aucun don déclaré pour le moment.</p>";
@@ -5237,6 +5269,138 @@ const _r = rafraichirAffichagePublic;
 rafraichirAffichagePublic = function () { const r = _r.apply(this, arguments); tout(); return r; };
 setInterval(tout, 2000);
 })();
+</script>
+<script>
+// ===== Abonnement payant : 3 jours d'essai (lecture seule), puis 500 FCFA / mois =====
+const ABO_JOUR = 864e5, ABO_PRIX = 500, ABO_ESSAI = 3 * ABO_JOUR, aboG = id => document.getElementById(id);
+const aboDuree = () => { const n = Number(donsParam().aboDuree); return n >= 1 ? Math.round(n) : 30; };
+const aboEquipe = () => estAdmin || estProf() || estSponsor() || estModo();
+function aboChaine(id) {   // chaque paiement validé prolonge à partir de la fin du précédent
+    let fin = 0;
+    return donneesSite.dons.filter(d => d.type === 'abo' && d.statut === 'recu' && d.auteurId === id)
+        .sort((a, b) => (a.dateTraitement || a.date) - (b.dateTraitement || b.date))
+        .map(d => { fin = Math.max(fin, d.dateTraitement || d.date) + (d.jours || 30) * ABO_JOUR; return [d, fin]; });
+}
+const aboFin = id => { const c = aboChaine(id); return c.length ? c[c.length - 1][1] : 0; };
+const aboEssaiFin = u => (u.creeLe || u.essaiDebut || 0) + ABO_ESSAI;
+function aboEtat() {    // 'equipe' | 'abonne' | 'essai' | 'termine' | null (visiteur)
+    if (aboEquipe()) return 'equipe';
+    const u = utilisateurActif; if (!u) return null;
+    if (aboFin(u.id) > Date.now()) return 'abonne';
+    if (!(u.creeLe || u.essaiDebut)) { u.essaiDebut = Date.now(); try { sauvegarder().catch(() => { }); } catch (e) { } }
+    return aboEssaiFin(u) > Date.now() ? 'essai' : 'termine';
+}
+const aboRestreint = () => { const e = aboEtat(); return e !== 'equipe' && e !== 'abonne'; };
+
+// ----- Téléchargement : bloqué en essai, confirmation pour les abonnés -----
+async function aboTelechargerUrl(url, titre) {
+    if (aboRestreint()) { notif("Téléchargement impossible avec l'accès gratuit. Abonnez-vous pour télécharger les fichiers."); fermerLecteur(); changerEcran('abonnement'); return; }
+    if (!url || !confirm('Voulez-vous vraiment télécharger ?')) return;
+    try {
+        const b = await (await fetch(url)).blob(), ext = { pdf: 'pdf', jpeg: 'jpg', png: 'png', gif: 'gif', webp: 'webp' }[(b.type || '').split('/')[1]];
+        const nom = String(titre || 'fichier').replace(/[^\w\-. À-ÿ]+/g, '_'), a = document.createElement('a');
+        a.href = URL.createObjectURL(b); a.download = nom + (ext && !/\.\w{2,4}$/.test(nom) ? '.' + ext : '');
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    } catch (e) { window.open(url, '_blank'); }
+}
+const aboTelechargerLecteur = () => window._aboF && aboTelechargerUrl(window._aboF.u, window._aboF.t);
+const aboTelEval = id => { const ev = donneesSite.evaluations.find(x => x._id === id); if (ev) aboTelechargerUrl(ev.fileUrl, ev.titre); };
+const _aboOLD = ouvrirLecteurDirect;
+ouvrirLecteurDirect = async function (t, u) { window._aboF = { t, u }; return _aboOLD(t, u); };
+document.addEventListener('contextmenu', e => { if (e.target.closest && e.target.closest('img,#modal-lecteur') && aboRestreint()) e.preventDefault(); });
+
+// ----- Page Abonnement (membre) -----
+function aboApresClic() { aboG('abo-merci').classList.add('hidden'); aboG('abo-question').classList.remove('hidden'); const n = aboG('abo-numero'); if (n && !n.value && utilisateurActif) n.value = utilisateurActif.telephone || ''; }
+async function aboOui() {
+    const m = moi(); if (!m || estAdmin) return notif('Connectez-vous avec un compte membre pour vous abonner.');
+    if (donneesSite.dons.some(d => d.type === 'abo' && d.auteurId === m.id && d.statut !== 'recu' && d.statut !== 'non_recu')) return notif('Votre paiement est déjà en attente de vérification.');
+    const num = aboG('abo-numero').value.trim();
+    if (!/^\+?[\d ]{8,16}$/.test(num)) return notif('Indiquez le numéro Wave utilisé pour payer (8 à 16 chiffres) avant de répondre « Oui ».');
+    const b = aboG('abo-oui'), lib = b.textContent; b.disabled = true; b.textContent = 'Envoi…';
+    const d = { auteurId: m.id, auteurNom: m.nom, montant: ABO_PRIX, date: Date.now(), statut: 'attente', type: 'abo', jours: aboDuree(), numero: num, identite: m.id };
+    donneesSite.dons.push(d);
+    try {
+        if (!(await sauvegarder())) { donneesSite.dons = donneesSite.dons.filter(x => x !== d); return notif("Envoi impossible : échec de l'enregistrement. Réessayez.\n\nDétail : " + derniereErreur); }
+        aboG('abo-question').classList.add('hidden');
+        const r = aboG('abo-merci'); r.textContent = "Merci ! L'administrateur va vérifier votre paiement. Votre abonnement s'activera dès sa validation."; r.classList.remove('hidden');
+        aboRafraichir();
+    } finally { b.disabled = false; b.textContent = lib; }
+}
+function aboRafraichir() {
+    const box = aboG('abo-statut'); if (!box) return;
+    const e = aboEtat(), u = utilisateurActif; aboG('abo-jours').textContent = aboDuree();
+    let t = 'Connectez-vous pour vous abonner.', c = 'bg-slate-50 border-slate-200 text-slate-700';
+    if (e === 'abonne') { t = "✅ Abonné jusqu'au " + new Date(aboFin(u.id)).toLocaleDateString('fr-FR'); c = 'bg-emerald-50 border-emerald-200 text-emerald-800'; }
+    else if (e === 'essai') { t = '🕒 Essai gratuit : ' + Math.max(1, Math.ceil((aboEssaiFin(u) - Date.now()) / ABO_JOUR)) + ' jour(s) restant(s). Lecture seule : téléchargement impossible.'; c = 'bg-amber-50 border-amber-200 text-amber-800'; }
+    else if (e === 'termine') { const att = donneesSite.dons.some(d => d.type === 'abo' && d.auteurId === u.id && d.statut !== 'recu' && d.statut !== 'non_recu'); t = att ? "⏳ Paiement envoyé : en attente de vérification par l'administrateur. Le site se débloquera dès la validation." : '⛔ Abonnement requis pour continuer.'; c = att ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-red-50 border-red-200 text-red-800'; }
+    else if (e === 'equipe') t = "👑 Accès complet (équipe du site).";
+    box.className = 'p-4 rounded-2xl border text-sm font-semibold ' + c; box.textContent = t;
+    const L = u ? donneesSite.dons.filter(d => d.type === 'abo' && d.auteurId === u.id).sort((a, b) => b.date - a.date) : [];
+    aboG('abo-historique-box').classList.toggle('hidden', !L.length);
+    aboG('abo-historique').innerHTML = L.map(d => { const [cl, lb] = donsBadge(d.statut); return `<div class="p-3 border rounded-lg bg-slate-50 text-sm flex justify-between items-center gap-2 flex-wrap"><span><b>${ABO_PRIX} FCFA</b> <span class="text-xs text-slate-400">${fmt(d.date)}</span></span><span class="px-2 py-0.5 rounded-full text-xs font-bold ${cl}">${lb}</span></div>`; }).join('');
+    const lock = e === 'termine'; document.body.classList.toggle('abo-lock', lock);   // blocage total, comme la maintenance
+    if (lock) document.body.style.overflow = 'hidden'; else if (aboLockVu) document.body.style.overflow = '';
+    aboLockVu = lock; ['abo-verrou-tete', 'abo-verrou-pied'].forEach(i => aboG(i).classList.toggle('hidden', !lock));
+    if (lock) { const ancien = aboFin(u.id) > 0; aboG('abo-verrou-titre').textContent = ancien ? 'Abonnement expiré' : 'Essai gratuit terminé'; aboG('abo-verrou-msg').textContent = ancien ? "Votre abonnement est arrivé à son terme. Renouvelez-le (500 FCFA / mois) pour retrouver l'accès au site." : "Vos 3 jours d'essai gratuit sont terminés. Abonnez-vous (500 FCFA / mois) pour continuer à utiliser le site."; }
+    aboRegistre();
+    const ab = aboG('abo-admin-box'); if (ab) {
+        ab.classList.toggle('hidden', !estAdmin); aboG('abo-duree-edit').classList.toggle('hidden', !estPrincipal());
+        const i = aboG('abo-duree'); if (i && document.activeElement !== i) i.value = aboDuree();
+    }
+}
+// ----- Administration : notification + durée (administrateur principal uniquement) -----
+let aboVu = -1;
+function aboNotifAdmin() {
+    if (!estAdmin) return;
+    const n = donneesSite.dons.filter(d => d.type === 'abo' && d.statut !== 'recu' && d.statut !== 'non_recu').length;
+    if (n > 0 && n > aboVu) notif('💳 ' + n + (n > 1 ? " paiements d'abonnement à vérifier" : " paiement d'abonnement à vérifier") + ' (Admin › 💝 Dons).');
+    aboVu = n;
+}
+async function aboEnregistrerDuree() {
+    if (!estPrincipal()) return;
+    const n = Math.round(Number(aboG('abo-duree').value));
+    if (!(n >= 1 && n <= 365)) return notif('Durée invalide : entre 1 et 365 jours.');
+    const p = P(), av = p.aboDuree; p.aboDuree = n;
+    if (!(await sauvegarder())) { p.aboDuree = av; return notif("Enregistrement impossible.\n\nDétail : " + derniereErreur); }
+    notif("Durée de l'abonnement enregistrée : " + n + ' jours.'); aboRafraichir();
+}
+// ----- Registre des abonnés : visible par tous les administrateurs, modifiable par le principal -----
+let aboLockVu = false;
+const aboListe = () => donneesSite.dons.filter(d => d.type === 'abo').sort((a, b) => b.date - a.date);
+function aboFins() { const m = new Map(); new Set(aboListe().map(d => d.auteurId)).forEach(id => aboChaine(id).forEach(([d, f]) => m.set(d._id, f))); return m; }
+function aboRegistre() {
+    const box = aboG('abo-registre-box'); if (!box) return;
+    box.classList.toggle('hidden', !estAdmin); if (!estAdmin) return;
+    const fins = aboFins(), pr = estPrincipal();
+    const h = aboListe().map(d => {
+        const [cl, lb] = donsBadge(d.statut), f = fins.get(d._id);
+        return `<div class="p-3 bg-white border rounded-xl text-sm space-y-1"><div class="flex justify-between items-center gap-2 flex-wrap"><b>${esc(d.auteurNom || '—')}</b><span class="px-2 py-0.5 rounded-full text-xs font-bold ${cl}">${lb}</span></div><div class="text-xs text-slate-600 break-words">🆔 ${esc(String(d.identite || d.auteurId))} · 📱 ${esc(d.numero || '—')} · ${fmt(d.date)}${f ? ' · jusqu\'au ' + new Date(f).toLocaleDateString('fr-FR') : ''}</div>${pr ? bt('bg-slate-700 text-white', '✏️ Modifier', `aboModifier('${d._id}')`) : ''}</div>`;
+    }).join('') || "<p class='text-sm text-slate-500 italic'>Aucun paiement d'abonnement pour le moment.</p>";
+    const el = aboG('abo-registre'); if (el.dataset.h !== h) { el.dataset.h = h; el.innerHTML = h; }
+}
+async function aboModifier(id) {
+    if (!estPrincipal()) return;
+    const d = donneesSite.dons.find(x => x._id === id && x.type === 'abo'); if (!d) return;
+    const nom = prompt('Nom :', d.auteurNom || ''); if (nom === null) return;
+    const ident = prompt('Identité (identifiant) :', d.identite || d.auteurId || ''); if (ident === null) return;
+    const num = prompt('Numéro de paiement :', d.numero || ''); if (num === null) return;
+    if (!nom.trim() || !ident.trim() || !/^\+?[\d ]{8,16}$/.test(num.trim())) return notif('Nom, identité et numéro valides requis (numéro : 8 à 16 chiffres).');
+    const av = [d.auteurNom, d.identite, d.numero];
+    d.auteurNom = nom.trim(); d.identite = ident.trim(); d.numero = num.trim();
+    if (!(await sauvegarder())) { [d.auteurNom, d.identite, d.numero] = av; return notif('Enregistrement impossible.\n\nDétail : ' + derniereErreur); }
+    notif('Fiche modifiée.'); aboRafraichir();
+}
+function aboExporter() {
+    if (!estAdmin) return;
+    const q = s => '"' + String(s ?? '').replace(/"/g, '""') + '"', fins = aboFins();
+    const lignes = [['Nom', 'Identité', 'Numéro', 'Date du paiement', 'Statut', "Fin d'abonnement"]].concat(aboListe().map(d => [d.auteurNom, d.identite || d.auteurId, d.numero || '', fmt(d.date),
+        d.statut === 'recu' ? 'Validé' : d.statut === 'non_recu' ? 'Refusé' : 'En attente', fins.get(d._id) ? new Date(fins.get(d._id)).toLocaleDateString('fr-FR') : '']));
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + lignes.map(l => l.map(q).join(';')).join('\n')], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'abonnes-' + new Date().toISOString().slice(0, 10) + '.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+setInterval(() => { if (document.body.classList.contains('abo-lock')) rechargerEnFond('abonnement'); }, 20000);   // se débloque seul dès la validation
+const _aboRaf = rafraichirAffichagePublic;
+rafraichirAffichagePublic = function () { _aboRaf(); try { aboRafraichir(); aboNotifAdmin(); } catch (e) { console.error('Abonnement :', e); } };
 </script>
 </body>
 </html>
